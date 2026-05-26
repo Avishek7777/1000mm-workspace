@@ -1,0 +1,259 @@
+/**
+ * Auth-related Server Actions
+ *
+ * These run on the server in response to <form action={…}> submissions
+ * from the login/register/reset pages. They handle the side effects
+ * (DB writes, email-token generation) and return either a redirect
+ * or a typed error message for the form to render.
+ *
+ * For dev (no Resend yet), tokens are console-logged instead of emailed.
+ * Look for "[DEV EMAIL]" lines in your terminal.
+ */
+
+"use server";
+
+import { z } from "zod";
+import bcrypt from "bcrypt";
+import { redirect } from "next/navigation";
+import { randomBytes } from "node:crypto";
+import { LocalMissionCode } from "@prisma/client";
+import { prisma } from "@/lib/prisma/base";
+import { signIn, signOut } from "@/lib/auth/config";
+
+// ─────────────────────────────────────────────────────────────────────
+// Common types
+// ─────────────────────────────────────────────────────────────────────
+export type FormState = {
+  ok: boolean;
+  error?: string;
+  fieldErrors?: Record<string, string>;
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// REGISTER (Trainee self-registration)
+// ─────────────────────────────────────────────────────────────────────
+const registerSchema = z
+  .object({
+    fullName: z.string().trim().min(2, "Full name is required."),
+    email: z.string().email("Invalid email.").toLowerCase().trim(),
+    phone: z.string().trim().optional(),
+    homeMissionCode: z.enum(LocalMissionCode, {
+      message: "Select a Local Mission.",
+    }),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters.")
+      .max(72, "Password too long."),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match.",
+  });
+
+export async function registerAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = registerSchema.safeParse(raw);
+
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const field = issue.path[0]?.toString();
+      if (field && !fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
+    return { ok: false, fieldErrors };
+  }
+  const { fullName, email, phone, homeMissionCode, password } = parsed.data;
+
+  // Reject duplicate email up front (rather than relying on DB unique violation)
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    return {
+      ok: false,
+      fieldErrors: { email: "An account with this email already exists." },
+    };
+  }
+
+  const mission = await prisma.localMission.findUnique({
+    where: { code: homeMissionCode },
+  });
+  if (!mission) {
+    return { ok: false, error: "Invalid mission selection." };
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  await prisma.user.create({
+    data: {
+      email,
+      passwordHash,
+      fullName,
+      phone: phone || null,
+      role: "TRAINEE",
+      homeMissionId: mission.id,
+      // Auto-verified per current decision. Flip to null when enforcing.
+      emailVerified: new Date(),
+      isActive: true,
+    },
+  });
+
+  // For when we DO enforce verification: a token is generated here and
+  // emailed. Keeping this commented as a TODO.
+  //
+  // const token = randomBytes(32).toString("hex");
+  // await prisma.emailVerificationToken.create({...});
+  // await sendVerificationEmail(email, token);
+
+  // Auto-login after registration
+  await signIn("credentials", {
+    email,
+    password,
+    redirect: false,
+  });
+  redirect("/dashboard");
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// LOGIN
+// ─────────────────────────────────────────────────────────────────────
+const loginSchema = z.object({
+  email: z.string().email().toLowerCase().trim(),
+  password: z.string().min(1, "Password is required."),
+  from: z.string().optional(),
+});
+
+export async function loginAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const parsed = loginSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) {
+    return { ok: false, error: "Invalid input." };
+  }
+  const { email, password, from } = parsed.data;
+
+  try {
+    await signIn("credentials", { email, password, redirect: false });
+  } catch {
+    return { ok: false, error: "Invalid email or password." };
+  }
+
+  // Use the "from" param if it exists and is a relative path
+  const target = from && from.startsWith("/") ? from : "/dashboard";
+  redirect(target);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// LOGOUT
+// ─────────────────────────────────────────────────────────────────────
+export async function logoutAction() {
+  await signOut({ redirect: false });
+  redirect("/login");
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// PASSWORD RESET REQUEST
+// ─────────────────────────────────────────────────────────────────────
+const forgotSchema = z.object({
+  email: z.string().email().toLowerCase().trim(),
+});
+
+export async function requestPasswordResetAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const parsed = forgotSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) {
+    return { ok: false, fieldErrors: { email: "Enter a valid email." } };
+  }
+
+  const { email } = parsed.data;
+  const user = await prisma.user.findFirst({
+    where: { email, deletedAt: null, isActive: true },
+  });
+
+  // IMPORTANT: same response whether or not user exists. Otherwise
+  // attackers can probe for valid emails.
+  if (user) {
+    const token = randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await prisma.passwordResetToken.create({
+      data: { token, userId: user.id, expiresAt },
+    });
+
+    const resetUrl = `${process.env.AUTH_URL ?? "http://localhost:3000"}/reset-password?token=${token}`;
+
+    // TODO: replace with Resend send when wired up
+    console.log("\n[DEV EMAIL] Password reset link for", email);
+    console.log("[DEV EMAIL]", resetUrl, "\n");
+  }
+
+  return {
+    ok: true,
+    error: undefined,
+    fieldErrors: undefined,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// PASSWORD RESET CONFIRM
+// ─────────────────────────────────────────────────────────────────────
+const resetSchema = z
+  .object({
+    token: z.string().min(10),
+    password: z.string().min(8, "Password must be at least 8 characters."),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match.",
+  });
+
+export async function resetPasswordAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const parsed = resetSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const field = issue.path[0]?.toString();
+      if (field && !fieldErrors[field]) fieldErrors[field] = issue.message;
+    }
+    return { ok: false, fieldErrors };
+  }
+  const { token, password } = parsed.data;
+
+  const record = await prisma.passwordResetToken.findUnique({
+    where: { token },
+    include: { user: true },
+  });
+
+  if (!record || record.usedAt || record.expiresAt < new Date()) {
+    return { ok: false, error: "This reset link is invalid or has expired." };
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: record.userId },
+      data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
+    }),
+    prisma.passwordResetToken.update({
+      where: { id: record.id },
+      data: { usedAt: new Date() },
+    }),
+    // Invalidate any other outstanding reset tokens for this user
+    prisma.passwordResetToken.updateMany({
+      where: { userId: record.userId, usedAt: null, id: { not: record.id } },
+      data: { usedAt: new Date() },
+    }),
+  ]);
+
+  redirect("/login?reset=success");
+}
