@@ -1,0 +1,766 @@
+// =====================================================================
+// 1000 Missionary Movement Bangladesh — Training Platform
+// Prisma Schema  v1.0
+// =====================================================================
+// Database:    PostgreSQL 16+
+// Prisma:      5.x or 6.x
+// Generated:   May 2026
+//
+// See SCHEMA.md for full architecture notes and design rationale.
+//
+// Conventions
+//  • All tables soft-delete (deletedAt nullable). No hard deletes from
+//    application code; admin tools may run periodic purge respecting
+//    retention rules in §6.2 of the SRS.
+//  • Every table has createdAt + updatedAt timestamps.
+//  • IDs are CUIDs (collision-resistant, sortable, URL-safe).
+//  • Money is stored as integer minor units (paisa/cents) — never float.
+//  • All user-facing strings support Bangla; column type is Text not VarChar
+//    unless an explicit length limit makes sense.
+//  • Local Mission isolation is enforced by a Prisma extension at runtime
+//    (see lib/prisma/mission-scope.ts) PLUS by indexes for performance.
+// =====================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================================================
+// ENUMS
+// =====================================================================
+
+enum LocalMissionCode {
+  EBM // Eastern Bangladesh Mission
+  NBM // Northern Bangladesh Mission
+  SBM // Southern Bangladesh Mission
+  WBM // Western Bangladesh Mission
+}
+
+enum UserRole {
+  TRAINEE          // Default: applicants and accepted trainees
+  TRAINER          // Delivers training to accepted trainees
+  LOCAL_DIRECTOR   // LMD: reviews applications from own mission
+  MAIN_DIRECTOR    // Top authority: final approval, window control
+  SYSTEM_ADMIN     // Technical admin
+}
+
+enum TrainingCategory {
+  SPIRITUAL
+  PHYSICAL
+  MENTAL
+  SOCIAL
+}
+
+enum ApplicationWindowState {
+  DRAFT         // Created by Main Director, not yet visible
+  ADVERTISING   // Promoted on site, applications NOT yet open
+  OPEN          // Accepting applications
+  CLOSED        // Past close date, no more submissions
+  ARCHIVED      // Hidden from default lists
+}
+
+enum ApplicationStatus {
+  DRAFT                       // Applicant editing, not submitted
+  SUBMITTED                   // Submitted; awaiting LMD review
+  UNDER_LMD_REVIEW            // LMD has opened it
+  RETURNED_TO_APPLICANT       // LMD requested changes
+  RECOMMENDED                 // LMD recommended; awaiting MD
+  UNDER_MAIN_DIRECTOR_REVIEW  // MD has opened it
+  RETURNED_TO_LMD             // MD wants more from LMD
+  ACCEPTED                    // Final: trainee accepted
+  REJECTED                    // Final: rejected at any stage
+  WITHDRAWN                   // Applicant withdrew
+}
+
+enum DonationStatus {
+  PENDING       // Initiated, awaiting gateway callback
+  COMPLETED     // Gateway confirmed success
+  FAILED        // Gateway reported failure
+  REFUNDED      // Manually refunded
+}
+
+enum PaymentGateway {
+  STRIPE
+  PAYPAL
+  SSLCOMMERZ
+  BKASH
+}
+
+enum AuditAction {
+  // Auth events
+  AUTH_LOGIN_SUCCESS
+  AUTH_LOGIN_FAILED
+  AUTH_LOGOUT
+  AUTH_PASSWORD_RESET_REQUESTED
+  AUTH_PASSWORD_CHANGED
+  // User management
+  USER_CREATED
+  USER_ROLE_CHANGED
+  USER_MISSION_CHANGED
+  USER_DEACTIVATED
+  USER_REACTIVATED
+  // Application workflow
+  APPLICATION_SUBMITTED
+  APPLICATION_REVIEW_STARTED
+  APPLICATION_RETURNED_TO_APPLICANT
+  APPLICATION_RECOMMENDED
+  APPLICATION_RETURNED_TO_LMD
+  APPLICATION_ACCEPTED
+  APPLICATION_REJECTED
+  APPLICATION_WITHDRAWN
+  // Document access
+  DOCUMENT_DOWNLOADED
+  DOCUMENT_UPLOADED
+  DOCUMENT_DELETED
+  // Window management
+  WINDOW_CREATED
+  WINDOW_OPENED
+  WINDOW_CLOSED
+  WINDOW_EDITED
+  // Donation lifecycle
+  DONATION_INITIATED
+  DONATION_COMPLETED
+  DONATION_REFUNDED
+}
+
+enum AuditSeverity {
+  INFO        // Routine, expected
+  NOTICE      // Worth noticing in reports
+  WARNING     // Suspicious or unusual
+  CRITICAL    // Security-sensitive (failed logins, role changes)
+}
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+}
+
+enum DocumentKind {
+  BIO_DATA_PDF              // Auto-generated application PDF
+  RECOMMENDATION_LETTER     // Uploaded by LMD
+  SUPPORTING_DOCUMENT       // Other uploaded docs
+  PROFILE_PHOTO             // Applicant photo
+}
+
+// =====================================================================
+// CORE: LOCAL MISSION
+// =====================================================================
+
+/// The four regional subdivisions of 1000MM. Fixed at seed time;
+/// extending requires a code change + migration (intentional).
+model LocalMission {
+  id          String           @id @default(cuid())
+  code        LocalMissionCode @unique
+  name        String           // "Eastern Bangladesh Mission"
+  nameBangla  String           // "পূর্ব বাংলাদেশ মিশন"
+  description String?          @db.Text
+  contactEmail String?
+  contactPhone String?
+  address     String?          @db.Text
+
+  // The director currently leading this mission. Nullable for transitions.
+  directorId  String?          @unique
+  director    User?            @relation("MissionDirector", fields: [directorId], references: [id])
+
+  users               User[]               @relation("UserHomeMission")
+  applications        Application[]        @relation("ApplicationSubmittedFromMission")
+  applicationWindows  ApplicationWindow[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([code])
+  @@map("local_missions")
+}
+
+// =====================================================================
+// CORE: USER
+// =====================================================================
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified DateTime?
+  passwordHash  String   // bcrypt/argon2; null if SSO-only in future
+  fullName      String
+  fullNameBangla String?
+  phone         String?
+  dateOfBirth   DateTime?
+  preferredLanguage String @default("en") // "en" or "bn"
+
+  role          UserRole @default(TRAINEE)
+
+  // CURRENT mission affiliation. Per design decision: trainee moves
+  // simply update this field. Historical applications keep their own
+  // submittedFromMissionId so reports stay correct.
+  homeMissionId String
+  homeMission   LocalMission @relation("UserHomeMission", fields: [homeMissionId], references: [id])
+
+  // Reverse relations
+  applications          Application[]         @relation("ApplicationApplicant")
+  reviewedAsLmd         Application[]         @relation("ApplicationLmdReviewer")
+  reviewedAsDirector    Application[]         @relation("ApplicationDirectorReviewer")
+  recommendations       Recommendation[]
+  auditLogs             AuditLog[]
+  notifications         Notification[]
+  uploadedDocuments     ApplicationDocument[] @relation("DocumentUploadedBy")
+  trainingsAsTrainer    TrainingProgram[]     @relation("ProgramTrainers")
+  enrollmentsAsTrainee  ProgramEnrollment[]
+  windowsCreated        ApplicationWindow[]   @relation("WindowCreatedBy")
+  sessionsHistory       Session[]
+  passwordResetTokens   PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  directedMission       LocalMission?         @relation("MissionDirector")
+
+  // Account state
+  isActive      Boolean  @default(true)
+  failedLoginCount Int   @default(0)
+  lockedUntil   DateTime?
+  lastLoginAt   DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  @@index([email])
+  @@index([homeMissionId])
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+// =====================================================================
+// AUTH: Sessions, password reset, email verification
+// =====================================================================
+// We use Auth.js (NextAuth v5) with the Prisma adapter. Schemas below
+// match the adapter's expected shape. If a future migration to a
+// different auth library happens, these tables can be dropped/changed
+// without touching the business domain.
+// =====================================================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@map("email_verification_tokens")
+}
+
+// =====================================================================
+// DOMAIN: TRAINING PROGRAM
+// =====================================================================
+// This is the OPERATIONAL side of training programs (intake counts,
+// trainers, enrollments). The MARKETING side (rich descriptions,
+// banner images, blog-style content) lives in Payload CMS, which
+// stores a reference to this program's id.
+// =====================================================================
+
+model TrainingProgram {
+  id          String           @id @default(cuid())
+  code        String           @unique // e.g., "SPIR-2026-Q3"
+  title       String
+  titleBangla String?
+  category    TrainingCategory
+
+  // Brief operational description; rich marketing copy lives in Payload.
+  summary       String? @db.Text
+  summaryBangla String? @db.Text
+
+  // Reference to the Payload CMS content piece for richer marketing.
+  // Nullable so a program can exist before CMS content is published.
+  payloadContentId String?
+
+  // Schedule
+  startDate     DateTime
+  endDate       DateTime
+  location      String?
+  locationBangla String?
+
+  // Capacity
+  targetIntake  Int      // Target number of trainees
+  maxIntake     Int?     // Hard cap; null = unlimited
+
+  // Trainers (many-to-many)
+  trainers      User[]   @relation("ProgramTrainers")
+
+  // Enrollments (accepted trainees who completed enrollment)
+  enrollments   ProgramEnrollment[]
+
+  // Application windows for this program (typically one, but multiple supported)
+  applicationWindows ApplicationWindow[]
+
+  isPublished   Boolean  @default(false)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  @@index([category])
+  @@index([startDate])
+  @@index([code])
+  @@map("training_programs")
+}
+
+/// A confirmed trainee in a confirmed program. Created when an
+/// Application reaches ACCEPTED and the trainee confirms attendance.
+model ProgramEnrollment {
+  id          String           @id @default(cuid())
+  programId   String
+  program     TrainingProgram  @relation(fields: [programId], references: [id])
+  traineeId   String
+  trainee     User             @relation(fields: [traineeId], references: [id])
+  applicationId String?        @unique // The application that produced this enrollment
+  application Application?     @relation(fields: [applicationId], references: [id])
+
+  enrolledAt  DateTime         @default(now())
+  attendanceConfirmed Boolean  @default(false)
+  notes       String?          @db.Text
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@unique([programId, traineeId])
+  @@index([programId])
+  @@index([traineeId])
+  @@map("program_enrollments")
+}
+
+// =====================================================================
+// DOMAIN: APPLICATION WINDOW
+// =====================================================================
+
+model ApplicationWindow {
+  id          String                 @id @default(cuid())
+  programId   String
+  program     TrainingProgram        @relation(fields: [programId], references: [id])
+
+  // If specified, this window is scoped to a single Local Mission.
+  // Most windows are global (null) and accept applicants from all missions.
+  scopedToMissionId String?
+  scopedToMission   LocalMission? @relation(fields: [scopedToMissionId], references: [id])
+
+  state             ApplicationWindowState @default(DRAFT)
+
+  // Dates that drive automatic state transitions
+  advertisingStartDate DateTime
+  applicationOpenDate  DateTime
+  applicationCloseDate DateTime
+  trainingStartDate    DateTime
+
+  targetIntake      Int
+  notes             String? @db.Text
+
+  // Audit
+  createdById       String
+  createdBy         User    @relation("WindowCreatedBy", fields: [createdById], references: [id])
+
+  applications      Application[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  deletedAt         DateTime?
+
+  @@index([programId])
+  @@index([state])
+  @@index([scopedToMissionId])
+  @@map("application_windows")
+}
+
+// =====================================================================
+// DOMAIN: APPLICATION
+// =====================================================================
+// The core workflow entity. State transitions are governed by the
+// state machine in lib/workflow/application-machine.ts (not in DB).
+// Every transition writes an entry to ApplicationStatusHistory AND
+// an AuditLog entry.
+// =====================================================================
+
+model Application {
+  id          String            @id @default(cuid())
+  // Human-readable reference (e.g., "APP-2026-EBM-00042"). Generated
+  // at submission time from sequence + mission code + year.
+  referenceNumber String?       @unique
+
+  // Who is applying
+  applicantId String
+  applicant   User              @relation("ApplicationApplicant", fields: [applicantId], references: [id])
+
+  // Which window
+  windowId    String
+  window      ApplicationWindow @relation(fields: [windowId], references: [id])
+
+  // ─────────────────────────────────────────────────────────────────
+  // Mission snapshot (set at submission, NEVER updated).
+  // Even if the user later moves to another Local Mission, this
+  // application stays attached to the mission they belonged to at
+  // submission time. This is the key to historically accurate
+  // mission-scoped reports for LMDs.
+  // ─────────────────────────────────────────────────────────────────
+  submittedFromMissionId String
+  submittedFromMission   LocalMission @relation("ApplicationSubmittedFromMission", fields: [submittedFromMissionId], references: [id])
+
+  // Workflow status
+  status      ApplicationStatus @default(DRAFT)
+  submittedAt DateTime?
+  lastTransitionAt DateTime?
+
+  // ─────────────────────────────────────────────────────────────────
+  // Bio-data: HYBRID design.
+  // Core demographic fields are columns so they can be filtered and
+  // aggregated in reports without ugly JSON queries. Long-form text
+  // and less commonly queried answers live in formData JSON.
+  // The canonical record of the EXACT form submitted is the
+  // generated PDF (see ApplicationDocument with kind=BIO_DATA_PDF).
+  // ─────────────────────────────────────────────────────────────────
+  applicantFullName     String   // Copy of applicant name at submission
+  applicantFullNameBangla String?
+  applicantDateOfBirth  DateTime
+  applicantGender       String   // "male" | "female" — left as string to allow future flexibility
+  applicantMaritalStatus String? // "single" | "married" | "widowed" | etc.
+  educationLevel        String?  // e.g. "ssc" | "hsc" | "bachelor" | "master"
+  permanentAddressCity  String?
+  permanentAddressDivision String?
+  currentAddressCity    String?
+  currentAddressDivision String?
+  nidOrPassport         String?  // Encrypted at rest at the application layer
+
+  // The full free-form form payload. Schema versioned via formVersion.
+  formData              Json
+  formVersion           Int      @default(1)
+
+  // Reviewer tracking
+  lmdReviewerId         String?
+  lmdReviewer           User?    @relation("ApplicationLmdReviewer", fields: [lmdReviewerId], references: [id])
+  lmdReviewStartedAt    DateTime?
+  lmdReviewCompletedAt  DateTime?
+
+  directorReviewerId    String?
+  directorReviewer      User?    @relation("ApplicationDirectorReviewer", fields: [directorReviewerId], references: [id])
+  directorReviewStartedAt DateTime?
+  directorReviewCompletedAt DateTime?
+
+  // Comments left by reviewers (visible to applicant)
+  lmdReviewerComment    String?  @db.Text
+  directorReviewerComment String? @db.Text
+  rejectionReason       String?  @db.Text
+
+  // Relations
+  documents             ApplicationDocument[]
+  recommendation        Recommendation?
+  statusHistory         ApplicationStatusHistory[]
+  enrollment            ProgramEnrollment?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  deletedAt             DateTime?
+
+  // Enforce: one application per (applicant, window). Implements FR-5.2.
+  @@unique([applicantId, windowId])
+  @@index([applicantId])
+  @@index([windowId])
+  @@index([submittedFromMissionId])
+  @@index([status])
+  @@index([submittedAt])
+  @@map("applications")
+}
+
+/// Append-only history of every status transition for an application.
+/// One row per transition. The current status on Application is the
+/// "head" of this list, but the list itself is the source of truth
+/// for "show me the timeline of this application."
+model ApplicationStatusHistory {
+  id            String            @id @default(cuid())
+  applicationId String
+  application   Application       @relation(fields: [applicationId], references: [id])
+
+  fromStatus    ApplicationStatus? // null on first entry
+  toStatus      ApplicationStatus
+  triggeredById String              // user who caused the transition
+  comment       String?             @db.Text
+
+  createdAt     DateTime           @default(now())
+
+  @@index([applicationId])
+  @@index([createdAt])
+  @@map("application_status_history")
+}
+
+// =====================================================================
+// DOMAIN: RECOMMENDATION & DOCUMENTS
+// =====================================================================
+
+/// One recommendation per application (from the LMD). Files attached
+/// are stored as ApplicationDocument with kind=RECOMMENDATION_LETTER.
+model Recommendation {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id])
+
+  recommenderId String      // The LMD
+  recommender   User        @relation(fields: [recommenderId], references: [id])
+
+  writtenComment String?    @db.Text
+  recommendedAt DateTime    @default(now())
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  @@index([recommenderId])
+  @@map("recommendations")
+}
+
+/// Any file attached to an application — generated PDF, recommendation
+/// scan, profile photo, supporting docs. Files live in object storage
+/// (Cloudflare R2); this row stores metadata + storage key.
+model ApplicationDocument {
+  id            String       @id @default(cuid())
+  applicationId String
+  application   Application  @relation(fields: [applicationId], references: [id])
+
+  kind          DocumentKind
+  fileName      String
+  mimeType      String
+  fileSizeBytes Int
+  storageKey    String       // Path/key in R2
+  checksum      String?      // SHA-256 for integrity verification
+
+  // For BIO_DATA_PDF documents, track the form version that produced it.
+  formVersion   Int?
+
+  uploadedById  String
+  uploadedBy    User         @relation("DocumentUploadedBy", fields: [uploadedById], references: [id])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  @@index([applicationId])
+  @@index([kind])
+  @@map("application_documents")
+}
+
+// =====================================================================
+// DOMAIN: DONATION
+// =====================================================================
+
+model Donation {
+  id            String         @id @default(cuid())
+  // Donor info — all optional (anonymous donations allowed)
+  donorName     String?
+  donorEmail    String?
+  donorPhone    String?
+  donorMessage  String?        @db.Text
+  isAnonymous   Boolean        @default(false)
+
+  // If donor was logged in, link to their account; otherwise null
+  userId        String?
+
+  // Amount as integer minor units (paisa for BDT, cents for USD)
+  amountMinor   BigInt
+  currency      String         // "BDT" | "USD"
+  gateway       PaymentGateway
+  status        DonationStatus @default(PENDING)
+
+  // Gateway-specific transaction reference
+  gatewayTransactionId String?
+  gatewayResponsePayload Json?  // Full gateway response for reconciliation
+
+  initiatedAt   DateTime       @default(now())
+  completedAt   DateTime?
+  refundedAt    DateTime?
+
+  // Receipt
+  receiptNumber String?        @unique
+  receiptSentAt DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  @@index([gateway])
+  @@index([status])
+  @@index([completedAt])
+  @@index([donorEmail])
+  @@map("donations")
+}
+
+// =====================================================================
+// DOMAIN: AUDIT LOG
+// =====================================================================
+
+/// Append-only audit log. Database-level write-once enforcement is
+/// done by a Postgres trigger (see migrations) that prevents UPDATE
+/// and DELETE on this table for non-superuser roles.
+model AuditLog {
+  id          String        @id @default(cuid())
+
+  action      AuditAction
+  severity    AuditSeverity @default(INFO)
+
+  // Who did it (null = system action)
+  actorId     String?
+  actor       User?         @relation(fields: [actorId], references: [id])
+  actorRole   UserRole?     // Snapshot of role at time of action
+  actorMissionCode LocalMissionCode? // Snapshot of mission at time of action
+
+  // What was affected (polymorphic — only one of these is typically set)
+  targetType  String?       // e.g. "Application", "User", "Donation"
+  targetId    String?       // The affected entity's id
+
+  // Context
+  ipAddress   String?
+  userAgent   String?       @db.Text
+
+  // Structured details. Keep small — large payloads belong in their own tables.
+  details     Json?
+
+  createdAt   DateTime      @default(now())
+
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@index([action])
+  @@index([severity])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// =====================================================================
+// DOMAIN: NOTIFICATION
+// =====================================================================
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id])
+
+  channel   NotificationChannel
+  // Templated key — actual text rendered from i18n message catalog at send time
+  templateKey String
+  // Variables for template rendering
+  templateData Json?
+
+  // For email notifications, we record delivery state
+  emailMessageId String?
+  sentAt    DateTime?
+  failedAt  DateTime?
+  errorMessage String?       @db.Text
+
+  // For in-app notifications, we track read state
+  readAt    DateTime?
+
+  // Link clicked through to (when applicable)
+  actionUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([channel])
+  @@index([sentAt])
+  @@index([readAt])
+  @@map("notifications")
+}
+
+// =====================================================================
+// DOMAIN: CONTACT MESSAGE
+// =====================================================================
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  fullName  String
+  email     String
+  phone     String?
+  subject   String?
+  message   String   @db.Text
+
+  // Anti-spam: IP and basic captcha verification result
+  ipAddress String?
+  isSpam    Boolean  @default(false)
+
+  // Workflow: track admin handling
+  isHandled Boolean  @default(false)
+  handledAt DateTime?
+  handledById String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@index([isHandled])
+  @@index([createdAt])
+  @@map("contact_messages")
+}
+
+// =====================================================================
+// CONFIG: System Settings
+// =====================================================================
+// Key-value store for runtime-tunable settings that shouldn't require
+// a redeploy: feature flags, email templates' admin overrides, etc.
+// =====================================================================
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  description String? @db.Text
+  updatedAt DateTime @updatedAt
+  updatedById String?
+
+  @@map("system_settings")
+}

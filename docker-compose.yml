@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mm1000-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mm1000
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: mm1000_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - mm1000-pgdata:/var/lib/postgresql/data
+
+volumes:
+  mm1000-pgdata:
