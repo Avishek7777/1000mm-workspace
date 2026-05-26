@@ -21,7 +21,7 @@
  *   /verify-email       — verify email from token (built but not enforced)
  *   /api/auth/[...]     — Auth.js endpoints
  */
-
+import "server-only";
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";

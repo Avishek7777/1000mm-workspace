@@ -5,7 +5,7 @@
  * They centralize the patterns "who is logged in?" and "is this person
  * allowed to do this?" so individual handlers don't reimplement them.
  */
-
+import "server-only";
 import { redirect } from "next/navigation";
 import { auth } from "./config";
 import { prisma } from "@/lib/prisma/base";

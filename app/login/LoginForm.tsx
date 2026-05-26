@@ -7,7 +7,7 @@ import { loginAction, type FormState } from "@/lib/auth/actions";
 
 const initial: FormState = { ok: false };
 
-export default async function LoginForm() {
+export default function LoginForm() {
   const params = useSearchParams();
   const from = params.get("from") ?? "";
   const resetSuccess = params.get("reset") === "success";
