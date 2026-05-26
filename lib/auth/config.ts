@@ -181,7 +181,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
         session.user.homeMissionId = token.homeMissionId as string;
-        session.user.homeMissionCode = token.homeMissionCode as LocalMissionCode;
+        session.user.homeMissionCode =
+          token.homeMissionCode as LocalMissionCode;
       }
       return session;
     },
