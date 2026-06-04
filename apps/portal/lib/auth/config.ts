@@ -26,7 +26,7 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma/base";
+import { prisma } from "@1000mm/db";
 import { edgeAuthConfig } from "./edge.config";
 import type { LocalMissionCode, UserRole } from "@prisma/client";
 

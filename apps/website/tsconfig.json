@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@1000mm/db": ["../../packages/db/src/index.ts"]
     }
   },
   "include": [

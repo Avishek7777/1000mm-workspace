@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/auth/helpers";
 import SystemAdminDashboard from "./system-admin/page";
+import TraineeDashboard from "./trainee/page";
 
 // As more role dashboards are built, import and add them here.
 // Each is a regular async Server Component — no special routing needed.
@@ -11,11 +12,13 @@ export default async function DashboardPage() {
     case "SYSTEM_ADMIN":
       return <SystemAdminDashboard />;
 
+    case "TRAINEE":
+      return <TraineeDashboard />;
+
     // Placeholders — replace with real dashboards as they're built
     case "MAIN_DIRECTOR":
     case "LOCAL_DIRECTOR":
     case "TRAINER":
-    case "TRAINEE":
     default:
       return (
         <div className="flex h-full items-center justify-center">

@@ -1,0 +1,816 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Reference Number Counter ────────────────────────────────────────────────
+// Atomic per-mission per-year serial. On each submission:
+// SELECT ... FOR UPDATE on the matching row, increment lastSerial, then
+// format referenceNumber as "{code}-{year}-{zero-padded serial}".
+model ApplicationCounter {
+  missionCode LocalMissionCode
+  year        Int
+  lastSerial  Int              @default(0)
+
+  @@id([missionCode, year])
+  @@map("application_counters")
+}
+
+// ─── Local Missions ───────────────────────────────────────────────────────────
+model LocalMission {
+  id                 String              @id @default(cuid())
+  code               LocalMissionCode    @unique
+  name               String
+  nameBangla         String
+  description        String?
+  contactEmail       String?
+  contactPhone       String?
+  address            String?
+  directorId         String?             @unique
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  deletedAt          DateTime?
+  applicationWindows ApplicationWindow[]
+  applications       Application[]       @relation("ApplicationSubmittedFromMission")
+  complaints         Complaint[]
+  director           User?               @relation("MissionDirector", fields: [directorId], references: [id])
+  users              User[]              @relation("UserHomeMission")
+
+  @@index([code])
+  @@map("local_missions")
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+// Applicants create an account BEFORE filling the bio data form.
+// Role starts as TRAINEE. On application ACCEPTED the account is
+// considered fully active (isActive already true from registration).
+model User {
+  id                      String                   @id @default(cuid())
+  email                   String                   @unique
+  emailVerified           DateTime?
+  passwordHash            String
+  fullName                String
+  fullNameBangla          String?
+  phone                   String?
+  dateOfBirth             DateTime?
+  preferredLanguage       String                   @default("en")
+  role                    UserRole                 @default(TRAINEE)
+  homeMissionId           String
+  isActive                Boolean                  @default(true)
+  failedLoginCount        Int                      @default(0)
+  lockedUntil             DateTime?
+  lastLoginAt             DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  deletedAt               DateTime?
+  uploadedDocuments       ApplicationDocument[]    @relation("DocumentUploadedBy")
+  windowsCreated          ApplicationWindow[]      @relation("WindowCreatedBy")
+  applications            Application[]            @relation("ApplicationApplicant")
+  reviewedAsDirector      Application[]            @relation("ApplicationDirectorReviewer")
+  reviewedAsLmd           Application[]            @relation("ApplicationLmdReviewer")
+  auditLogs               AuditLog[]
+  emailVerificationTokens EmailVerificationToken[]
+  directedMission         LocalMission?            @relation("MissionDirector")
+  fieldReports            FieldReport[]
+  notifications           Notification[]
+  passwordResetTokens     PasswordResetToken[]
+  complaints              Complaint[]              @relation("ComplaintSubmittedBy")
+  resolvedComplaints      Complaint[]              @relation("ComplaintResolvedBy")
+  announcements           Announcement[]           @relation("AnnouncementCreatedBy")
+  enrollmentsAsTrainee    ProgramEnrollment[]
+  recommendations         Recommendation[]
+  sessionsHistory         Session[]
+  homeMission             LocalMission             @relation("UserHomeMission", fields: [homeMissionId], references: [id])
+  trainingsAsTrainer      TrainingProgram[]        @relation("ProgramTrainers")
+  deploymentAssignments   ProgramEnrollment[]      @relation("DeploymentAssignedBy")
+
+  @@index([email])
+  @@index([homeMissionId])
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("email_verification_tokens")
+}
+
+// ─── Announcements ────────────────────────────────────────────────────────────
+// Created by System Admin. Visible to LMDs and Trainees on their dashboards.
+model Announcement {
+  id            String    @id @default(cuid())
+  title         String
+  body          String
+  attachmentUrl String?
+  publishedAt   DateTime?
+  expiresAt     DateTime?
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdBy     User      @relation("AnnouncementCreatedBy", fields: [createdById], references: [id])
+
+  @@index([publishedAt])
+  @@index([expiresAt])
+  @@map("announcements")
+}
+
+// ─── Training Programs ────────────────────────────────────────────────────────
+model TrainingProgram {
+  id                 String              @id @default(cuid())
+  code               String              @unique
+  title              String
+  titleBangla        String?
+  category           TrainingCategory
+  summary            String?
+  summaryBangla      String?
+  payloadContentId   String?
+  startDate          DateTime
+  endDate            DateTime
+  location           String?
+  locationBangla     String?
+  targetIntake       Int
+  maxIntake          Int?
+  isPublished        Boolean             @default(false)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  deletedAt          DateTime?
+  applicationWindows ApplicationWindow[]
+  enrollments        ProgramEnrollment[]
+  fieldReports       FieldReport[]
+  trainers           User[]              @relation("ProgramTrainers")
+
+  @@index([category])
+  @@index([startDate])
+  @@index([code])
+  @@map("training_programs")
+}
+
+model ProgramEnrollment {
+  id                  String          @id @default(cuid())
+  programId           String
+  traineeId           String
+  applicationId       String?         @unique
+  enrolledAt          DateTime        @default(now())
+  attendanceConfirmed Boolean         @default(false)
+  certificateIssued   Boolean         @default(false)
+  certificateIssuedAt DateTime?
+
+  // ── Deployment location (assigned by LMD) ──
+  deploymentLocation  String?         // Area/district name where trainee is deployed
+  deploymentLatitude  Float?          // Optional — for map view
+  deploymentLongitude Float?          // Optional — for map view
+  deploymentAssignedAt DateTime?      // When the location was assigned
+  deploymentAssignedById String?      // FK to User (LMD who assigned it)
+
+  notes               String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  deletedAt           DateTime?
+  application         Application?    @relation(fields: [applicationId], references: [id])
+  program             TrainingProgram @relation(fields: [programId], references: [id])
+  trainee             User            @relation(fields: [traineeId], references: [id])
+  deploymentAssignedBy User?          @relation("DeploymentAssignedBy", fields: [deploymentAssignedById], references: [id])
+
+  @@unique([programId, traineeId])
+  @@index([programId])
+  @@index([traineeId])
+  @@index([deploymentLocation])
+  @@map("program_enrollments")
+}
+
+model ApplicationWindow {
+  id                   String                 @id @default(cuid())
+  programId            String
+  scopedToMissionId    String?
+  state                ApplicationWindowState @default(DRAFT)
+  advertisingStartDate DateTime
+  applicationOpenDate  DateTime
+  applicationCloseDate DateTime
+  trainingStartDate    DateTime
+  targetIntake         Int
+  notes                String?
+  createdById          String
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  deletedAt            DateTime?
+  createdBy            User                   @relation("WindowCreatedBy", fields: [createdById], references: [id])
+  program              TrainingProgram        @relation(fields: [programId], references: [id])
+  scopedToMission      LocalMission?          @relation(fields: [scopedToMissionId], references: [id])
+  applications         Application[]
+
+  @@index([programId])
+  @@index([state])
+  @@index([scopedToMissionId])
+  @@map("application_windows")
+}
+
+// ─── Application ──────────────────────────────────────────────────────────────
+// Core model. Applicant must be a registered User (created before form fill).
+// All fields the form collects are either promoted columns (for querying/reporting)
+// or stored in the formData Json blob (for display/PDF only).
+//
+// ADDRESS FIELDS: stored as plain String. Validated at app layer against
+// a static BD district/upazila JSON dictionary. NOT Prisma enums.
+//
+// EDUCATION: stored as a Json array inside formData. Each entry has:
+//   { degree, institutionName, gpa, passingYear, certificateDocumentId }
+//   certificateDocumentId references ApplicationDocument.id
+//
+// FAMILY NID FILES: stored as ApplicationDocument with kind FATHER_NID / MOTHER_NID
+//
+// PROFILE PHOTO: stored as ApplicationDocument with kind PROFILE_PHOTO;
+//   profilePhotoDocumentId caches the active photo reference for quick access.
+//
+// APPLICATION SECTION (Page 4) non-queryable fields stored in formData:
+//   { missionaryDesire, courtRecord, healthCondition, badHabits, declarationAccepted }
+model Application {
+  id              String  @id @default(cuid())
+  referenceNumber String? @unique // Set on submit. Format: NBM-2026-00001. Display only — never used as auth.
+
+  // ── Applicant link ──
+  applicantId String
+  applicant   User   @relation("ApplicationApplicant", fields: [applicantId], references: [id])
+
+  // ── Window / Mission ──
+  windowId               String
+  window                 ApplicationWindow @relation(fields: [windowId], references: [id])
+  submittedFromMissionId String
+  submittedFromMission   LocalMission      @relation("ApplicationSubmittedFromMission", fields: [submittedFromMissionId], references: [id])
+
+  // ── Status & workflow ──
+  status           ApplicationStatus @default(DRAFT)
+  submittedAt      DateTime?
+  lastTransitionAt DateTime?
+
+  // ── Promoted personal detail columns (queryable / reportable) ──
+  applicantFullName       String
+  applicantFullNameBangla String?
+  applicantDateOfBirth    DateTime
+  applicantAge            Int           // Derived from DOB, stored for quick filtering
+  applicantGender         Gender
+  applicantBloodType      BloodType?
+  applicantMaritalStatus  MaritalStatus?
+  applicantDenomination   Denomination?
+  applicantMobileNo       String?
+  applicantEmail          String?
+  applicantPlaceOfBirth   String?
+  applicantHeight         Float?
+  applicantWeight         Float?
+  applicantChurchName     String?
+  applicantDateOfBaptism  DateTime?
+  applicantWorkplace      String?       // Present workplace / occupation
+
+  // ── Address columns (plain String, validated against static JSON at app layer) ──
+  presentAddressDistrict     String?
+  presentAddressUpazila      String?
+  presentAddressPostOffice   String?
+  presentAddressVillage      String?
+  permanentAddressDistrict   String?
+  permanentAddressUpazila    String?
+  permanentAddressPostOffice String?
+  permanentAddressVillage    String?
+  permanentSameAsPresent     Boolean @default(false)
+
+  // ── Profile photo shortcut ──
+  profilePhotoDocumentId String? // FK to ApplicationDocument; set when photo uploaded
+
+  // ── Family details (promoted for quick access) ──
+  fatherName     String?
+  fatherAge      Int?
+  fatherReligion Religion?
+  fatherChurchName String?   // Only if fatherReligion == CHRISTIANITY
+  motherName     String?
+  motherAge      Int?
+  motherReligion Religion?
+  motherChurchName String?   // Only if motherReligion == CHRISTIANITY
+  familyMobileNo String?
+  familyEmail    String?
+
+  // ── Education (array) + application section fields ──
+  // formData stores:
+  //   - education: { id, degree, institutionName, gpa, passingYear, certificateDocumentId }[]
+  //   - missionaryDesire: string
+  //   - courtRecord: boolean
+  //   - healthCondition: boolean
+  //   - badHabits: boolean
+  //   - declarationAccepted: boolean
+  formData    Json
+  formVersion Int  @default(1)
+
+  // ── LMD review ──
+  lmdReviewerId        String?
+  lmdReviewer          User?    @relation("ApplicationLmdReviewer", fields: [lmdReviewerId], references: [id])
+  lmdReviewStartedAt   DateTime?
+  lmdReviewCompletedAt DateTime?
+  lmdReviewerComment   String?
+
+  // ── Director review ──
+  directorReviewerId        String?
+  directorReviewer          User?    @relation("ApplicationDirectorReviewer", fields: [directorReviewerId], references: [id])
+  directorReviewStartedAt   DateTime?
+  directorReviewCompletedAt DateTime?
+  directorReviewerComment   String?
+
+  // ── Rejection ──
+  rejectionReason String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  documents      ApplicationDocument[]
+  statusHistory  ApplicationStatusHistory[]
+  enrollment     ProgramEnrollment?
+  recommendation Recommendation?
+  fieldReports   FieldReport[]
+
+  @@unique([applicantId, windowId])
+  @@index([applicantId])
+  @@index([windowId])
+  @@index([submittedFromMissionId])
+  @@index([status])
+  @@index([submittedAt])
+  @@map("applications")
+}
+
+model ApplicationStatusHistory {
+  id            String             @id @default(cuid())
+  applicationId String
+  fromStatus    ApplicationStatus?
+  toStatus      ApplicationStatus
+  triggeredById String
+  comment       String?
+  createdAt     DateTime           @default(now())
+  application   Application        @relation(fields: [applicationId], references: [id])
+
+  @@index([applicationId])
+  @@index([createdAt])
+  @@map("application_status_history")
+}
+
+// ─── Recommendation ───────────────────────────────────────────────────────────
+// Created by the LMD when they recommend an applicant.
+// Documents uploaded by LMD (Recommendation Letter, Sworn Statement, Ex-Com Vote)
+// are stored as ApplicationDocument with their respective kinds.
+model Recommendation {
+  id             String      @id @default(cuid())
+  applicationId  String      @unique
+  recommenderId  String
+  writtenComment String?
+  recommendedAt  DateTime    @default(now())
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+  application    Application @relation(fields: [applicationId], references: [id])
+  recommender    User        @relation(fields: [recommenderId], references: [id])
+
+  @@index([recommenderId])
+  @@map("recommendations")
+}
+
+// ─── Application Documents ───────────────────────────────────────────────────
+// All file uploads for an application. Files stored in Cloudflare R2.
+// educationEntryIndex: for EDUCATION_CERTIFICATE kind only — links the
+// document to a specific entry in the formData education array (0-based index).
+model ApplicationDocument {
+  id                  String       @id @default(cuid())
+  applicationId       String
+  kind                DocumentKind
+  fileName            String
+  mimeType            String
+  fileSizeBytes       Int
+  storageKey          String
+  checksum            String?
+  formVersion         Int?
+  educationEntryIndex Int?         // EDUCATION_CERTIFICATE only
+  uploadedById        String
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  deletedAt           DateTime?
+  application         Application  @relation(fields: [applicationId], references: [id])
+  uploadedBy          User         @relation("DocumentUploadedBy", fields: [uploadedById], references: [id])
+
+  @@index([applicationId])
+  @@index([kind])
+  @@map("application_documents")
+}
+
+// ─── Field Reports ────────────────────────────────────────────────────────────
+// Monthly progress reports submitted by deployed trainees (status = ACCEPTED).
+// Visible to the trainee's LMD and the Union Director.
+// One report per trainee per month — enforced by the unique constraint.
+model FieldReport {
+  id                 String          @id @default(cuid())
+  traineeId          String
+  applicationId      String
+  programId          String
+  reportMonth        Int             // 1–12
+  reportYear         Int
+  activitiesSummary  String
+  peopleReached      Int?
+  challengesFaced    String?
+  prayerRequests     String?
+  attachments        Json?           // [{ fileName, storageKey, mimeType, fileSizeBytes }]
+  submittedAt        DateTime        @default(now())
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  trainee            User            @relation(fields: [traineeId], references: [id])
+  application        Application     @relation(fields: [applicationId], references: [id])
+  program            TrainingProgram @relation(fields: [programId], references: [id])
+
+  @@unique([traineeId, reportMonth, reportYear])
+  @@index([traineeId])
+  @@index([programId])
+  @@index([reportYear, reportMonth])
+  @@map("field_reports")
+}
+
+// ─── Complaints ───────────────────────────────────────────────────────────────
+// Anonymous by default. submittedById is null when anonymous.
+// missionCode is inferred from session at submit time for LMD routing
+// and stored even for anonymous submissions so the correct LMD sees it.
+model Complaint {
+  id              String            @id @default(cuid())
+  category        ComplaintCategory
+  subject         String
+  description     String
+  isAnonymous     Boolean           @default(true)
+  submittedById   String?           // null if anonymous
+  missionCode     LocalMissionCode? // for LMD routing
+  missionId       String?           // FK to LocalMission for relation
+  isResolved      Boolean           @default(false)
+  resolvedAt      DateTime?
+  resolvedById    String?
+  response        String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  submittedBy     User?             @relation("ComplaintSubmittedBy", fields: [submittedById], references: [id])
+  resolvedBy      User?             @relation("ComplaintResolvedBy", fields: [resolvedById], references: [id])
+  mission         LocalMission?     @relation(fields: [missionId], references: [id])
+
+  @@index([missionCode])
+  @@index([isResolved])
+  @@index([category])
+  @@index([createdAt])
+  @@map("complaints")
+}
+
+// ─── Donations ────────────────────────────────────────────────────────────────
+model Donation {
+  id                     String         @id @default(cuid())
+  donorName              String?
+  donorEmail             String?
+  donorPhone             String?
+  donorMessage           String?
+  isAnonymous            Boolean        @default(false)
+  userId                 String?
+  amountMinor            BigInt
+  currency               String
+  gateway                PaymentGateway
+  status                 DonationStatus @default(PENDING)
+  gatewayTransactionId   String?
+  gatewayResponsePayload Json?
+  initiatedAt            DateTime       @default(now())
+  completedAt            DateTime?
+  refundedAt             DateTime?
+  receiptNumber          String?        @unique
+  receiptSentAt          DateTime?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  deletedAt              DateTime?
+
+  @@index([gateway])
+  @@index([status])
+  @@index([completedAt])
+  @@index([donorEmail])
+  @@map("donations")
+}
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+model AuditLog {
+  id               String            @id @default(cuid())
+  action           AuditAction
+  severity         AuditSeverity     @default(INFO)
+  actorId          String?
+  actorRole        UserRole?
+  actorMissionCode LocalMissionCode?
+  targetType       String?
+  targetId         String?
+  ipAddress        String?
+  userAgent        String?
+  details          Json?
+  createdAt        DateTime          @default(now())
+  actor            User?             @relation(fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@index([action])
+  @@index([severity])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+model Notification {
+  id             String              @id @default(cuid())
+  userId         String
+  channel        NotificationChannel
+  templateKey    String
+  templateData   Json?
+  emailMessageId String?
+  sentAt         DateTime?
+  failedAt       DateTime?
+  errorMessage   String?
+  readAt         DateTime?
+  actionUrl      String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  user           User                @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([channel])
+  @@index([sentAt])
+  @@index([readAt])
+  @@map("notifications")
+}
+
+// ─── Contact / System ────────────────────────────────────────────────────────
+model ContactMessage {
+  id          String    @id @default(cuid())
+  fullName    String
+  email       String
+  phone       String?
+  subject     String?
+  message     String
+  ipAddress   String?
+  isSpam      Boolean   @default(false)
+  isHandled   Boolean   @default(false)
+  handledAt   DateTime?
+  handledById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([isHandled])
+  @@index([createdAt])
+  @@map("contact_messages")
+}
+
+model SystemSetting {
+  key         String   @id
+  value       Json
+  description String?
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+
+  @@map("system_settings")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+enum LocalMissionCode {
+  EBM
+  NBM
+  SBM
+  WBM
+}
+
+enum UserRole {
+  TRAINEE
+  TRAINER
+  LOCAL_DIRECTOR
+  MAIN_DIRECTOR
+  SYSTEM_ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum BloodType {
+  A_POS
+  A_NEG
+  B_POS
+  B_NEG
+  AB_POS
+  AB_NEG
+  O_POS
+  O_NEG
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+}
+
+enum Denomination {
+  SEVENTH_DAY_ADVENTIST
+  BAPTIST
+  CATHOLIC
+  METHODIST
+  PRESBYTERIAN
+  PENTECOSTAL
+  ANGLICAN
+  LUTHERAN
+  ORTHODOX
+  OTHER
+}
+
+enum Religion {
+  CHRISTIANITY
+  ISLAM
+  HINDUISM
+  BUDDHISM
+  JUDAISM
+  OTHER
+}
+
+enum TrainingCategory {
+  SPIRITUAL
+  PHYSICAL
+  MENTAL
+  SOCIAL
+}
+
+enum ApplicationWindowState {
+  DRAFT
+  ADVERTISING
+  OPEN
+  CLOSED
+  ARCHIVED
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_LMD_REVIEW
+  RETURNED_TO_APPLICANT
+  RECOMMENDED
+  UNDER_MAIN_DIRECTOR_REVIEW
+  RETURNED_TO_LMD
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum DocumentKind {
+  // ── Applicant uploads (Bio Data) ──
+  BIO_DATA_PDF                   // Auto-generated PDF of the completed form
+  PROFILE_PHOTO                  // Applicant's own photo (Page 1)
+  FATHER_NID                     // Father's NID scan (Page 2)
+  MOTHER_NID                     // Mother's NID scan (Page 2)
+  EDUCATION_CERTIFICATE          // Per education entry (Page 3); use educationEntryIndex
+
+  // ── Applicant uploads (Application section) ──
+  DISTRICT_PASTOR_RECOMMENDATION // Recommendation letter from district pastor
+  NID                            // Applicant's own NID (if age requirement met)
+  BIRTH_CERTIFICATE              // Applicant's birth certificate
+  PARENT_PASSPORT_PHOTO          // Passport-sized photo of one parent (not a passport scan)
+  BAPTISM_CERTIFICATE            // Baptism certificate
+  PARENTS_CONSENT                // Parents' consent form
+  LETTER_OF_INTENT               // Letter of intent / commitment
+
+  // ── LMD uploads ──
+  RECOMMENDATION_LETTER          // LMD's formal recommendation letter PDF
+  SWORN_STATEMENT                // LMD's sworn statement legal paper
+  EXCOM_VOTE_COPY                // Executive Committee vote copy from the church
+
+  // ── System generated ──
+  ID_CARD                        // Generated ID card PDF (batch; on-demand TBD)
+  CERTIFICATE                    // Training completion certificate (design TBD)
+
+  // ── Misc ──
+  SUPPORTING_DOCUMENT            // Any other document
+}
+
+enum ComplaintCategory {
+  GRIEVANCE
+  SUGGESTION
+  GENERAL_FEEDBACK
+}
+
+enum DonationStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentGateway {
+  STRIPE
+  PAYPAL
+  SSLCOMMERZ
+  BKASH
+}
+
+enum AuditAction {
+  AUTH_LOGIN_SUCCESS
+  AUTH_LOGIN_FAILED
+  AUTH_LOGOUT
+  AUTH_PASSWORD_RESET_REQUESTED
+  AUTH_PASSWORD_CHANGED
+  USER_CREATED
+  USER_ROLE_CHANGED
+  USER_MISSION_CHANGED
+  USER_DEACTIVATED
+  USER_REACTIVATED
+  APPLICATION_SUBMITTED
+  APPLICATION_REVIEW_STARTED
+  APPLICATION_RETURNED_TO_APPLICANT
+  APPLICATION_RECOMMENDED
+  APPLICATION_RETURNED_TO_LMD
+  APPLICATION_ACCEPTED
+  APPLICATION_REJECTED
+  APPLICATION_WITHDRAWN
+  DOCUMENT_DOWNLOADED
+  DOCUMENT_UPLOADED
+  DOCUMENT_DELETED
+  WINDOW_CREATED
+  WINDOW_OPENED
+  WINDOW_CLOSED
+  WINDOW_EDITED
+  FIELD_REPORT_SUBMITTED
+  COMPLAINT_SUBMITTED
+  ID_CARDS_GENERATED
+  CERTIFICATE_GENERATED
+  DONATION_INITIATED
+  DONATION_COMPLETED
+  DONATION_REFUNDED
+}
+
+enum AuditSeverity {
+  INFO
+  NOTICE
+  WARNING
+  CRITICAL
+}
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+}
+
+

@@ -17,7 +17,7 @@ import bcrypt from "bcrypt";
 import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
 import { LocalMissionCode } from "@prisma/client";
-import { prisma } from "@/lib/prisma/base";
+import { prisma } from "@1000mm/db";
 import { signIn, signOut } from "@/lib/auth/config";
 
 // ─────────────────────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ export async function registerAction(
     password,
     redirect: false,
   });
-  redirect("/dashboard");
+  redirect("/dashboard/my-application/new");
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ export async function loginAction(
 // ─────────────────────────────────────────────────────────────────────
 export async function logoutAction() {
   await signOut({ redirect: false });
-  redirect("/login");
+  redirect("/");
 }
 
 // ─────────────────────────────────────────────────────────────────────

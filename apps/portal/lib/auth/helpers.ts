@@ -8,8 +8,8 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { auth } from "./config";
-import { prisma } from "@/lib/prisma/base";
-import { withMissionScope } from "@/lib/prisma/mission-scope";
+import { prisma } from "@1000mm/db";
+import { withMissionScope } from "@1000mm/db";
 import type { UserRole } from "@prisma/client";
 
 /**

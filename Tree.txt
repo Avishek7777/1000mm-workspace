@@ -1,0 +1,257 @@
+.
+├── AGENTS.md
+├── apps
+│   ├── portal
+│   │   ├── actions
+│   │   │   └── application.ts
+│   │   ├── app
+│   │   │   ├── api
+│   │   │   │   └── auth
+│   │   │   ├── (auth)
+│   │   │   │   ├── forgot-password
+│   │   │   │   ├── register
+│   │   │   │   └── reset-password
+│   │   │   ├── dashboard
+│   │   │   │   ├── _components
+│   │   │   │   ├── layout.tsx
+│   │   │   │   ├── my-application
+│   │   │   │   ├── page.tsx
+│   │   │   │   ├── system-admin
+│   │   │   │   └── trainee
+│   │   │   ├── favicon.ico
+│   │   │   ├── globals.css
+│   │   │   ├── layout.tsx
+│   │   │   ├── login
+│   │   │   │   └── LoginForm.tsx
+│   │   │   └── page.tsx
+│   │   ├── components
+│   │   │   └── ui
+│   │   │       └── button.tsx
+│   │   ├── components.json
+│   │   ├── data
+│   │   │   └── bd-address-map.json
+│   │   ├── eslint.config.mjs
+│   │   ├── lib
+│   │   │   ├── auth
+│   │   │   │   ├── actions.ts
+│   │   │   │   ├── config.ts
+│   │   │   │   ├── edge.config.ts
+│   │   │   │   └── helpers.ts
+│   │   │   ├── r2.ts
+│   │   │   └── utils.ts
+│   │   ├── middleware.ts
+│   │   ├── next.config.ts
+│   │   ├── next-env.d.ts
+│   │   ├── node_modules
+│   │   │   ├── @auth
+│   │   │   │   └── prisma-adapter -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@auth+prisma-adapter@2.11.2_acb7cbca5e770bacb34e5ecb1ec49235/node_modules/@auth/prisma-adapter
+│   │   │   ├── bcrypt -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/bcrypt@6.0.0/node_modules/bcrypt
+│   │   │   ├── class-variance-authority -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/class-variance-authority@0.7.1/node_modules/class-variance-authority
+│   │   │   ├── clsx -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/clsx@2.1.1/node_modules/clsx
+│   │   │   ├── dotenv -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/dotenv@17.4.2/node_modules/dotenv
+│   │   │   ├── eslint -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/eslint@9.39.4_jiti@2.7.0/node_modules/eslint
+│   │   │   ├── eslint-config-next -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/eslint-config-next@16.2.6_@_f084f045d20d8210561d68baf06d6aff/node_modules/eslint-config-next
+│   │   │   ├── eslint-config-prettier -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/eslint-config-prettier@10.1.8_eslint@9.39.4_jiti@2.7.0_/node_modules/eslint-config-prettier
+│   │   │   ├── fs -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/fs@0.0.1-security/node_modules/fs
+│   │   │   ├── @hookform
+│   │   │   │   └── resolvers -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@hookform+resolvers@5.4.0_r_75d575960b8b67cd64d4025d9ab60cbd/node_modules/@hookform/resolvers
+│   │   │   ├── lucide-react -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/lucide-react@1.16.0_react@19.2.4/node_modules/lucide-react
+│   │   │   ├── next -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/next@16.2.6_@babel+core@7.2_40a7effce8bcad24669d45809ebe449e/node_modules/next
+│   │   │   ├── next-auth -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/next-auth@5.0.0-beta.31_nex_b669b8016ef5843c2baf9d3e57af13db/node_modules/next-auth
+│   │   │   ├── next-intl -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/next-intl@4.12.0_@swc+helpe_281724a7faea4490df231ffa7810cc1a/node_modules/next-intl
+│   │   │   ├── prettier -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/prettier@3.8.3/node_modules/prettier
+│   │   │   ├── @prisma
+│   │   │   │   └── client -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@prisma+client@6.19.3_prism_1d040ab5215f59f0e27ddee7f0cf082e/node_modules/@prisma/client
+│   │   │   ├── prisma -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/prisma@6.19.3_typescript@5.9.3/node_modules/prisma
+│   │   │   ├── radix-ui -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/radix-ui@1.4.3_@types+react_06ef3c23bb18eacb8f97d1bb8edbc095/node_modules/radix-ui
+│   │   │   ├── react -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/react@19.2.4/node_modules/react
+│   │   │   ├── react-dom -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom
+│   │   │   ├── @react-email
+│   │   │   │   └── components -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@react-email+components@1.0_d320819bc6106e0a8c415ddc6eb3591b/node_modules/@react-email/components
+│   │   │   ├── react-email -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/react-email@6.4.0_react-dom_0d72ffe56bf670af4029c4888cbf96ad/node_modules/react-email
+│   │   │   ├── react-hook-form -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/react-hook-form@7.76.1_react@19.2.4/node_modules/react-hook-form
+│   │   │   ├── @react-pdf
+│   │   │   │   └── renderer -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@react-pdf+renderer@4.5.1_react@19.2.4/node_modules/@react-pdf/renderer
+│   │   │   ├── resend -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/resend@6.12.4_@react-email+_7e7d99626e3e372ff48a81d837e3d2c9/node_modules/resend
+│   │   │   ├── server-only -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/server-only@0.0.1/node_modules/server-only
+│   │   │   ├── shadcn -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/shadcn@4.8.1_@types+node@20.19.41_typescript@5.9.3/node_modules/shadcn
+│   │   │   ├── @tailwindcss
+│   │   │   │   └── postcss -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@tailwindcss+postcss@4.3.0/node_modules/@tailwindcss/postcss
+│   │   │   ├── tailwindcss -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/tailwindcss@4.3.0/node_modules/tailwindcss
+│   │   │   ├── tailwind-merge -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/tailwind-merge@3.6.0/node_modules/tailwind-merge
+│   │   │   ├── tsx -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/tsx@4.22.3/node_modules/tsx
+│   │   │   ├── tw-animate-css -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/tw-animate-css@1.4.0/node_modules/tw-animate-css
+│   │   │   ├── @types
+│   │   │   │   ├── bcrypt -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@types+bcrypt@6.0.0/node_modules/@types/bcrypt
+│   │   │   │   ├── node -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@types+node@20.19.41/node_modules/@types/node
+│   │   │   │   ├── react -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@types+react@19.2.15/node_modules/@types/react
+│   │   │   │   └── react-dom -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@types+react-dom@19.2.3_@types+react@19.2.15/node_modules/@types/react-dom
+│   │   │   ├── typescript -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+│   │   │   ├── @vitest
+│   │   │   │   └── ui -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@vitest+ui@4.1.7_vitest@4.1.7/node_modules/@vitest/ui
+│   │   │   ├── vitest -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/vitest@4.1.7_@types+node@20_338a20d93150897c2ded105246f1a5ec/node_modules/vitest
+│   │   │   └── zod -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/zod@4.4.3/node_modules/zod
+│   │   ├── package.json
+│   │   ├── pnpm-workspace.yaml
+│   │   ├── postcss.config.mjs
+│   │   ├── public
+│   │   │   ├── file.svg
+│   │   │   ├── globe.svg
+│   │   │   ├── next.svg
+│   │   │   ├── vercel.svg
+│   │   │   └── window.svg
+│   │   └── tsconfig.json
+│   └── website
+│       ├── app
+│       │   ├── favicon.ico
+│       │   ├── globals.css
+│       │   ├── layout.tsx
+│       │   └── page.tsx
+│       ├── components
+│       │   ├── NavBar.tsx
+│       │   ├── sections
+│       │   │   ├── AboutUs.tsx
+│       │   │   ├── ContactUs.tsx
+│       │   │   ├── DirectorsMessage.tsx
+│       │   │   ├── Footer.tsx
+│       │   │   ├── HeroSection.tsx
+│       │   │   ├── HowToJoin.tsx
+│       │   │   ├── StatisticsSection.tsx
+│       │   │   └── Testimonies.tsx
+│       │   └── ui
+│       │       ├── badge.tsx
+│       │       ├── button.tsx
+│       │       ├── card.tsx
+│       │       ├── input.tsx
+│       │       └── textarea.tsx
+│       ├── components.json
+│       ├── eslint.config.mjs
+│       ├── lib
+│       │   └── utils.ts
+│       ├── next.config.ts
+│       ├── next-env.d.ts
+│       ├── node_modules
+│       │   ├── class-variance-authority -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/class-variance-authority@0.7.1/node_modules/class-variance-authority
+│       │   ├── clsx -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/clsx@2.1.1/node_modules/clsx
+│       │   ├── eslint -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/eslint@9.39.4_jiti@2.7.0/node_modules/eslint
+│       │   ├── eslint-config-next -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/eslint-config-next@16.2.6_e_72211ce3b9512499652c5dc3697990c7/node_modules/eslint-config-next
+│       │   ├── framer-motion -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/framer-motion@12.40.0_react_7bc50d26d12d6dce7f969ed329d51b78/node_modules/framer-motion
+│       │   ├── lucide-react -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/lucide-react@1.16.0_react@19.2.4/node_modules/lucide-react
+│       │   ├── next -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/next@16.2.6_@babel+core@7.2_40a7effce8bcad24669d45809ebe449e/node_modules/next
+│       │   ├── radix-ui -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/radix-ui@1.4.3_@types+react_06ef3c23bb18eacb8f97d1bb8edbc095/node_modules/radix-ui
+│       │   ├── react -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/react@19.2.4/node_modules/react
+│       │   ├── react-dom -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom
+│       │   ├── react-hook-form -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/react-hook-form@7.76.1_react@19.2.4/node_modules/react-hook-form
+│       │   ├── react-icons -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/react-icons@5.6.0_react@19.2.4/node_modules/react-icons
+│       │   ├── shadcn -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/shadcn@4.8.1_@types+node@20.19.41_typescript@5.9.3/node_modules/shadcn
+│       │   ├── @tailwindcss
+│       │   │   └── postcss -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@tailwindcss+postcss@4.3.0/node_modules/@tailwindcss/postcss
+│       │   ├── tailwindcss -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/tailwindcss@4.3.0/node_modules/tailwindcss
+│       │   ├── tailwind-merge -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/tailwind-merge@3.6.0/node_modules/tailwind-merge
+│       │   ├── tw-animate-css -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/tw-animate-css@1.4.0/node_modules/tw-animate-css
+│       │   ├── @types
+│       │   │   ├── node -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@types+node@20.19.41/node_modules/@types/node
+│       │   │   ├── react -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@types+react@19.2.15/node_modules/@types/react
+│       │   │   └── react-dom -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@types+react-dom@19.2.3_@types+react@19.2.15/node_modules/@types/react-dom
+│       │   └── typescript -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+│       ├── package.json
+│       ├── pnpm-lock.yaml
+│       ├── pnpm-workspace.yaml
+│       ├── postcss.config.mjs
+│       ├── public
+│       │   ├── file.svg
+│       │   ├── globe.svg
+│       │   ├── next.svg
+│       │   ├── vercel.svg
+│       │   └── window.svg
+│       ├── README.md
+│       └── tsconfig.json
+├── CLAUDE.md
+├── docker-compose.yml
+├── docs
+│   └── PROGRESS.md
+├── node_modules
+│   ├── @alloc
+│   ├── @auth
+│   ├── @babel
+│   ├── @dotenvx
+│   ├── @ecies
+│   ├── @esbuild
+│   ├── @eslint
+│   ├── @eslint-community
+│   ├── @floating-ui
+│   ├── @formatjs
+│   ├── @hono
+│   ├── @hookform
+│   ├── @humanfs
+│   ├── @humanwhocodes
+│   ├── @img
+│   ├── @inquirer
+│   ├── @jridgewell
+│   ├── @modelcontextprotocol
+│   ├── @mswjs
+│   ├── @napi-rs
+│   ├── @next
+│   ├── @noble
+│   ├── @nodelib
+│   ├── @nolyfill
+│   ├── @open-draft
+│   ├── @oxc-project
+│   ├── @panva
+│   ├── @parcel
+│   ├── @polka
+│   ├── @prisma
+│   ├── @radix-ui
+│   ├── @react-email
+│   ├── @react-pdf
+│   ├── @rolldown
+│   ├── @rtsao
+│   ├── @schummar
+│   ├── @sec-ant
+│   ├── @selderee
+│   ├── @sindresorhus
+│   ├── @socket.io
+│   ├── @stablelib
+│   ├── @standard-schema
+│   ├── @swc
+│   ├── @tailwindcss
+│   ├── @ts-morph
+│   ├── @tybys
+│   ├── @types
+│   ├── @typescript-eslint
+│   ├── @unrs
+│   └── @vitest
+├── package.json
+├── package-lock.json
+├── packages
+│   └── db
+│       ├── node_modules
+│       │   ├── bcrypt -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/bcrypt@6.0.0/node_modules/bcrypt
+│       │   ├── dotenv -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/dotenv@17.4.2/node_modules/dotenv
+│       │   ├── path -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/path@0.12.7/node_modules/path
+│       │   ├── @prisma
+│       │   │   └── client -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@prisma+client@6.19.3_prism_1d040ab5215f59f0e27ddee7f0cf082e/node_modules/@prisma/client
+│       │   ├── prisma -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/prisma@6.19.3_typescript@5.9.3/node_modules/prisma
+│       │   ├── tsx -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/tsx@4.22.3/node_modules/tsx
+│       │   └── @types
+│       │       ├── bcrypt -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@types+bcrypt@6.0.0/node_modules/@types/bcrypt
+│       │       └── node -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@types+node@25.9.1/node_modules/@types/node
+│       ├── package.json
+│       ├── prisma
+│       │   ├── migrations
+│       │   │   ├── 20260604025215_add_deployment_location_to_enrollment
+│       │   │   └── migration_lock.toml
+│       │   ├── schema.prisma
+│       │   └── seed.ts
+│       ├── prisma.config.ts
+│       ├── src
+│       │   ├── base.ts
+│       │   ├── index.ts
+│       │   └── mission-scope.ts
+│       └── tsconfig.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── README.md
+└── Tree.txt
+
+172 directories, 83 files
