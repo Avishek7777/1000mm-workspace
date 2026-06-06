@@ -5,7 +5,7 @@ import Image from "next/image";
 
 export default function DirectorsMessage() {
   return (
-    <section className="relative py-24 overflow-hidden bg-stone-50">
+    <section className="relative py-10 overflow-hidden bg-stone-50">
       {/* Subtle background texture */}
       <div
         className="absolute inset-0 opacity-[0.03]"
@@ -21,7 +21,7 @@ export default function DirectorsMessage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.1 }}
           transition={{ duration: 0.6 }}
-          className="flex items-center gap-3 mb-12"
+          className="flex items-center justify-center gap-3 mb-5"
         >
           <span
             className="h-px w-12"
@@ -35,6 +35,12 @@ export default function DirectorsMessage() {
           >
             A Word from Leadership
           </span>
+          <span
+            className="h-px w-12"
+            style={{
+              background: "linear-gradient(90deg, #16a34a, #f97316)",
+            }}
+          />
         </motion.div>
 
         {/* 5-column grid: text (3 cols) + 2 images (1 col each) */}
@@ -48,16 +54,15 @@ export default function DirectorsMessage() {
             className="lg:col-span-3 flex flex-col justify-center"
           >
             <h2
-              className="text-4xl md:text-5xl font-bold text-stone-800 leading-tight mb-8"
+              className="text-4xl md:text-5xl font-semibold text-stone-700 leading-tight mb-5"
               style={{ fontFamily: "Georgia, serif" }}
             >
-              Message from
-              <br />
+              Message from&nbsp;
               <span
                 className="text-transparent bg-clip-text"
                 style={{
                   backgroundImage:
-                    "linear-gradient(90deg, #16a34a 0%, #f97316 100%)",
+                    "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
                 }}
               >
                 the Director
@@ -65,36 +70,35 @@ export default function DirectorsMessage() {
             </h2>
 
             {/* Opening quote mark */}
-            <div
-              className="text-7xl leading-none text-green-200 font-serif mb-2 select-none"
+            {/* <div
+              className="text-5xl leading-none text-green-200 font-serif select-none"
               aria-hidden="true"
             >
               &ldquo;
-            </div>
+            </div> */}
 
             <div
               className="text-stone-600 text-base md:text-lg leading-relaxed space-y-4"
               style={{ fontFamily: "Georgia, serif" }}
             >
               <p>
-                Dear young people of Bangladesh, it is a great privilege to
-                serve as the Director of the 1000 Missionary Movement in
-                Bangladesh. We are witnessing a mighty move of the Holy Spirit
-                among our youth today. Many are rising up with passion and
-                courage to answer God&apos;s call for mission.
+                Dear Brothers and Sisters in Christ, It is a great joy to serve
+                through The 1000 Missionary Movement – Bangladesh. Our mission
+                is to share the love, hope, and saving message of Christ across
+                Bangladesh and beyond.
               </p>
               <p>
                 The 1000 Missionary Movement is more than just a program — it is
-                a divine opportunity for you to dedicate one year of your life
-                completely to Jesus. Whether you serve in the villages of
-                Bangladesh, in the cities, or are sent to other nations, your
-                life can make an eternal difference.
+                a divine opportunity for you, God is calling you to become a
+                faithful missionary for His Kingdom. Though challenges may come,
+                God will strengthen and guide us as we move forward in faith,
+                prayer, and unity.
               </p>
               <p>
-                If you feel a stirring in your heart, do not hesitate. Step
-                forward in faith. The harvest is ripe, and the Lord is looking
-                for willing workers. We are praying for you and believe God will
-                do amazing things through this generation.
+                I encourage everyone to continue supporting this mission through
+                prayer and service. Together, we can bring spiritual
+                transformation to many lives. <br />
+                “Here am I, Lord, send me.” — Isaiah 6:8
               </p>
             </div>
 
@@ -111,10 +115,10 @@ export default function DirectorsMessage() {
                   className="font-bold text-stone-800 text-sm"
                   style={{ fontFamily: "Georgia, serif" }}
                 >
-                  Director, 1000 Missionary Movement
+                  Pr. Krysthyann Zeferino, Director
                 </p>
                 <p className="text-stone-400 text-xs tracking-wide">
-                  Bangladesh Division
+                  Bangladesh
                 </p>
               </div>
             </div>
@@ -128,16 +132,16 @@ export default function DirectorsMessage() {
             transition={{ duration: 0.7, delay: 0.25 }}
             className="lg:col-span-1 flex flex-col items-center gap-3"
           >
-            <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-xl bg-gradient-to-br from-green-100 to-orange-100">
+            <div className="relative mt-6 w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-xl bg-gradient-to-br  from-green-100 to-orange-100">
               <Image
-                src="/images/director-current.jpg"
+                src="/images/director-current.jpeg"
                 alt="Current Director"
                 fill
                 className="object-cover object-top"
               />
               {/* Fallback gradient shown if image missing */}
               <div className="absolute inset-0 flex items-end p-4 bg-gradient-to-t from-black/50 to-transparent">
-                <div>
+                {/* <div>
                   <p
                     className="text-white font-bold text-sm"
                     style={{ fontFamily: "Georgia, serif" }}
@@ -145,10 +149,10 @@ export default function DirectorsMessage() {
                     Current Director
                   </p>
                   <p className="text-white/70 text-xs">1000MM Bangladesh</p>
-                </div>
+                </div> */}
               </div>
             </div>
-            <span className="text-xs text-stone-400 tracking-widest uppercase">
+            <span className="text-xs font-medium text-stone-800 tracking-widest uppercase">
               Current Director
             </span>
           </motion.div>
@@ -163,13 +167,13 @@ export default function DirectorsMessage() {
           >
             <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden shadow-xl bg-gradient-to-br from-orange-100 to-green-100">
               <Image
-                src="/images/director-former.jpg"
+                src="/images/director-former.jpeg"
                 alt="Former Director"
                 fill
                 className="object-cover object-top"
               />
               <div className="absolute inset-0 flex items-end p-4 bg-gradient-to-t from-black/50 to-transparent">
-                <div>
+                {/* <div>
                   <p
                     className="text-white font-bold text-sm"
                     style={{ fontFamily: "Georgia, serif" }}
@@ -177,10 +181,10 @@ export default function DirectorsMessage() {
                     Former Director
                   </p>
                   <p className="text-white/70 text-xs">1000MM Bangladesh</p>
-                </div>
+                </div> */}
               </div>
             </div>
-            <span className="text-xs text-stone-400 tracking-widest uppercase">
+            <span className="text-xs italic font-medium text-stone-800 tracking-widest uppercase">
               Former Director
             </span>
           </motion.div>

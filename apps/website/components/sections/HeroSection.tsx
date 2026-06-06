@@ -10,21 +10,20 @@ export default function HeroSection() {
       {/* Background Image with fallback pattern */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="/images/hero-bg.jpg"
+          src="/images/hero-bg.png"
           alt="Missionaries in Bangladesh"
           fill
           className="object-cover object-center"
           priority
-          onError={() => {}}
         />
         {/* Fallback geometric pattern — shows behind/over broken image */}
         <div
           className="absolute inset-0"
           style={{
-            background: `
-              linear-gradient(135deg, #14532d 0%, #166534 30%, #c2410c 70%, #7c2d12 100%)
-            `,
-            backgroundBlendMode: "multiply",
+            background:
+              "linear-gradient(-135deg, #007f98 0%, #0099b8 30%, #c2410c 70%, #7c2d12 100%)",
+            mixBlendMode: "multiply", // ← blends with the image instead of covering it
+            opacity: 0.7,
           }}
         />
         {/* SVG cross-hatch pattern overlay */}
@@ -65,7 +64,7 @@ export default function HeroSection() {
           className="text-5xl md:text-7xl lg:text-8xl font-bold text-white leading-[1.05] tracking-tight mb-6"
           style={{ fontFamily: "Georgia, serif" }}
         >
-          Will You Be
+          Answer the Call,
           <br />
           <span
             className="text-transparent bg-clip-text"
@@ -74,7 +73,7 @@ export default function HeroSection() {
                 "linear-gradient(90deg, #4ade80 0%, #f97316 100%)",
             }}
           >
-            One of the 1000?
+            Join the Movement.
           </span>
         </motion.h1>
 
@@ -86,14 +85,13 @@ export default function HeroSection() {
           className="text-white/80 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-10"
           style={{ fontFamily: "Georgia, serif" }}
         >
-          Young people of Bangladesh, God is calling you to step out in faith.
-          Join the{" "}
+          The 1000 Missionary Movement is a bold initiative of the{" "}
           <span className="text-orange-300 font-semibold">
-            1000 Missionary Movement
+            Seventh-day Adventist Church
           </span>{" "}
-          and spend one year fully dedicated to serving Jesus — transforming
-          lives, planting churches, and sharing the hope of the Gospel across
-          Bangladesh and beyond.
+          raising up committed young believers to carry the Gospel across
+          Bangladesh and beyond. We are looking for passionate, dedicated
+          individuals ready to serve.
         </motion.p>
 
         {/* CTA Buttons */}

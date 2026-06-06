@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { saveDraftAction } from "@/actions/application";
-import { Religion } from "@prisma/client";
 import {
   Field,
   Input,
@@ -12,9 +11,11 @@ import {
   FormCard,
   FormNav,
 } from "./FormFields";
+import type { ExistingDraft, UploadedDoc } from "./BioDataForm";
 
 type Props = {
   applicationId: string;
+  defaultValues?: ExistingDraft;
   onBack: () => void;
   onNext: () => void;
 };
@@ -32,12 +33,26 @@ function ParentSection({
   prefix,
   title,
   errors,
+  defaults,
+  existingNid,
 }: {
   prefix: "father" | "mother";
   title: string;
   errors: Record<string, string>;
+  defaults?: {
+    name: string;
+    age: string | number;
+    religion: string;
+    churchName: string;
+  };
+  existingNid: UploadedDoc | null;
 }) {
-  const [religion, setReligion] = useState("");
+  const [name, setName] = useState(defaults?.name ?? "");
+  const [age, setAge] = useState(
+    defaults?.age != null && defaults.age !== "" ? String(defaults.age) : "",
+  );
+  const [religion, setReligion] = useState(defaults?.religion ?? "");
+  const [churchName, setChurchName] = useState(defaults?.churchName ?? "");
 
   const nameKey = `${prefix}Name`;
   const ageKey = `${prefix}Age`;
@@ -54,6 +69,8 @@ function ParentSection({
             name={nameKey}
             placeholder="Full name"
             maxLength={36}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             error={errors[nameKey]}
           />
         </Field>
@@ -64,6 +81,8 @@ function ParentSection({
             placeholder="Age"
             min={18}
             max={100}
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
             error={errors[ageKey]}
           />
         </Field>
@@ -88,6 +107,8 @@ function ParentSection({
               name={churchKey}
               placeholder="Church name"
               maxLength={70}
+              value={churchName}
+              onChange={(e) => setChurchName(e.target.value)}
               error={errors[churchKey]}
             />
           </Field>
@@ -104,16 +125,32 @@ function ParentSection({
           accept="image/jpeg,image/png,application/pdf"
           hint="JPG, PNG or PDF — max 400 KB"
           error={errors[nidKey]}
+          existingFile={existingNid}
         />
       </Field>
     </div>
   );
 }
 
-export function Page2FamilyDetails({ applicationId, onBack, onNext }: Props) {
+export function Page2FamilyDetails({
+  applicationId,
+  defaultValues,
+  onBack,
+  onNext,
+}: Props) {
+  const d = defaultValues;
+  const docs = d?.documents ?? [];
+
+  const existingFatherNid =
+    docs.find((doc) => doc.kind === "FATHER_NID") ?? null;
+  const existingMotherNid =
+    docs.find((doc) => doc.kind === "MOTHER_NID") ?? null;
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
+  const [familyMobileNo, setFamilyMobileNo] = useState(d?.familyMobileNo ?? "");
+  const [familyEmail, setFamilyEmail] = useState(d?.familyEmail ?? "");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -151,15 +188,44 @@ export function Page2FamilyDetails({ applicationId, onBack, onNext }: Props) {
           description="Information about your parents. All fields are optional but recommended."
         />
 
-        <ParentSection prefix="father" title="Father" errors={errors} />
+        <ParentSection
+          prefix="father"
+          title="Father"
+          errors={errors}
+          existingNid={existingFatherNid}
+          defaults={
+            d
+              ? {
+                  name: d.fatherName,
+                  age: d.fatherAge,
+                  religion: d.fatherReligion,
+                  churchName: d.fatherChurchName,
+                }
+              : undefined
+          }
+        />
 
         <div className="my-6 border-t border-gray-100" />
 
-        <ParentSection prefix="mother" title="Mother" errors={errors} />
+        <ParentSection
+          prefix="mother"
+          title="Mother"
+          errors={errors}
+          existingNid={existingMotherNid}
+          defaults={
+            d
+              ? {
+                  name: d.motherName,
+                  age: d.motherAge,
+                  religion: d.motherReligion,
+                  churchName: d.motherChurchName,
+                }
+              : undefined
+          }
+        />
 
         <div className="my-6 border-t border-gray-100" />
 
-        {/* Parents' contact */}
         <SectionHeading title="Parents' Contact" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Parents' Mobile No" error={errors.familyMobileNo}>
@@ -167,6 +233,8 @@ export function Page2FamilyDetails({ applicationId, onBack, onNext }: Props) {
               name="familyMobileNo"
               placeholder="01X-XXXXXXXX"
               maxLength={11}
+              value={familyMobileNo}
+              onChange={(e) => setFamilyMobileNo(e.target.value)}
               error={errors.familyMobileNo}
             />
           </Field>
@@ -175,6 +243,8 @@ export function Page2FamilyDetails({ applicationId, onBack, onNext }: Props) {
               type="email"
               name="familyEmail"
               placeholder="parent@example.com"
+              value={familyEmail}
+              onChange={(e) => setFamilyEmail(e.target.value)}
               error={errors.familyEmail}
             />
           </Field>

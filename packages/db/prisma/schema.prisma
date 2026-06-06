@@ -9,9 +9,6 @@ datasource db {
 }
 
 // ─── Reference Number Counter ────────────────────────────────────────────────
-// Atomic per-mission per-year serial. On each submission:
-// SELECT ... FOR UPDATE on the matching row, increment lastSerial, then
-// format referenceNumber as "{code}-{year}-{zero-padded serial}".
 model ApplicationCounter {
   missionCode LocalMissionCode
   year        Int
@@ -46,9 +43,6 @@ model LocalMission {
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────
-// Applicants create an account BEFORE filling the bio data form.
-// Role starts as TRAINEE. On application ACCEPTED the account is
-// considered fully active (isActive already true from registration).
 model User {
   id                      String                   @id @default(cuid())
   email                   String                   @unique
@@ -153,7 +147,6 @@ model EmailVerificationToken {
 }
 
 // ─── Announcements ────────────────────────────────────────────────────────────
-// Created by System Admin. Visible to LMDs and Trainees on their dashboards.
 model Announcement {
   id            String    @id @default(cuid())
   title         String
@@ -204,30 +197,27 @@ model TrainingProgram {
 }
 
 model ProgramEnrollment {
-  id                  String          @id @default(cuid())
-  programId           String
-  traineeId           String
-  applicationId       String?         @unique
-  enrolledAt          DateTime        @default(now())
-  attendanceConfirmed Boolean         @default(false)
-  certificateIssued   Boolean         @default(false)
-  certificateIssuedAt DateTime?
-
-  // ── Deployment location (assigned by LMD) ──
-  deploymentLocation  String?         // Area/district name where trainee is deployed
-  deploymentLatitude  Float?          // Optional — for map view
-  deploymentLongitude Float?          // Optional — for map view
-  deploymentAssignedAt DateTime?      // When the location was assigned
-  deploymentAssignedById String?      // FK to User (LMD who assigned it)
-
-  notes               String?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-  deletedAt           DateTime?
-  application         Application?    @relation(fields: [applicationId], references: [id])
-  program             TrainingProgram @relation(fields: [programId], references: [id])
-  trainee             User            @relation(fields: [traineeId], references: [id])
-  deploymentAssignedBy User?          @relation("DeploymentAssignedBy", fields: [deploymentAssignedById], references: [id])
+  id                     String          @id @default(cuid())
+  programId              String
+  traineeId              String
+  applicationId          String?         @unique
+  enrolledAt             DateTime        @default(now())
+  attendanceConfirmed    Boolean         @default(false)
+  certificateIssued      Boolean         @default(false)
+  certificateIssuedAt    DateTime?
+  deploymentLocation     String?
+  deploymentLatitude     Float?
+  deploymentLongitude    Float?
+  deploymentAssignedAt   DateTime?
+  deploymentAssignedById String?
+  notes                  String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  deletedAt              DateTime?
+  application            Application?    @relation(fields: [applicationId], references: [id])
+  program                TrainingProgram @relation(fields: [programId], references: [id])
+  trainee                User            @relation(fields: [traineeId], references: [id])
+  deploymentAssignedBy   User?           @relation("DeploymentAssignedBy", fields: [deploymentAssignedById], references: [id])
 
   @@unique([programId, traineeId])
   @@index([programId])
@@ -263,27 +253,9 @@ model ApplicationWindow {
 }
 
 // ─── Application ──────────────────────────────────────────────────────────────
-// Core model. Applicant must be a registered User (created before form fill).
-// All fields the form collects are either promoted columns (for querying/reporting)
-// or stored in the formData Json blob (for display/PDF only).
-//
-// ADDRESS FIELDS: stored as plain String. Validated at app layer against
-// a static BD district/upazila JSON dictionary. NOT Prisma enums.
-//
-// EDUCATION: stored as a Json array inside formData. Each entry has:
-//   { degree, institutionName, gpa, passingYear, certificateDocumentId }
-//   certificateDocumentId references ApplicationDocument.id
-//
-// FAMILY NID FILES: stored as ApplicationDocument with kind FATHER_NID / MOTHER_NID
-//
-// PROFILE PHOTO: stored as ApplicationDocument with kind PROFILE_PHOTO;
-//   profilePhotoDocumentId caches the active photo reference for quick access.
-//
-// APPLICATION SECTION (Page 4) non-queryable fields stored in formData:
-//   { missionaryDesire, courtRecord, healthCondition, badHabits, declarationAccepted }
 model Application {
   id              String  @id @default(cuid())
-  referenceNumber String? @unique // Set on submit. Format: NBM-2026-00001. Display only — never used as auth.
+  referenceNumber String? @unique
 
   // ── Applicant link ──
   applicantId String
@@ -300,11 +272,11 @@ model Application {
   submittedAt      DateTime?
   lastTransitionAt DateTime?
 
-  // ── Promoted personal detail columns (queryable / reportable) ──
+  // ── Promoted personal detail columns ──
   applicantFullName       String
   applicantFullNameBangla String?
   applicantDateOfBirth    DateTime
-  applicantAge            Int           // Derived from DOB, stored for quick filtering
+  applicantAge            Int
   applicantGender         Gender
   applicantBloodType      BloodType?
   applicantMaritalStatus  MaritalStatus?
@@ -316,9 +288,9 @@ model Application {
   applicantWeight         Float?
   applicantChurchName     String?
   applicantDateOfBaptism  DateTime?
-  applicantWorkplace      String?       // Present workplace / occupation
+  applicantWorkplace      String?
 
-  // ── Address columns (plain String, validated against static JSON at app layer) ──
+  // ── Address columns ──
   presentAddressDistrict     String?
   presentAddressUpazila      String?
   presentAddressPostOffice   String?
@@ -330,46 +302,42 @@ model Application {
   permanentSameAsPresent     Boolean @default(false)
 
   // ── Profile photo shortcut ──
-  profilePhotoDocumentId String? // FK to ApplicationDocument; set when photo uploaded
+  profilePhotoDocumentId String?
 
-  // ── Family details (promoted for quick access) ──
-  fatherName     String?
-  fatherAge      Int?
-  fatherReligion Religion?
-  fatherChurchName String?   // Only if fatherReligion == CHRISTIANITY
-  motherName     String?
-  motherAge      Int?
-  motherReligion Religion?
-  motherChurchName String?   // Only if motherReligion == CHRISTIANITY
-  familyMobileNo String?
-  familyEmail    String?
+  // ── Family details ──
+  fatherName       String?
+  fatherAge        Int?
+  fatherReligion   Religion?
+  fatherChurchName String?
+  motherName       String?
+  motherAge        Int?
+  motherReligion   Religion?
+  motherChurchName String?
+  familyMobileNo   String?
+  familyEmail      String?
 
-  // ── Education (array) + application section fields ──
-  // formData stores:
-  //   - education: { id, degree, institutionName, gpa, passingYear, certificateDocumentId }[]
-  //   - missionaryDesire: string
-  //   - courtRecord: boolean
-  //   - healthCondition: boolean
-  //   - badHabits: boolean
-  //   - declarationAccepted: boolean
+  // ── Form data ──
   formData    Json
   formVersion Int  @default(1)
 
   // ── LMD review ──
   lmdReviewerId        String?
-  lmdReviewer          User?    @relation("ApplicationLmdReviewer", fields: [lmdReviewerId], references: [id])
+  lmdReviewer          User?     @relation("ApplicationLmdReviewer", fields: [lmdReviewerId], references: [id])
   lmdReviewStartedAt   DateTime?
   lmdReviewCompletedAt DateTime?
   lmdReviewerComment   String?
 
+  // ── LMD rejection (hidden from applicant) ──
+  lmdRejectionReason String?
+
   // ── Director review ──
   directorReviewerId        String?
-  directorReviewer          User?    @relation("ApplicationDirectorReviewer", fields: [directorReviewerId], references: [id])
+  directorReviewer          User?     @relation("ApplicationDirectorReviewer", fields: [directorReviewerId], references: [id])
   directorReviewStartedAt   DateTime?
   directorReviewCompletedAt DateTime?
   directorReviewerComment   String?
 
-  // ── Rejection ──
+  // ── Rejection (visible to applicant — set by Director only) ──
   rejectionReason String?
 
   createdAt DateTime  @default(now())
@@ -407,9 +375,6 @@ model ApplicationStatusHistory {
 }
 
 // ─── Recommendation ───────────────────────────────────────────────────────────
-// Created by the LMD when they recommend an applicant.
-// Documents uploaded by LMD (Recommendation Letter, Sworn Statement, Ex-Com Vote)
-// are stored as ApplicationDocument with their respective kinds.
 model Recommendation {
   id             String      @id @default(cuid())
   applicationId  String      @unique
@@ -427,9 +392,6 @@ model Recommendation {
 }
 
 // ─── Application Documents ───────────────────────────────────────────────────
-// All file uploads for an application. Files stored in Cloudflare R2.
-// educationEntryIndex: for EDUCATION_CERTIFICATE kind only — links the
-// document to a specific entry in the formData education array (0-based index).
 model ApplicationDocument {
   id                  String       @id @default(cuid())
   applicationId       String
@@ -440,7 +402,7 @@ model ApplicationDocument {
   storageKey          String
   checksum            String?
   formVersion         Int?
-  educationEntryIndex Int?         // EDUCATION_CERTIFICATE only
+  educationEntryIndex Int?
   uploadedById        String
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
@@ -454,27 +416,24 @@ model ApplicationDocument {
 }
 
 // ─── Field Reports ────────────────────────────────────────────────────────────
-// Monthly progress reports submitted by deployed trainees (status = ACCEPTED).
-// Visible to the trainee's LMD and the Union Director.
-// One report per trainee per month — enforced by the unique constraint.
 model FieldReport {
-  id                 String          @id @default(cuid())
-  traineeId          String
-  applicationId      String
-  programId          String
-  reportMonth        Int             // 1–12
-  reportYear         Int
-  activitiesSummary  String
-  peopleReached      Int?
-  challengesFaced    String?
-  prayerRequests     String?
-  attachments        Json?           // [{ fileName, storageKey, mimeType, fileSizeBytes }]
-  submittedAt        DateTime        @default(now())
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
-  trainee            User            @relation(fields: [traineeId], references: [id])
-  application        Application     @relation(fields: [applicationId], references: [id])
-  program            TrainingProgram @relation(fields: [programId], references: [id])
+  id                String          @id @default(cuid())
+  traineeId         String
+  applicationId     String
+  programId         String
+  reportMonth       Int
+  reportYear        Int
+  activitiesSummary String
+  peopleReached     Int?
+  challengesFaced   String?
+  prayerRequests    String?
+  attachments       Json?
+  submittedAt       DateTime        @default(now())
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  trainee           User            @relation(fields: [traineeId], references: [id])
+  application       Application     @relation(fields: [applicationId], references: [id])
+  program           TrainingProgram @relation(fields: [programId], references: [id])
 
   @@unique([traineeId, reportMonth, reportYear])
   @@index([traineeId])
@@ -484,27 +443,24 @@ model FieldReport {
 }
 
 // ─── Complaints ───────────────────────────────────────────────────────────────
-// Anonymous by default. submittedById is null when anonymous.
-// missionCode is inferred from session at submit time for LMD routing
-// and stored even for anonymous submissions so the correct LMD sees it.
 model Complaint {
-  id              String            @id @default(cuid())
-  category        ComplaintCategory
-  subject         String
-  description     String
-  isAnonymous     Boolean           @default(true)
-  submittedById   String?           // null if anonymous
-  missionCode     LocalMissionCode? // for LMD routing
-  missionId       String?           // FK to LocalMission for relation
-  isResolved      Boolean           @default(false)
-  resolvedAt      DateTime?
-  resolvedById    String?
-  response        String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  submittedBy     User?             @relation("ComplaintSubmittedBy", fields: [submittedById], references: [id])
-  resolvedBy      User?             @relation("ComplaintResolvedBy", fields: [resolvedById], references: [id])
-  mission         LocalMission?     @relation(fields: [missionId], references: [id])
+  id            String            @id @default(cuid())
+  category      ComplaintCategory
+  subject       String
+  description   String
+  isAnonymous   Boolean           @default(true)
+  submittedById String?
+  missionCode   LocalMissionCode?
+  missionId     String?
+  isResolved    Boolean           @default(false)
+  resolvedAt    DateTime?
+  resolvedById  String?
+  response      String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  submittedBy   User?             @relation("ComplaintSubmittedBy", fields: [submittedById], references: [id])
+  resolvedBy    User?             @relation("ComplaintResolvedBy", fields: [resolvedById], references: [id])
+  mission       LocalMission?     @relation(fields: [missionId], references: [id])
 
   @@index([missionCode])
   @@index([isResolved])
@@ -718,32 +674,32 @@ enum ApplicationStatus {
 
 enum DocumentKind {
   // ── Applicant uploads (Bio Data) ──
-  BIO_DATA_PDF                   // Auto-generated PDF of the completed form
-  PROFILE_PHOTO                  // Applicant's own photo (Page 1)
-  FATHER_NID                     // Father's NID scan (Page 2)
-  MOTHER_NID                     // Mother's NID scan (Page 2)
-  EDUCATION_CERTIFICATE          // Per education entry (Page 3); use educationEntryIndex
+  BIO_DATA_PDF
+  PROFILE_PHOTO
+  FATHER_NID
+  MOTHER_NID
+  EDUCATION_CERTIFICATE
 
   // ── Applicant uploads (Application section) ──
-  DISTRICT_PASTOR_RECOMMENDATION // Recommendation letter from district pastor
-  NID                            // Applicant's own NID (if age requirement met)
-  BIRTH_CERTIFICATE              // Applicant's birth certificate
-  PARENT_PASSPORT_PHOTO          // Passport-sized photo of one parent (not a passport scan)
-  BAPTISM_CERTIFICATE            // Baptism certificate
-  PARENTS_CONSENT                // Parents' consent form
-  LETTER_OF_INTENT               // Letter of intent / commitment
+  DISTRICT_PASTOR_RECOMMENDATION
+  NID
+  BIRTH_CERTIFICATE
+  PARENT_PASSPORT_PHOTO
+  BAPTISM_CERTIFICATE
+  PARENTS_CONSENT
+  LETTER_OF_INTENT
 
   // ── LMD uploads ──
-  RECOMMENDATION_LETTER          // LMD's formal recommendation letter PDF
-  SWORN_STATEMENT                // LMD's sworn statement legal paper
-  EXCOM_VOTE_COPY                // Executive Committee vote copy from the church
+  RECOMMENDATION_LETTER
+  SWORN_STATEMENT
+  EXCOM_VOTE_COPY
 
   // ── System generated ──
-  ID_CARD                        // Generated ID card PDF (batch; on-demand TBD)
-  CERTIFICATE                    // Training completion certificate (design TBD)
+  ID_CARD
+  CERTIFICATE
 
   // ── Misc ──
-  SUPPORTING_DOCUMENT            // Any other document
+  SUPPORTING_DOCUMENT
 }
 
 enum ComplaintCategory {
@@ -781,6 +737,7 @@ enum AuditAction {
   APPLICATION_REVIEW_STARTED
   APPLICATION_RETURNED_TO_APPLICANT
   APPLICATION_RECOMMENDED
+  APPLICATION_REJECTED_BY_LMD
   APPLICATION_RETURNED_TO_LMD
   APPLICATION_ACCEPTED
   APPLICATION_REJECTED
@@ -812,5 +769,3 @@ enum NotificationChannel {
   EMAIL
   IN_APP
 }
-
-

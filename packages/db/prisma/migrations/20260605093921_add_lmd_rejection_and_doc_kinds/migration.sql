@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "DocumentKind" ADD VALUE 'APPLICATION_REJECTED_BY_LMD';

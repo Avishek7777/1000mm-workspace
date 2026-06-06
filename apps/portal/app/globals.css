@@ -126,5 +126,18 @@
   }
   html {
     @apply font-sans;
+    overflow-y: scroll; /* always reserve scrollbar width — prevents layout shift when file dialogs open */
   }
+}
+
+.file-input-hidden {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

@@ -10,7 +10,7 @@ import { redirect } from "next/navigation";
 import { auth } from "./config";
 import { prisma } from "@1000mm/db";
 import { withMissionScope } from "@1000mm/db";
-import type { UserRole } from "@prisma/client";
+import type { UserRole } from "@1000mm/db";
 
 /**
  * Returns the current user's session, or null if not signed in.

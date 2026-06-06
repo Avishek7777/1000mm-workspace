@@ -96,80 +96,62 @@ const accordionItems = [
   },
 ];
 
-function AccordionItem({
+function RequirementCard({
   item,
-  isOpen,
-  onToggle,
+  index,
 }: {
   item: (typeof accordionItems)[0];
-  isOpen: boolean;
-  onToggle: () => void;
+  index: number;
 }) {
   return (
-    <div
-      className={`rounded-2xl overflow-hidden border transition-all duration-300 ${
-        isOpen
-          ? "border-green-200 shadow-md"
-          : "border-stone-200 hover:border-stone-300"
-      }`}
-    >
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-6 py-4 text-left bg-white hover:bg-stone-50 transition-colors duration-200"
+    <div className="rounded-2xl overflow-hidden border border-stone-200 bg-white shadow-sm">
+      {/* Card header */}
+      <div
+        className="px-6 py-4 flex items-center gap-3 border-b border-stone-100"
+        style={{
+          background:
+            index % 2 === 0
+              ? "linear-gradient(135deg, rgba(22,163,74,0.06) 0%, rgba(249,115,22,0.04) 100%)"
+              : "linear-gradient(135deg, rgba(249,115,22,0.06) 0%, rgba(22,163,74,0.04) 100%)",
+        }}
       >
-        <div className="flex items-center gap-3">
-          <span
-            className="text-sm font-bold"
-            style={{
-              background: "linear-gradient(90deg, #16a34a, #f97316)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            {item.icon}
-          </span>
-          <span
-            className="font-semibold text-stone-800 text-sm md:text-base"
-            style={{ fontFamily: "Georgia, serif" }}
-          >
-            {item.title}
-          </span>
-        </div>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.3 }}
+        <span
+          className="text-sm font-bold"
+          style={{
+            background: "linear-gradient(90deg, #16a34a, #f97316)",
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            color: "transparent",
+            display: "inline-block",
+          }}
         >
-          <ChevronDown className="w-4 h-4 text-stone-400" />
-        </motion.div>
-      </button>
+          {item.icon}
+        </span>
+        <span
+          className="font-bold text-stone-800 text-sm md:text-base"
+          style={{ fontFamily: "Georgia, serif" }}
+        >
+          {item.title}
+        </span>
+      </div>
 
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.35, ease: "easeInOut" }}
-            className="overflow-hidden"
-          >
-            <div className="px-6 pb-5 pt-1 bg-white border-t border-stone-100">
-              <ul className="space-y-2">
-                {item.items.map((text, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                    <span
-                      className="text-stone-600 text-sm leading-relaxed"
-                      style={{ fontFamily: "Georgia, serif" }}
-                    >
-                      {text}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Card body */}
+      <div className="px-6 py-5">
+        <ul className="space-y-2">
+          {item.items.map((text, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+              <span
+                className="text-stone-600 text-sm leading-relaxed"
+                style={{ fontFamily: "Georgia, serif" }}
+              >
+                {text}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -184,9 +166,9 @@ export default function HowToJoin() {
   return (
     <section
       id="how-to-join"
-      className="relative py-28 overflow-hidden"
+      className="relative py-15 overflow-hidden"
       style={{
-        background: "linear-gradient(160deg, #0a1a0f 0%, #1c1008 100%)",
+        background: "linear-gradient(160deg, #0a1a0f 0%, #4e392a 100%)",
       }}
     >
       {/* Background pattern */}
@@ -213,13 +195,13 @@ export default function HowToJoin() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.1 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-20"
+          className="text-center mb-15"
         >
           <div className="flex items-center justify-center gap-3 mb-4">
             <span
               className="h-px w-12"
               style={{
-                background: "linear-gradient(90deg, transparent, #4ade80)",
+                background: "linear-gradient(90deg, transparent, #007f98)",
               }}
             />
             <span
@@ -244,7 +226,7 @@ export default function HowToJoin() {
               className="text-transparent bg-clip-text"
               style={{
                 backgroundImage:
-                  "linear-gradient(90deg, #4ade80 0%, #f97316 100%)",
+                  "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
               }}
             >
               Join the Movement.
@@ -260,7 +242,7 @@ export default function HowToJoin() {
         </motion.div>
 
         {/* Steps */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-20">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-15">
           {steps.map((step, i) => (
             <motion.div
               key={step.number}
@@ -331,13 +313,13 @@ export default function HowToJoin() {
           ))}
         </div>
 
-        {/* Accordion */}
+        {/* Cards grid — replace the accordion block */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.1 }}
           transition={{ duration: 0.6 }}
-          className="max-w-3xl mx-auto space-y-3"
+          className="max-w-7xl mx-auto"
         >
           <p
             className="text-white/40 text-xs tracking-[0.2em] uppercase text-center mb-6"
@@ -345,14 +327,11 @@ export default function HowToJoin() {
           >
             Everything you need to know
           </p>
-          {accordionItems.map((item) => (
-            <AccordionItem
-              key={item.id}
-              item={item}
-              isOpen={openId === item.id}
-              onToggle={() => toggle(item.id)}
-            />
-          ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {accordionItems.map((item, index) => (
+              <RequirementCard key={item.id} item={item} index={index} />
+            ))}
+          </div>
         </motion.div>
       </div>
     </section>

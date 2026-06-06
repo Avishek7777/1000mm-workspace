@@ -25,7 +25,7 @@ const missions = [
 
 export default function AboutUs() {
   return (
-    <section id="about-us" className="relative py-28 overflow-hidden bg-white">
+    <section id="about-us" className="relative py-15 overflow-hidden bg-white">
       {/* Decorative side accent */}
       <div
         className="absolute left-0 top-0 bottom-0 w-1"
@@ -50,12 +50,12 @@ export default function AboutUs() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.1 }}
           transition={{ duration: 0.5 }}
-          className="flex items-center gap-3 mb-14"
+          className="flex items-center gap-3 mb-10"
         >
           <span
             className="h-px w-12"
             style={{
-              background: "linear-gradient(90deg, #16a34a, #f97316)",
+              background: "linear-gradient(90deg, #007f98, #f97316)",
             }}
           />
           <span
@@ -84,7 +84,7 @@ export default function AboutUs() {
                   className="text-transparent bg-clip-text"
                   style={{
                     backgroundImage:
-                      "linear-gradient(90deg, #16a34a 0%, #f97316 100%)",
+                      "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
                   }}
                 >
                   We Are
@@ -150,7 +150,7 @@ export default function AboutUs() {
                 className="inline-block px-5 py-3 rounded-xl text-sm font-semibold italic text-white shadow-md"
                 style={{
                   background:
-                    "linear-gradient(90deg, #16a34a 0%, #f97316 100%)",
+                    "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
                 }}
               >
                 &ldquo;Once a Missionary, Always a Missionary.&rdquo;
@@ -222,7 +222,7 @@ export default function AboutUs() {
                       style={{
                         background:
                           i % 2 === 0
-                            ? "linear-gradient(135deg, #16a34a, #4ade80)"
+                            ? "linear-gradient(135deg, #007f98, #4ade80)"
                             : "linear-gradient(135deg, #f97316, #fb923c)",
                       }}
                     >
@@ -259,7 +259,7 @@ export default function AboutUs() {
                 className="inline-flex items-center gap-2 px-7 py-3 rounded-full font-bold text-white text-sm shadow-lg hover:scale-105 hover:shadow-orange-200 transition-all duration-300"
                 style={{
                   background:
-                    "linear-gradient(90deg, #16a34a 0%, #f97316 100%)",
+                    "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
                 }}
               >
                 Apply Now

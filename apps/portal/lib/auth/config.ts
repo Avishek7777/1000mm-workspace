@@ -28,7 +28,7 @@ import bcrypt from "bcrypt";
 import { z } from "zod";
 import { prisma } from "@1000mm/db";
 import { edgeAuthConfig } from "./edge.config";
-import type { LocalMissionCode, UserRole } from "@prisma/client";
+import type { LocalMissionCode, UserRole } from "@1000mm/db";
 
 // ─────────────────────────────────────────────────────────────────────
 // Module augmentation: add our custom fields to Session and JWT.

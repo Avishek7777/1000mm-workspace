@@ -1,12 +1,14 @@
 import Link from "next/link";
-import type { UserRole, LocalMissionCode } from "@prisma/client";
 import SignOutButton from "./sign-out-button";
+import { UserRole, LocalMissionCode, prisma } from "@1000mm/db";
+import { auth } from "@/lib/auth/config";
 
 // ─── Nav item shape ───────────────────────────────────────────────────────────
 
 type NavItem = {
   label: string;
-  href: string;
+  // href can be a static string or a function of the user's role
+  href: string | ((role: UserRole) => string);
   icon: React.ReactNode;
   roles: UserRole[];
 };
@@ -43,7 +45,12 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
     items: [
       {
         label: "Dashboard",
-        href: "/dashboard",
+        href: (role) => {
+          if (role === "LOCAL_DIRECTOR") return "/dashboard/lmd";
+          if (role === "MAIN_DIRECTOR") return "/dashboard/director";
+          if (role === "SYSTEM_ADMIN") return "/dashboard/system-admin";
+          return "/dashboard";
+        },
         roles: ALL_ROLES,
         icon: (
           <svg
@@ -71,7 +78,12 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
     items: [
       {
         label: "Applications",
-        href: "/dashboard/applications",
+        href: (role) => {
+          if (role === "LOCAL_DIRECTOR") return "/dashboard/lmd/applications";
+          if (role === "MAIN_DIRECTOR")
+            return "/dashboard/director/applications";
+          return "/dashboard/applications";
+        },
         roles: DIRECTOR_ROLES,
         icon: (
           <svg
@@ -144,7 +156,11 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
     items: [
       {
         label: "Programs",
-        href: "/dashboard/programs",
+        href: (role) => {
+          if (role === "MAIN_DIRECTOR") return "/dashboard/director/programs";
+          if (role === "SYSTEM_ADMIN") return "/dashboard/director/programs";
+          return "/dashboard/programs"; // TRAINER
+        },
         roles: [...ADMIN_ROLES, "TRAINER"],
         icon: (
           <svg
@@ -290,7 +306,7 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 4-2z" />
             <polyline points="22,6 12,13 2,6" />
           </svg>
         ),
@@ -343,7 +359,11 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
     items: [
       {
         label: "Reports",
-        href: "/dashboard/reports",
+        href: (role) => {
+          if (role === "LOCAL_DIRECTOR") return "/dashboard/lmd/reports";
+          if (role === "MAIN_DIRECTOR") return "/dashboard/director/reports";
+          return "/dashboard/reports"; // SYSTEM_ADMIN
+        },
         roles: DIRECTOR_ROLES,
         icon: (
           <svg
@@ -461,6 +481,13 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function resolveHref(
+  href: string | ((role: UserRole) => string),
+  role: UserRole,
+): string {
+  return typeof href === "function" ? href(role) : href;
+}
+
 function roleLabel(role: UserRole): string {
   const map: Record<UserRole, string> = {
     SYSTEM_ADMIN: "System Admin",
@@ -490,9 +517,10 @@ type SidebarProps = {
     role: UserRole;
     homeMissionCode: LocalMissionCode;
   };
+  unreadCount?: number;
 };
 
-export default function Sidebar({ user }: SidebarProps) {
+export default function Sidebar({ user, unreadCount = 0 }: SidebarProps) {
   const displayName = user.name ?? user.email ?? "User";
 
   return (
@@ -523,16 +551,24 @@ export default function Sidebar({ user }: SidebarProps) {
               <p className="mb-1 mt-4 px-2 text-[10px] font-medium uppercase tracking-widest text-gray-400">
                 {section.section}
               </p>
-              {visibleItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-                >
-                  {item.icon}
-                  {item.label}
-                </Link>
-              ))}
+              {visibleItems.map((item) => {
+                const href = resolveHref(item.href, user.role);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                  >
+                    {item.icon}
+                    <span className="flex-1">{item.label}</span>
+                    {item.label === "Notifications" && unreadCount > 0 && (
+                      <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-teal-600 px-1 text-[10px] font-semibold text-white">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           );
         })}

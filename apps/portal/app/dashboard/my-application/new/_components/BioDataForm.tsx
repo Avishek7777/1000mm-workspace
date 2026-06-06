@@ -7,6 +7,69 @@ import { Page2FamilyDetails } from "./Page2FamilyDetails";
 import { Page3Education } from "./Page3Education";
 import { Page4Application } from "./Page4Application";
 
+// A single uploaded document record (subset of ApplicationDocument)
+export type UploadedDoc = {
+  kind: string;
+  fileName: string;
+  educationEntryIndex: number | null;
+};
+
+// Shape of the hydrated draft passed from the server component
+export type ExistingDraft = {
+  id: string;
+  // Page 1
+  applicantFullName: string;
+  applicantFullNameBangla: string;
+  applicantDateOfBirth: string; // "YYYY-MM-DD"
+  applicantGender: string;
+  applicantBloodType: string;
+  applicantMaritalStatus: string;
+  applicantDenomination: string;
+  applicantMobileNo: string;
+  applicantEmail: string;
+  applicantPlaceOfBirth: string;
+  applicantHeight: string | number;
+  applicantWeight: string | number;
+  applicantChurchName: string;
+  applicantDateOfBaptism: string; // "YYYY-MM-DD"
+  applicantWorkplace: string;
+  presentAddressDistrict: string;
+  presentAddressUpazila: string;
+  presentAddressPostOffice: string;
+  presentAddressVillage: string;
+  permanentSameAsPresent: boolean;
+  permanentAddressDistrict: string;
+  permanentAddressUpazila: string;
+  permanentAddressPostOffice: string;
+  permanentAddressVillage: string;
+  // Page 2
+  fatherName: string;
+  fatherAge: string | number;
+  fatherReligion: string;
+  fatherChurchName: string;
+  motherName: string;
+  motherAge: string | number;
+  motherReligion: string;
+  motherChurchName: string;
+  familyMobileNo: string;
+  familyEmail: string;
+  // Page 3
+  educationEntries: Array<{
+    id: string;
+    degree: string;
+    institutionName: string;
+    gpa: string;
+    passingYear: string;
+  }> | null;
+  // Page 4
+  missionaryDesire: string;
+  courtRecord: string; // "true" | "false" | ""
+  healthCondition: string;
+  badHabits: string;
+  // All uploaded documents for this draft
+  documents: UploadedDoc[];
+};
+
 export type FormProps = {
   applicantName: string;
   missionCode: string;
@@ -14,7 +77,7 @@ export type FormProps = {
   windowOpen: boolean;
   windowCloseDate: string | null;
   programTitle: string | null;
-  existingDraftId: string | null;
+  existingDraft: ExistingDraft | null;
 };
 
 const STEPS = [
@@ -31,11 +94,11 @@ export function BioDataForm({
   windowOpen,
   windowCloseDate,
   programTitle,
-  existingDraftId,
+  existingDraft,
 }: FormProps) {
   const [step, setStep] = useState(1);
   const [applicationId, setApplicationId] = useState<string | null>(
-    existingDraftId,
+    existingDraft?.id ?? null,
   );
 
   if (!windowOpen) {
@@ -104,6 +167,7 @@ export function BioDataForm({
         {step === 1 && (
           <Page1PersonalDetails
             applicationId={applicationId}
+            defaultValues={existingDraft ?? undefined}
             onNext={(id) => {
               setApplicationId(id);
               setStep(2);
@@ -113,6 +177,7 @@ export function BioDataForm({
         {step === 2 && (
           <Page2FamilyDetails
             applicationId={applicationId!}
+            defaultValues={existingDraft ?? undefined}
             onBack={() => setStep(1)}
             onNext={() => setStep(3)}
           />
@@ -120,6 +185,7 @@ export function BioDataForm({
         {step === 3 && (
           <Page3Education
             applicationId={applicationId!}
+            defaultValues={existingDraft ?? undefined}
             onBack={() => setStep(2)}
             onNext={() => setStep(4)}
           />
@@ -127,7 +193,11 @@ export function BioDataForm({
         {step === 4 && (
           <Page4Application
             applicationId={applicationId!}
+            defaultValues={existingDraft ?? undefined}
             onBack={() => setStep(3)}
+            applicantName={applicantName}
+            missionName={missionName}
+            programTitle={programTitle ?? undefined}
           />
         )}
       </div>

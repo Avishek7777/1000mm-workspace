@@ -91,10 +91,13 @@ function StatCard({
           fontFamily: "Georgia, serif",
           background:
             index % 2 === 0
-              ? "linear-gradient(135deg, #4ade80, #16a34a)"
+              ? "linear-gradient(135deg, #4ade80, #007f98)"
               : "linear-gradient(135deg, #f97316, #ea580c)",
           WebkitBackgroundClip: "text",
+          backgroundClip: "text",
           WebkitTextFillColor: "transparent",
+          color: "transparent", // ← add this
+          display: "inline-block", // ← add this — critical fix
         }}
       >
         {stat.prefix}
@@ -131,7 +134,7 @@ export default function StatisticsSection() {
   return (
     <section
       ref={ref}
-      className="relative py-28 overflow-hidden"
+      className="relative py-15 overflow-hidden"
       style={{
         background:
           "linear-gradient(135deg, #0a1a0f 0%, #1a0f05 50%, #0d1a0a 100%)",

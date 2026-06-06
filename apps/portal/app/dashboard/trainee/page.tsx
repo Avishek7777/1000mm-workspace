@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/auth/helpers";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
-import type { ApplicationStatus } from "@prisma/client";
+import type { ApplicationStatus } from "@1000mm/db";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

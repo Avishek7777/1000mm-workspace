@@ -16,7 +16,11 @@ const quickLinks = [
 ];
 
 const socialLinks = [
-  { icon: FaFacebookF, href: "#", label: "Facebook" },
+  {
+    icon: FaFacebookF,
+    href: "https://www.facebook.com/1000mm.bd/",
+    label: "Facebook",
+  },
   { icon: FaInstagram, href: "#", label: "Instagram" },
   { icon: FaYoutube, href: "#", label: "YouTube" },
   { icon: FaXTwitter, href: "#", label: "Twitter / X" },
@@ -91,6 +95,7 @@ export default function Footer() {
                   href={social.href}
                   aria-label={social.label}
                   className="w-9 h-9 rounded-xl flex items-center justify-center border border-white/10 text-white/40 hover:text-white hover:border-white/30 hover:bg-white/10 transition-all duration-200"
+                  target="_blank"
                 >
                   <social.icon className="w-4 h-4" />
                 </Link>
@@ -109,7 +114,7 @@ export default function Footer() {
             <div
               className="h-px w-8"
               style={{
-                background: "linear-gradient(90deg, #4ade80, #f97316)",
+                background: "linear-gradient(90deg, #007f98, #f97316)",
               }}
             />
             <ul className="space-y-3">
@@ -123,7 +128,7 @@ export default function Footer() {
                     <span
                       className="h-px w-0 group-hover:w-4 transition-all duration-300"
                       style={{
-                        background: "linear-gradient(90deg, #4ade80, #f97316)",
+                        background: "linear-gradient(90deg, #007f98, #f97316)",
                       }}
                     />
                     {link.label}
@@ -144,7 +149,7 @@ export default function Footer() {
             <div
               className="h-px w-8"
               style={{
-                background: "linear-gradient(90deg, #4ade80, #f97316)",
+                background: "linear-gradient(90deg, #007f98, #f97316)",
               }}
             />
 
@@ -161,9 +166,12 @@ export default function Footer() {
                 className="text-4xl leading-none mb-2 select-none"
                 style={{
                   fontFamily: "Georgia, serif",
-                  background: "linear-gradient(90deg, #4ade80, #f97316)",
+                  background: "linear-gradient(90deg, #007f98, #f97316)",
                   WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
                   WebkitTextFillColor: "transparent",
+                  color: "transparent",
+                  display: "inline-block",
                 }}
                 aria-hidden="true"
               >
@@ -188,7 +196,7 @@ export default function Footer() {
               href="#donate"
               className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-bold text-white text-sm hover:opacity-90 hover:scale-105 transition-all duration-300 shadow-lg w-fit"
               style={{
-                background: "linear-gradient(90deg, #16a34a 0%, #f97316 100%)",
+                background: "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
                 fontFamily: "Georgia, serif",
               }}
             >

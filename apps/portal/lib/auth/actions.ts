@@ -16,7 +16,7 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
-import { LocalMissionCode } from "@prisma/client";
+import { LocalMissionCode } from "@1000mm/db";
 import { prisma } from "@1000mm/db";
 import { signIn, signOut } from "@/lib/auth/config";
 
@@ -185,7 +185,7 @@ export async function requestPasswordResetAction(
       data: { token, userId: user.id, expiresAt },
     });
 
-    const resetUrl = `${process.env.AUTH_URL ?? "http://localhost:3000"}/reset-password?token=${token}`;
+    const resetUrl = `${process.env.AUTH_URL ?? "http://localhost:3001"}/reset-password?token=${token}`;
 
     // TODO: replace with Resend send when wired up
     console.log("\n[DEV EMAIL] Password reset link for", email);

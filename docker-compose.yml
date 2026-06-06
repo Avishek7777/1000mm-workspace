@@ -9,11 +9,27 @@ services:
       POSTGRES_DB: mm1000
 
   portal:
-    build: ./apps/portal
+    build:
+      context: .
+      dockerfile: apps/portal/Dockerfile
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/portal/node_modules
+    working_dir: /app
+    command: pnpm --filter portal dev
     ports:
       - "3001:3001"
 
   website:
-    build: ./apps/website
+    build:
+      context: .
+      dockerfile: apps/website/Dockerfile
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/website/node_modules
+    working_dir: /app
+    command: pnpm --filter website dev
     ports:
       - "3000:3000"

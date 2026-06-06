@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
 import { uploadToR2, r2Prefix } from "@/lib/r2";
+import { headers } from "next/headers";
 import {
   Gender,
   BloodType,
@@ -12,7 +13,7 @@ import {
   Denomination,
   Religion,
   DocumentKind,
-} from "@prisma/client";
+} from "@1000mm/db";
 
 export type FormState = {
   ok: boolean;
@@ -20,9 +21,18 @@ export type FormState = {
   fieldErrors?: Record<string, string>;
 };
 
+// ─── IP helper ────────────────────────────────────────────────────────────────
+
+async function getClientIp(): Promise<string | null> {
+  const h = await headers();
+  return (
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    h.get("x-real-ip") ??
+    null
+  );
+}
+
 // ─── File upload helper ───────────────────────────────────────────────────────
-// Reads a File from FormData, uploads to R2, returns document row data.
-// Returns null if no file was provided (optional uploads).
 
 async function uploadFormFile(
   file: File | null,
@@ -120,7 +130,6 @@ const page2Schema = z.object({
 });
 
 const page3Schema = z.object({
-  // education entries come as JSON string from hidden input
   educationEntries: z.string().transform((v) => JSON.parse(v)),
 });
 
@@ -134,9 +143,7 @@ const page4Schema = z.object({
   }),
 });
 
-// ─── SAVE DRAFT (pages 1–3, Next button) ─────────────────────────────────────
-// Upserts the Application in DRAFT status. Returns applicationId in fieldErrors
-// so the client can track it across page transitions.
+// ─── SAVE DRAFT (pages 1–3) ───────────────────────────────────────────────────
 
 export async function saveDraftAction(
   _prev: FormState,
@@ -149,7 +156,6 @@ export async function saveDraftAction(
   const page = Number(formData.get("__page") ?? 1);
   const applicationId = (formData.get("__applicationId") as string) || null;
 
-  // Find the user's home mission and active application window
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { homeMission: true },
@@ -244,7 +250,6 @@ export async function saveDraftAction(
         data: baseData,
       });
     } else {
-      // Check no existing draft for this window
       const existing = await prisma.application.findFirst({
         where: {
           applicantId: userId,
@@ -271,7 +276,6 @@ export async function saveDraftAction(
       }
     }
 
-    // Handle profile photo upload
     const photoFile = formData.get("profilePhoto") as File | null;
     if (photoFile && photoFile.size > 0) {
       const doc = await uploadFormFile(
@@ -322,7 +326,6 @@ export async function saveDraftAction(
       },
     });
 
-    // Handle father/mother NID uploads
     const fatherNid = formData.get("fatherNid") as File | null;
     const motherNid = formData.get("motherNid") as File | null;
     await uploadFormFile(
@@ -358,7 +361,6 @@ export async function saveDraftAction(
       passingYear: number;
     }>;
 
-    // Upload each education certificate
     const savedEntries = await Promise.all(
       entries.map(async (entry, idx) => {
         const certFile = formData.get(`cert_${entry.id}`) as File | null;
@@ -377,7 +379,6 @@ export async function saveDraftAction(
       }),
     );
 
-    // Fetch current formData and merge education
     const app = await prisma.application.findUnique({
       where: { id: applicationId },
       select: { formData: true },
@@ -400,7 +401,7 @@ export async function saveDraftAction(
 export async function submitApplicationAction(
   _prev: FormState,
   formData: FormData,
-): Promise<FormState & { applicationId?: string }> {
+): Promise<FormState & { applicationId?: string; referenceNumber?: string }> {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
@@ -421,7 +422,6 @@ export async function submitApplicationAction(
 
   const d = parsed.data;
 
-  // Fetch current formData
   const app = await prisma.application.findUnique({
     where: { id: applicationId },
     include: { submittedFromMission: true },
@@ -438,7 +438,7 @@ export async function submitApplicationAction(
     declarationAccepted: true,
   };
 
-  // Handle Page 4 document uploads
+  // Page 4 document uploads
   const docKinds: Array<[string, DocumentKind]> = [
     [
       "districtPastorRecommendation",
@@ -456,6 +456,9 @@ export async function submitApplicationAction(
     await uploadFormFile(file, kind, applicationId, userId);
   }
 
+  // Capture client IP from request headers
+  const ipAddress = await getClientIp();
+
   // Generate reference number
   const year = new Date().getFullYear();
   const referenceNumber = await generateReferenceNumber(
@@ -463,7 +466,6 @@ export async function submitApplicationAction(
     year,
   );
 
-  // Submit
   await prisma.$transaction([
     prisma.application.update({
       where: { id: applicationId },
@@ -491,10 +493,11 @@ export async function submitApplicationAction(
         actorRole: "TRAINEE",
         targetType: "Application",
         targetId: applicationId,
+        ipAddress, // ← stored here, read back by pdf-data route
         details: { referenceNumber },
       },
     }),
   ]);
 
-  redirect("/dashboard/my-application?submitted=true");
+  return { ok: true, applicationId, referenceNumber };
 }

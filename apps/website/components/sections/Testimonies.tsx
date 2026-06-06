@@ -57,7 +57,7 @@ const testimonies = [
 export default function Testimonies() {
   return (
     <section
-      className="relative py-28 overflow-hidden"
+      className="relative py-15 overflow-hidden"
       style={{
         background: "linear-gradient(160deg, #fafaf9 0%, #fff7ed 100%)",
       }}
@@ -78,7 +78,7 @@ export default function Testimonies() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.1 }}
           transition={{ duration: 0.6 }}
-          className="mb-16"
+          className="mb-10"
         >
           <div className="flex items-center gap-3 mb-4">
             <span
@@ -103,7 +103,7 @@ export default function Testimonies() {
               className="text-transparent bg-clip-text"
               style={{
                 backgroundImage:
-                  "linear-gradient(90deg, #16a34a 0%, #f97316 100%)",
+                  "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
               }}
             >
               Transformed
@@ -171,7 +171,10 @@ export default function Testimonies() {
                     fontFamily: "Georgia, serif",
                     background: "linear-gradient(90deg, #16a34a, #f97316)",
                     WebkitBackgroundClip: "text",
+                    backgroundClip: "text",
                     WebkitTextFillColor: "transparent",
+                    color: "transparent",
+                    display: "inline-block", // ← the fix
                   }}
                   aria-hidden="true"
                 >

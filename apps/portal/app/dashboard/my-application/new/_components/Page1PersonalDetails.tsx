@@ -12,23 +12,96 @@ import {
   FormCard,
   FormNav,
 } from "./FormFields";
+import type { ExistingDraft } from "./BioDataForm";
 
 const DISTRICTS = Object.keys(addressMap).sort();
 const UPAZILAS: Record<string, string[]> = addressMap;
 
 type Props = {
   applicationId: string | null;
+  defaultValues?: ExistingDraft;
   onNext: (applicationId: string) => void;
 };
 
-export function Page1PersonalDetails({ applicationId, onNext }: Props) {
+export function Page1PersonalDetails({
+  applicationId,
+  defaultValues,
+  onNext,
+}: Props) {
+  const d = defaultValues;
+  const docs = d?.documents ?? [];
+
+  // Existing uploaded doc lookups
+  const existingPhoto =
+    docs.find((doc) => doc.kind === "PROFILE_PHOTO") ?? null;
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
-  const [permanentSameAsPresent, setPermanentSameAsPresent] = useState(false);
-  const [presentDistrict, setPresentDistrict] = useState("");
-  const [permanentDistrict, setPermanentDistrict] = useState("");
+
+  const [permanentSameAsPresent, setPermanentSameAsPresent] = useState(
+    d?.permanentSameAsPresent ?? false,
+  );
+  const [presentDistrict, setPresentDistrict] = useState(
+    d?.presentAddressDistrict ?? "",
+  );
+  const [permanentDistrict, setPermanentDistrict] = useState(
+    d?.permanentAddressDistrict ?? "",
+  );
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  const [fullName, setFullName] = useState(d?.applicantFullName ?? "");
+  const [fullNameBangla, setFullNameBangla] = useState(
+    d?.applicantFullNameBangla ?? "",
+  );
+  const [dob, setDob] = useState(d?.applicantDateOfBirth ?? "");
+  const [gender, setGender] = useState(d?.applicantGender ?? "");
+  const [bloodType, setBloodType] = useState(d?.applicantBloodType ?? "");
+  const [placeOfBirth, setPlaceOfBirth] = useState(
+    d?.applicantPlaceOfBirth ?? "",
+  );
+  const [maritalStatus, setMaritalStatus] = useState(
+    d?.applicantMaritalStatus ?? "",
+  );
+  const [denomination, setDenomination] = useState(
+    d?.applicantDenomination ?? "",
+  );
+  const [churchName, setChurchName] = useState(d?.applicantChurchName ?? "");
+  const [dateOfBaptism, setDateOfBaptism] = useState(
+    d?.applicantDateOfBaptism ?? "",
+  );
+  const [height, setHeight] = useState(
+    d?.applicantHeight != null && d.applicantHeight !== ""
+      ? String(d.applicantHeight)
+      : "",
+  );
+  const [weight, setWeight] = useState(
+    d?.applicantWeight != null && d.applicantWeight !== ""
+      ? String(d.applicantWeight)
+      : "",
+  );
+  const [workplace, setWorkplace] = useState(d?.applicantWorkplace ?? "");
+  const [mobileNo, setMobileNo] = useState(d?.applicantMobileNo ?? "");
+  const [email, setEmail] = useState(d?.applicantEmail ?? "");
+  const [presentUpazila, setPresentUpazila] = useState(
+    d?.presentAddressUpazila ?? "",
+  );
+  const [presentPostOffice, setPresentPostOffice] = useState(
+    d?.presentAddressPostOffice ?? "",
+  );
+  const [presentVillage, setPresentVillage] = useState(
+    d?.presentAddressVillage ?? "",
+  );
+  const [permanentUpazila, setPermanentUpazila] = useState(
+    d?.permanentAddressUpazila ?? "",
+  );
+  const [permanentPostOffice, setPermanentPostOffice] = useState(
+    d?.permanentAddressPostOffice ?? "",
+  );
+  const [permanentVillage, setPermanentVillage] = useState(
+    d?.permanentAddressVillage ?? "",
+  );
+
   const formRef = useRef<HTMLFormElement>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -56,10 +129,7 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setPhotoPreview(url);
-    }
+    if (file) setPhotoPreview(URL.createObjectURL(file));
   }
 
   return (
@@ -106,15 +176,35 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
               )}
             </div>
             <label className="cursor-pointer rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
-              Upload Photo
+              {existingPhoto && !photoPreview
+                ? "Replace Photo"
+                : "Upload Photo"}
               <input
                 type="file"
                 name="profilePhoto"
                 accept="image/jpeg,image/png,image/webp"
-                className="sr-only"
+                className="file-input-hidden"
                 onChange={handlePhotoChange}
               />
             </label>
+            {existingPhoto && !photoPreview && (
+              <p className="flex items-center gap-1 text-xs text-green-600">
+                <svg
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                {existingPhoto.fileName}
+              </p>
+            )}
             <p className="text-center text-xs text-gray-400">
               Max 2 MB
               <br />
@@ -136,6 +226,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
                 name="applicantFullName"
                 placeholder="As on official document"
                 maxLength={36}
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 error={errors.applicantFullName}
               />
             </Field>
@@ -148,6 +240,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
                 placeholder="বাংলায় নাম"
                 dir="auto"
                 maxLength={50}
+                value={fullNameBangla}
+                onChange={(e) => setFullNameBangla(e.target.value)}
                 error={errors.applicantFullNameBangla}
               />
             </Field>
@@ -164,18 +258,30 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
             <Input
               type="date"
               name="applicantDateOfBirth"
+              value={dob}
+              onChange={(e) => setDob(e.target.value)}
               error={errors.applicantDateOfBirth}
             />
           </Field>
           <Field label="Gender" required error={errors.applicantGender}>
-            <Select name="applicantGender" error={errors.applicantGender}>
+            <Select
+              name="applicantGender"
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              error={errors.applicantGender}
+            >
               <option value="">Select</option>
               <option value="MALE">Male</option>
               <option value="FEMALE">Female</option>
             </Select>
           </Field>
           <Field label="Blood Type" error={errors.applicantBloodType}>
-            <Select name="applicantBloodType" error={errors.applicantBloodType}>
+            <Select
+              name="applicantBloodType"
+              value={bloodType}
+              onChange={(e) => setBloodType(e.target.value)}
+              error={errors.applicantBloodType}
+            >
               <option value="">Select</option>
               {[
                 "A_POS",
@@ -202,12 +308,16 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
               name="applicantPlaceOfBirth"
               placeholder="City / Village"
               maxLength={50}
+              value={placeOfBirth}
+              onChange={(e) => setPlaceOfBirth(e.target.value)}
               error={errors.applicantPlaceOfBirth}
             />
           </Field>
           <Field label="Marital Status" error={errors.applicantMaritalStatus}>
             <Select
               name="applicantMaritalStatus"
+              value={maritalStatus}
+              onChange={(e) => setMaritalStatus(e.target.value)}
               error={errors.applicantMaritalStatus}
             >
               <option value="">Select</option>
@@ -220,6 +330,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
           <Field label="Denomination" error={errors.applicantDenomination}>
             <Select
               name="applicantDenomination"
+              value={denomination}
+              onChange={(e) => setDenomination(e.target.value)}
               error={errors.applicantDenomination}
             >
               <option value="">Select</option>
@@ -246,6 +358,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
               name="applicantChurchName"
               placeholder="Your home church"
               maxLength={70}
+              value={churchName}
+              onChange={(e) => setChurchName(e.target.value)}
               error={errors.applicantChurchName}
             />
           </Field>
@@ -253,6 +367,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
             <Input
               type="date"
               name="applicantDateOfBaptism"
+              value={dateOfBaptism}
+              onChange={(e) => setDateOfBaptism(e.target.value)}
               error={errors.applicantDateOfBaptism}
             />
           </Field>
@@ -268,6 +384,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
               min={100}
               max={250}
               step={0.1}
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
               error={errors.applicantHeight}
             />
           </Field>
@@ -279,6 +397,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
               min={30}
               max={300}
               step={0.1}
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
               error={errors.applicantWeight}
             />
           </Field>
@@ -290,6 +410,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
               name="applicantWorkplace"
               placeholder="Job or occupation"
               maxLength={100}
+              value={workplace}
+              onChange={(e) => setWorkplace(e.target.value)}
               error={errors.applicantWorkplace}
             />
           </Field>
@@ -302,6 +424,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
               name="applicantMobileNo"
               placeholder="01X-XXXXXXXX"
               maxLength={11}
+              value={mobileNo}
+              onChange={(e) => setMobileNo(e.target.value)}
               error={errors.applicantMobileNo}
             />
           </Field>
@@ -310,6 +434,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
               type="email"
               name="applicantEmail"
               placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               error={errors.applicantEmail}
             />
           </Field>
@@ -324,6 +450,7 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
               value={presentDistrict}
               onChange={(e) => {
                 setPresentDistrict(e.target.value);
+                setPresentUpazila("");
               }}
               error={errors.presentAddressDistrict}
             >
@@ -341,6 +468,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
           >
             <Select
               name="presentAddressUpazila"
+              value={presentUpazila}
+              onChange={(e) => setPresentUpazila(e.target.value)}
               error={errors.presentAddressUpazila}
               disabled={!presentDistrict}
             >
@@ -359,6 +488,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
               name="presentAddressPostOffice"
               placeholder="Post office name"
               maxLength={50}
+              value={presentPostOffice}
+              onChange={(e) => setPresentPostOffice(e.target.value)}
               error={errors.presentAddressPostOffice}
             />
           </Field>
@@ -367,6 +498,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
               name="presentAddressVillage"
               placeholder="Village or road"
               maxLength={50}
+              value={presentVillage}
+              onChange={(e) => setPresentVillage(e.target.value)}
               error={errors.presentAddressVillage}
             />
           </Field>
@@ -397,7 +530,10 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
                 <Select
                   name="permanentAddressDistrict"
                   value={permanentDistrict}
-                  onChange={(e) => setPermanentDistrict(e.target.value)}
+                  onChange={(e) => {
+                    setPermanentDistrict(e.target.value);
+                    setPermanentUpazila("");
+                  }}
                   error={errors.permanentAddressDistrict}
                 >
                   <option value="">Select District</option>
@@ -414,6 +550,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
               >
                 <Select
                   name="permanentAddressUpazila"
+                  value={permanentUpazila}
+                  onChange={(e) => setPermanentUpazila(e.target.value)}
                   error={errors.permanentAddressUpazila}
                   disabled={!permanentDistrict}
                 >
@@ -437,6 +575,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
                   name="permanentAddressPostOffice"
                   placeholder="Post office name"
                   maxLength={50}
+                  value={permanentPostOffice}
+                  onChange={(e) => setPermanentPostOffice(e.target.value)}
                   error={errors.permanentAddressPostOffice}
                 />
               </Field>
@@ -448,6 +588,8 @@ export function Page1PersonalDetails({ applicationId, onNext }: Props) {
                   name="permanentAddressVillage"
                   placeholder="Village or road"
                   maxLength={50}
+                  value={permanentVillage}
+                  onChange={(e) => setPermanentVillage(e.target.value)}
                   error={errors.permanentAddressVillage}
                 />
               </Field>

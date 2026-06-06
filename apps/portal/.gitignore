@@ -17,6 +17,8 @@
 /.next/
 /out/
 
+apps/portal/public/uploads/
+
 # production
 /build
 

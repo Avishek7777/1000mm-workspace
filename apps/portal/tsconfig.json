@@ -20,7 +20,8 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@1000mm/db": ["../../packages/db/src/index.ts"]
+      "@1000mm/db": ["../../packages/db/src/index.ts"],
+      "@prisma/client": ["../../packages/db/node_modules/@prisma/client"]
     }
   },
   "include": [

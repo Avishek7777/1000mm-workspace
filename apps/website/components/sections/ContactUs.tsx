@@ -15,15 +15,15 @@ const contactInfo = {
     icon: MapPin,
     title: "Address",
     lines: [
-      "1000 Missionary Movement Bangladesh",
-      "Seventh-day Adventist Church",
-      "Dhaka, Bangladesh",
+      "1000 Missionary Movement",
+      "Seventh-day Adventist Church of Bangladesh",
+      "149 Shah Ali Bagh, Mirpur-1, Dhaka-1216, GPO Box 80, Dhaka 1000",
     ],
   },
   contact: {
     icon: Phone,
     title: "Contact",
-    lines: ["+880 1XXX-XXXXXX", "info@1000mmbd.org", "www.1000mmbd.org"],
+    lines: ["+880 1314-333300", "info@1000mm.org.bd", "www.1000mm.org.bd"],
   },
   schedule: {
     icon: Calendar,
@@ -54,7 +54,7 @@ export default function ContactUs() {
   return (
     <section
       id="contact"
-      className="relative py-28 overflow-hidden bg-stone-50"
+      className="relative py-10 overflow-hidden bg-stone-50"
     >
       {/* Decorative top border */}
       <div
@@ -80,7 +80,7 @@ export default function ContactUs() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.1 }}
           transition={{ duration: 0.6 }}
-          className="mb-16"
+          className="mb-10"
         >
           <div className="flex items-center gap-3 mb-4">
             <span
@@ -105,7 +105,7 @@ export default function ContactUs() {
               className="text-transparent bg-clip-text"
               style={{
                 backgroundImage:
-                  "linear-gradient(90deg, #16a34a 0%, #f97316 100%)",
+                  "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
               }}
             >
               Us
@@ -114,7 +114,7 @@ export default function ContactUs() {
         </motion.div>
 
         {/* 3-column info grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {Object.values(contactInfo).map((info, i) => (
             <motion.div
               key={info.title}
@@ -303,7 +303,7 @@ export default function ContactUs() {
                   className="w-full py-3 rounded-xl font-bold text-white text-sm hover:opacity-90 hover:scale-[1.02] active:scale-100 transition-all duration-200 shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
                     background:
-                      "linear-gradient(90deg, #16a34a 0%, #f97316 100%)",
+                      "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
                     fontFamily: "Georgia, serif",
                   }}
                 >

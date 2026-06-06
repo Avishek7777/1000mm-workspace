@@ -1,56 +1,38 @@
 /**
- * Cloudflare R2 client + upload helper.
+ * Local filesystem storage — development/self-hosted replacement for R2.
  *
- * Credentials are read from env vars. Leave them blank during development —
- * uploadToR2 will throw a clear error if called without creds, but the rest
- * of the app (form UI, DB writes) will still work fine.
+ * Files are written to:  <project_root>/public/uploads/{prefix}/{year}/{randomHex}.{ext}
+ * Files are served at:   http://localhost:3001/uploads/{prefix}/{year}/{randomHex}.{ext}
  *
- * Add to your .env.local:
- *   R2_ACCOUNT_ID=
- *   R2_ACCESS_KEY_ID=
- *   R2_SECRET_ACCESS_KEY=
- *   R2_BUCKET_NAME=
- *   R2_PUBLIC_URL=          ← the public bucket URL or a custom domain
+ * The `public/uploads/` folder is gitignored (add it if not already).
+ *
+ * To switch to R2 later: replace this file with the R2 version.
+ * Everything else in the codebase stays the same.
+ *
+ * Set in your .env.local:
+ *   NEXT_PUBLIC_APP_URL=http://localhost:3001   ← used to build public URLs
  */
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
+import fs from "node:fs/promises";
 
-const accountId = process.env.R2_ACCOUNT_ID ?? "";
-const accessKeyId = process.env.R2_ACCESS_KEY_ID ?? "";
-const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY ?? "";
-const bucketName = process.env.R2_BUCKET_NAME ?? "";
-const publicUrl = process.env.R2_PUBLIC_URL ?? "";
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
 
-// Lazily instantiated so missing creds don't crash on import
-let _client: S3Client | null = null;
-function getClient(): S3Client {
-  if (!accountId || !accessKeyId || !secretAccessKey) {
-    throw new Error(
-      "R2 credentials are not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY in your .env.local.",
-    );
-  }
-  if (!_client) {
-    _client = new S3Client({
-      region: "auto",
-      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-      credentials: { accessKeyId, secretAccessKey },
-    });
-  }
-  return _client;
-}
+// Resolve the uploads directory relative to the Next.js project root.
+// process.cwd() in Next.js always points to the app root (where package.json is).
+const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
 
 export type UploadResult = {
-  storageKey: string;
-  publicUrl: string;
-  fileName: string;
+  storageKey: string; // relative path used as DB reference, e.g. "profile-photos/2026/abc123.jpg"
+  publicUrl: string; // full URL to serve the file
+  fileName: string; // original file name
   mimeType: string;
   fileSizeBytes: number;
 };
 
 /**
- * Upload a file buffer to R2.
+ * Save a file buffer to the local filesystem.
  *
  * storageKey format: {prefix}/{year}/{randomHex}.{ext}
  * e.g. "profile-photos/2026/a3f9c12b.jpg"
@@ -61,35 +43,30 @@ export async function uploadToR2(
   mimeType: string,
   prefix: string,
 ): Promise<UploadResult> {
-  if (!bucketName) {
-    throw new Error("R2_BUCKET_NAME is not configured.");
-  }
-
   const ext = path.extname(originalFileName).toLowerCase() || ".bin";
   const year = new Date().getFullYear();
   const randomHex = randomBytes(16).toString("hex");
   const storageKey = `${prefix}/${year}/${randomHex}${ext}`;
 
-  await getClient().send(
-    new PutObjectCommand({
-      Bucket: bucketName,
-      Key: storageKey,
-      Body: buffer,
-      ContentType: mimeType,
-      ContentDisposition: `inline; filename="${originalFileName}"`,
-    }),
-  );
+  const destDir = path.join(UPLOADS_DIR, prefix, String(year));
+  const destFile = path.join(UPLOADS_DIR, ...storageKey.split("/"));
+
+  // Ensure the directory exists
+  await fs.mkdir(destDir, { recursive: true });
+
+  // Write the file
+  await fs.writeFile(destFile, buffer);
 
   return {
     storageKey,
-    publicUrl: `${publicUrl}/${storageKey}`,
+    publicUrl: `${appUrl}/uploads/${storageKey}`,
     fileName: originalFileName,
     mimeType,
     fileSizeBytes: buffer.byteLength,
   };
 }
 
-/** Map DocumentKind to an R2 storage prefix */
+/** Map DocumentKind to a storage prefix folder */
 export const r2Prefix: Record<string, string> = {
   PROFILE_PHOTO: "profile-photos",
   FATHER_NID: "family-nids",
