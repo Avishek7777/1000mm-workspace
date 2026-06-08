@@ -2,6 +2,16 @@ import { requireRole } from "@/lib/auth/helpers";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
 import type { ApplicationStatus } from "@1000mm/db";
+import { ExportButtons } from "@/app/dashboard/_components/ExportButtons";
+
+// In the page header JSX:
+<div className="flex items-center justify-between">
+  <div>
+    <h1 className="text-lg font-semibold text-gray-900">Applications</h1>
+    {/* ... subtitle */}
+  </div>
+  <ExportButtons />
+</div>;
 
 const STATUS_LABELS: Record<ApplicationStatus, string> = {
   DRAFT: "Draft",
@@ -326,6 +336,7 @@ export default async function DirectorApplicationsPage({
             Showing {(pageNum - 1) * PAGE_SIZE + 1}–
             {Math.min(pageNum * PAGE_SIZE, total)} of {total}
           </p>
+          <ExportButtons />
           <div className="flex gap-2">
             {pageNum > 1 && (
               <Link

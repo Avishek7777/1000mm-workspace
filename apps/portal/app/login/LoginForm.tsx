@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { loginAction, type FormState } from "@/lib/auth/actions";
 import { Cross } from "lucide-react";
+import Image from "next/image";
 
 const initial: FormState = { ok: false };
 
@@ -19,14 +20,14 @@ export default function LoginForm() {
     <div
       className="min-h-screen flex items-center justify-center px-6 py-16 relative overflow-hidden"
       style={{
-        background: "linear-gradient(160deg, #071009 0%, #130a03 100%)",
+        background: "linear-gradient(-160deg, #007f98d3 0%, #da6614d8 100%)",
       }}
     >
       {/* Background cross pattern */}
       <div
         className="absolute inset-0 opacity-[0.04]"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0v60M0 30h60' stroke='%23ffffff' stroke-width='0.5'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0v60M0 30h60' stroke='%23ffffff' stroke-width='1.8'/%3E%3C/svg%3E")`,
         }}
       />
 
@@ -44,7 +45,7 @@ export default function LoginForm() {
         className="relative z-10 w-full max-w-md rounded-3xl p-8 md:p-10"
         style={{
           background:
-            "linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)",
+            "linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, hsla(0, 0%, 100%, 0.03) 100%)",
           border: "1px solid rgba(255,255,255,0.10)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
@@ -52,20 +53,26 @@ export default function LoginForm() {
       >
         {/* Logo */}
         <div className="flex items-center gap-2 mb-8">
-          <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
-            <Cross className="w-4 h-4 text-white" />
+          <div className="w-12 mx-auto h-12 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
+            {/* <Cross className="w-4 h-4 text-white" /> */}
+            <Image
+              src="/logos/1000mm-logo.png"
+              alt="1000MM Logo"
+              width={32}
+              height={32}
+            />
           </div>
-          <span
+          {/* <span
             className="font-bold text-white text-lg tracking-tight"
             style={{ fontFamily: "Georgia, serif" }}
           >
             1000<span className="font-light opacity-60">MM</span>
-          </span>
+          </span> */}
         </div>
 
         {/* Heading */}
         <h1
-          className="text-3xl font-bold text-white mb-1 leading-tight"
+          className="text-3xl text-center font-bold text-white mb-1 leading-tight"
           style={{ fontFamily: "Georgia, serif" }}
         >
           Welcome{" "}
@@ -73,14 +80,14 @@ export default function LoginForm() {
             className="text-transparent bg-clip-text"
             style={{
               backgroundImage:
-                "linear-gradient(90deg, #4ade80 0%, #f97316 100%)",
+                "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
             }}
           >
             Back
           </span>
         </h1>
         <p
-          className="text-white/40 text-sm mb-8"
+          className="text-white/40 text-semibold text-center text-sm mb-8"
           style={{ fontFamily: "Georgia, serif" }}
         >
           1000 Missionary Movement Bangladesh
@@ -183,7 +190,7 @@ export default function LoginForm() {
             disabled={pending}
             className="w-full py-3 rounded-xl font-bold text-white text-sm hover:opacity-90 hover:scale-[1.02] active:scale-100 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 mt-2"
             style={{
-              background: "linear-gradient(90deg, #16a34a 0%, #f97316 100%)",
+              background: "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
               fontFamily: "Georgia, serif",
             }}
           >
@@ -197,7 +204,7 @@ export default function LoginForm() {
           style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
         >
           <p
-            className="text-white/30 text-xs"
+            className="text-white/30 text-semibold text-xs"
             style={{ fontFamily: "Georgia, serif" }}
           >
             Don&apos;t have an account?{" "}

@@ -10,6 +10,7 @@ import {
   notifyStaffAboutComplaint,
   NOTIFICATION_TEMPLATES,
 } from "@/lib/notifications";
+import { isSettingEnabled, SETTINGS } from "@/lib/settings";
 
 export type ActionResult = {
   ok: boolean;
@@ -136,6 +137,10 @@ export async function respondToComplaintAction(
       ok: false,
       error: "You are not permitted to respond to complaints.",
     };
+  }
+  if (user.role === "MAIN_DIRECTOR") {
+    const allowed = await isSettingEnabled(SETTINGS.UD_CAN_RESPOND_COMPLAINTS);
+    if (!allowed) return { ok: false, error: "Not permitted." };
   }
 
   const parsed = respondSchema.safeParse({

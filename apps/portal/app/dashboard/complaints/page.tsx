@@ -37,13 +37,13 @@ export default async function ComplaintsPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    include: { homeMission: { select: { code: true } } },
   });
   if (!user) redirect("/login");
 
+  // Only TRAINEE, MAIN_DIRECTOR, SYSTEM_ADMIN can access this page
+  // LOCAL_DIRECTOR cannot see complaints
   const canSubmit = ["TRAINEE", "LOCAL_DIRECTOR"].includes(user.role);
   const isStaff = ["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
-  const isLmd = user.role === "LOCAL_DIRECTOR";
 
   // Build query based on role
   let complaints: any[] = [];
@@ -51,25 +51,14 @@ export default async function ComplaintsPage() {
   if (isStaff) {
     // UD and SA see all complaints
     complaints = await prisma.complaint.findMany({
-      where: { deletedAt: null },
-      orderBy: { createdAt: "desc" },
-      include: { submittedBy: { select: { fullName: true } } },
-    });
-  } else if (isLmd) {
-    // LMD sees complaints from their mission
-    complaints = await prisma.complaint.findMany({
-      where: {
-        deletedAt: null,
-        missionCode: user.homeMission?.code as any,
-      },
+      where: {},
       orderBy: { createdAt: "desc" },
       include: { submittedBy: { select: { fullName: true } } },
     });
   } else {
-    // TRAINEE: sees their own non-anonymous complaints only
+    // TRAINEE + LOCAL_DIRECTOR: see only their own non-anonymous complaints
     complaints = await prisma.complaint.findMany({
       where: {
-        deletedAt: null,
         submittedById: user.id,
         isAnonymous: false,
       },
@@ -90,9 +79,7 @@ export default async function ComplaintsPage() {
           <p className="mt-0.5 text-sm text-gray-500">
             {isStaff
               ? `${complaints.length} total · ${unresolved} unresolved`
-              : isLmd
-                ? `${complaints.length} from your mission · ${unresolved} unresolved`
-                : "Your submitted complaints"}
+              : "Your submitted complaints"}
           </p>
         </div>
         {canSubmit && (
@@ -196,7 +183,7 @@ export default async function ComplaintsPage() {
                       Pending
                     </span>
                   )}
-                  {c.isAnonymous && (isStaff || isLmd) && (
+                  {c.isAnonymous && isStaff && (
                     <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">
                       Anonymous
                     </span>
@@ -213,7 +200,7 @@ export default async function ComplaintsPage() {
                 <p className="mt-0.5 line-clamp-1 text-xs text-gray-500">
                   {c.description}
                 </p>
-                {!c.isAnonymous && c.submittedBy && (isStaff || isLmd) && (
+                {!c.isAnonymous && c.submittedBy && isStaff && (
                   <p className="mt-1 text-[11px] text-gray-400">
                     by {c.submittedBy.fullName}
                   </p>

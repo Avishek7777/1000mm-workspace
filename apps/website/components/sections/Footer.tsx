@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Cross } from "lucide-react";
+//import { Cross } from "lucide-react";
 import {
   FaFacebookF,
   FaInstagram,
   FaYoutube,
   FaXTwitter,
 } from "react-icons/fa6";
+import Image from "next/image";
 
 const quickLinks = [
   { label: "Home", href: "/" },
@@ -61,30 +62,41 @@ export default function Footer() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-6">
         {/* Main footer content */}
-        <div className="py-16 grid grid-cols-1 md:grid-cols-3 gap-12">
+        <div className="py-12 grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Brand column */}
           <div className="md:col-span-1 flex flex-col gap-5">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 w-fit">
-              <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
-                <Cross className="w-4 h-4 text-white" />
+              <div>
+                {/* className="w-12 h-12 rounded-full bg-white/20 flex items-center */}
+                {/* justify-center border border-white/20" */}
+                <Image
+                  src="/logos/sda-nsd.png"
+                  alt="1000MM Logo"
+                  width={64}
+                  height={64}
+                />
+                {/* <Cross className="w-4 h-4 text-white" /> */}
               </div>
               <span
-                className="font-bold text-white text-xl tracking-tight"
-                style={{ fontFamily: "Georgia, serif" }}
+                className="font-bold text-white tracking-tight"
+                style={{ fontFamily: "Georgia, serif", fontSize: "0.9rem" }}
               >
-                1000<span className="font-light opacity-70">MM</span>
+                {/* 1000<span className="font-light opacity-70">MM</span> */}
+                An official website of the Seventh-day Adventist Church.
               </span>
             </Link>
 
             {/* Tagline */}
             <p
-              className="text-white/50 text-sm leading-relaxed max-w-xs"
+              className="text-white/50 text-sm text-justify leading-relaxed max-w-xs"
               style={{ fontFamily: "Georgia, serif" }}
             >
-              Raising young Bangladeshi missionaries to serve Jesus Christ. One
-              year. Eternal impact. We train, equip, and send passionate youth
-              to reach the unreached with the Gospel.
+              Raising and mobilizing a new generation of Bangladeshi
+              missionaries to impact the world for God. Through training,
+              discipleship, and practical support, we equip and send passionate
+              servants to bring the hope of the Gospel to unreached peoples,
+              make disciples, and advance God's Kingdom across the world.
             </p>
 
             {/* Social icons */}
@@ -163,7 +175,7 @@ export default function Footer() {
               }}
             >
               <div
-                className="text-4xl leading-none mb-2 select-none"
+                className="text-4xl leading-none select-none"
                 style={{
                   fontFamily: "Georgia, serif",
                   background: "linear-gradient(90deg, #007f98, #f97316)",

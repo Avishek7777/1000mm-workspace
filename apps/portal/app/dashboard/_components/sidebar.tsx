@@ -1,19 +1,13 @@
 import Link from "next/link";
 import SignOutButton from "./sign-out-button";
-import { UserRole, LocalMissionCode, prisma } from "@1000mm/db";
-import { auth } from "@/lib/auth/config";
-
-// ─── Nav item shape ───────────────────────────────────────────────────────────
+import { UserRole, LocalMissionCode } from "@1000mm/db";
 
 type NavItem = {
   label: string;
-  // href can be a static string or a function of the user's role
   href: string | ((role: UserRole) => string);
   icon: React.ReactNode;
   roles: UserRole[];
 };
-
-// ─── Role groups ──────────────────────────────────────────────────────────────
 
 const ALL_ROLES: UserRole[] = [
   "SYSTEM_ADMIN",
@@ -22,22 +16,12 @@ const ALL_ROLES: UserRole[] = [
   "TRAINER",
   "TRAINEE",
 ];
-
 const DIRECTOR_ROLES: UserRole[] = [
   "SYSTEM_ADMIN",
   "MAIN_DIRECTOR",
   "LOCAL_DIRECTOR",
 ];
-
 const ADMIN_ROLES: UserRole[] = ["SYSTEM_ADMIN", "MAIN_DIRECTOR"];
-
-const BULK_EMAIL_ROLES: UserRole[] = [
-  "SYSTEM_ADMIN",
-  "MAIN_DIRECTOR",
-  "LOCAL_DIRECTOR",
-];
-
-// ─── Nav sections ─────────────────────────────────────────────────────────────
 
 const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
   {
@@ -80,9 +64,7 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
         label: "Applications",
         href: (role) => {
           if (role === "LOCAL_DIRECTOR") return "/dashboard/lmd/applications";
-          if (role === "MAIN_DIRECTOR")
-            return "/dashboard/director/applications";
-          return "/dashboard/applications";
+          return "/dashboard/director/applications"; // MAIN_DIRECTOR + SYSTEM_ADMIN
         },
         roles: DIRECTOR_ROLES,
         icon: (
@@ -128,7 +110,7 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
       },
       {
         label: "Windows",
-        href: "/dashboard/windows",
+        href: "/dashboard/director/windows",
         roles: ADMIN_ROLES,
         icon: (
           <svg
@@ -157,8 +139,8 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
       {
         label: "Programs",
         href: (role) => {
-          if (role === "MAIN_DIRECTOR") return "/dashboard/director/programs";
-          if (role === "SYSTEM_ADMIN") return "/dashboard/director/programs";
+          if (role === "MAIN_DIRECTOR" || role === "SYSTEM_ADMIN")
+            return "/dashboard/director/programs";
           return "/dashboard/programs"; // TRAINER
         },
         roles: [...ADMIN_ROLES, "TRAINER"],
@@ -203,7 +185,7 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
       {
         label: "Trainees",
         href: "/dashboard/trainees",
-        roles: [...ADMIN_ROLES, "TRAINER"],
+        roles: [...ADMIN_ROLES, "LOCAL_DIRECTOR", "TRAINER"],
         icon: (
           <svg
             width="16"
@@ -225,7 +207,12 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
       },
       {
         label: "Field Reports",
-        href: "/dashboard/field-reports",
+        href: (role) => {
+          if (role === "LOCAL_DIRECTOR") return "/dashboard/lmd/field-reports";
+          if (role === "MAIN_DIRECTOR" || role === "SYSTEM_ADMIN")
+            return "/dashboard/director/field-reports";
+          return "/dashboard/field-reports";
+        },
         roles: ["TRAINEE", ...DIRECTOR_ROLES],
         icon: (
           <svg
@@ -244,14 +231,44 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
           </svg>
         ),
       },
+      {
+        label: "Field Statistics",
+        href: (role) => {
+          if (role === "LOCAL_DIRECTOR")
+            return "/dashboard/lmd/field-reports/stats";
+          return "/dashboard/director/field-reports/stats";
+        },
+        roles: [...DIRECTOR_ROLES],
+        icon: (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="18" y1="20" x2="18" y2="10" />
+            <line x1="12" y1="20" x2="12" y2="4" />
+            <line x1="6" y1="20" x2="6" y2="14" />
+          </svg>
+        ),
+      },
     ],
   },
   {
     section: "Communication",
     items: [
       {
+        // SA sees Announcements management; everyone else sees the read-only news feed
         label: "News",
-        href: "/dashboard/news",
+        href: (role) => {
+          if (role === "SYSTEM_ADMIN") return "/dashboard/announcements";
+          return "/dashboard/news";
+        },
         roles: ALL_ROLES,
         icon: (
           <svg
@@ -270,51 +287,9 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
         ),
       },
       {
-        label: "Announcements",
-        href: "/dashboard/announcements",
-        roles: ["SYSTEM_ADMIN"],
-        icon: (
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3z" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-        ),
-      },
-      {
-        label: "Bulk Email",
-        href: "/dashboard/email",
-        roles: BULK_EMAIL_ROLES,
-        icon: (
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 4-2z" />
-            <polyline points="22,6 12,13 2,6" />
-          </svg>
-        ),
-      },
-      {
         label: "Complaints",
         href: "/dashboard/complaints",
-        roles: ["TRAINEE", ...DIRECTOR_ROLES],
+        roles: ["TRAINEE", "LOCAL_DIRECTOR", "MAIN_DIRECTOR", "SYSTEM_ADMIN"],
         icon: (
           <svg
             width="16"
@@ -361,8 +336,7 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
         label: "Reports",
         href: (role) => {
           if (role === "LOCAL_DIRECTOR") return "/dashboard/lmd/reports";
-          if (role === "MAIN_DIRECTOR") return "/dashboard/director/reports";
-          return "/dashboard/reports"; // SYSTEM_ADMIN
+          return "/dashboard/director/reports";
         },
         roles: DIRECTOR_ROLES,
         icon: (
@@ -383,11 +357,55 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
           </svg>
         ),
       },
+      {
+        label: "LMD Reports",
+        href: "/dashboard/director/lmd-reports",
+        roles: ADMIN_ROLES,
+        icon: (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <line x1="23" y1="21" x2="23" y2="19" />
+            <line x1="19" y1="21" x2="19" y2="15" />
+          </svg>
+        ),
+      },
     ],
   },
   {
     section: "Admin",
     items: [
+      {
+        label: "ID Cards",
+        href: "/dashboard/id-cards",
+        roles: ADMIN_ROLES,
+        icon: (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="2" y="5" width="20" height="14" rx="2" />
+            <line x1="2" y1="10" x2="22" y2="10" />
+          </svg>
+        ),
+      },
       {
         label: "Missions",
         href: "/dashboard/missions",
@@ -479,8 +497,6 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
   },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function resolveHref(
   href: string | ((role: UserRole) => string),
   role: UserRole,
@@ -507,8 +523,6 @@ function initials(name: string): string {
     .join("")
     .toUpperCase();
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 type SidebarProps = {
   user: {
@@ -545,7 +559,6 @@ export default function Sidebar({ user, unreadCount = 0 }: SidebarProps) {
             item.roles.includes(user.role),
           );
           if (visibleItems.length === 0) return null;
-
           return (
             <div key={section.section} className="mb-1">
               <p className="mb-1 mt-4 px-2 text-[10px] font-medium uppercase tracking-widest text-gray-400">

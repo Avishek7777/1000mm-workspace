@@ -8,17 +8,21 @@ export default async function NewApplicationPage() {
   if (!session?.user?.id) redirect("/login");
 
   const userId = session.user.id;
-  if (session.user.role !== "TRAINEE") redirect("/dashboard");
 
   // Check if there's already a submitted/active application
   const existingSubmitted = await prisma.application.findFirst({
     where: {
       applicantId: userId,
       deletedAt: null,
-      status: { notIn: ["DRAFT", "WITHDRAWN"] },
+      status: {
+        notIn: ["DRAFT", "WITHDRAWN"],
+      },
     },
   });
-  if (existingSubmitted) redirect("/dashboard/my-application");
+
+  if (existingSubmitted) {
+    redirect("/dashboard/my-application");
+  }
 
   // Get user + mission
   const user = await prisma.user.findUnique({
@@ -41,22 +45,58 @@ export default async function NewApplicationPage() {
     orderBy: { applicationOpenDate: "desc" },
   });
 
-  // Fetch full draft including uploaded documents
+  // Fetch full draft (with formData + documents) so pages can be hydrated
   const existingDraft = await prisma.application.findFirst({
-    where: { applicantId: userId, status: "DRAFT", deletedAt: null },
+    where: {
+      applicantId: userId,
+      status: "DRAFT",
+      deletedAt: null,
+    },
     include: {
       documents: {
         where: { deletedAt: null },
         orderBy: { createdAt: "asc" },
-        select: { kind: true, fileName: true, educationEntryIndex: true },
       },
     },
   });
 
-  const fd = existingDraft?.formData as Record<string, unknown> | null;
+  // Role guard — only TRAINEE can access this page
+  if (!user || user.role !== "TRAINEE") redirect("/dashboard");
+
+  // Re-apply flow: if no DRAFT exists, fall back to most recent previous
+  // application to pre-populate the form for returning applicants
+  const previousApplication = !existingDraft
+    ? await prisma.application.findFirst({
+        where: {
+          applicantId: userId,
+          deletedAt: null,
+          status: { notIn: ["DRAFT", "WITHDRAWN"] },
+        },
+        orderBy: { submittedAt: "desc" },
+        include: {
+          documents: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      })
+    : null;
+
+  // Use draft if exists, otherwise fall back to previous application
+  const formSource = existingDraft ?? previousApplication;
+  const isReapply = !existingDraft && !!previousApplication;
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {isReapply && (
+        <div className="mx-auto max-w-3xl px-6 pt-6">
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm text-blue-800">
+            <strong>Re-applying?</strong> We've pre-filled the form with your
+            previous application data. Please review all fields before
+            submitting — some information may have changed.
+          </div>
+        </div>
+      )}
       <BioDataForm
         applicantName={user?.fullName ?? ""}
         missionCode={user?.homeMission?.code ?? ""}
@@ -67,88 +107,97 @@ export default async function NewApplicationPage() {
         }
         programTitle={activeWindow?.program?.title ?? null}
         existingDraft={
-          existingDraft
+          formSource
             ? {
-                id: existingDraft.id,
-                // Page 1
-                applicantFullName: existingDraft.applicantFullName ?? "",
+                id: formSource.id,
+                // Page 1 — personal details
+                applicantFullName: formSource.applicantFullName ?? "",
                 applicantFullNameBangla:
-                  existingDraft.applicantFullNameBangla ?? "",
-                applicantDateOfBirth: existingDraft.applicantDateOfBirth
-                  ? existingDraft.applicantDateOfBirth
+                  formSource.applicantFullNameBangla ?? "",
+                applicantDateOfBirth: formSource.applicantDateOfBirth
+                  ? formSource.applicantDateOfBirth.toISOString().split("T")[0]
+                  : "",
+                applicantGender: formSource.applicantGender ?? "",
+                applicantBloodType: formSource.applicantBloodType ?? "",
+                applicantMaritalStatus: formSource.applicantMaritalStatus ?? "",
+                applicantDenomination: formSource.applicantDenomination ?? "",
+                applicantMobileNo: formSource.applicantMobileNo ?? "",
+                applicantEmail: formSource.applicantEmail ?? "",
+                applicantPlaceOfBirth: formSource.applicantPlaceOfBirth ?? "",
+                applicantHeight: formSource.applicantHeight ?? "",
+                applicantWeight: formSource.applicantWeight ?? "",
+                applicantChurchName: formSource.applicantChurchName ?? "",
+                applicantDateOfBaptism: formSource.applicantDateOfBaptism
+                  ? formSource.applicantDateOfBaptism
                       .toISOString()
                       .split("T")[0]
                   : "",
-                applicantGender: existingDraft.applicantGender ?? "",
-                applicantBloodType: existingDraft.applicantBloodType ?? "",
-                applicantMaritalStatus:
-                  existingDraft.applicantMaritalStatus ?? "",
-                applicantDenomination:
-                  existingDraft.applicantDenomination ?? "",
-                applicantMobileNo: existingDraft.applicantMobileNo ?? "",
-                applicantEmail: existingDraft.applicantEmail ?? "",
-                applicantPlaceOfBirth:
-                  existingDraft.applicantPlaceOfBirth ?? "",
-                applicantHeight: existingDraft.applicantHeight ?? "",
-                applicantWeight: existingDraft.applicantWeight ?? "",
-                applicantChurchName: existingDraft.applicantChurchName ?? "",
-                applicantDateOfBaptism: existingDraft.applicantDateOfBaptism
-                  ? existingDraft.applicantDateOfBaptism
-                      .toISOString()
-                      .split("T")[0]
-                  : "",
-                applicantWorkplace: existingDraft.applicantWorkplace ?? "",
-                presentAddressDistrict:
-                  existingDraft.presentAddressDistrict ?? "",
-                presentAddressUpazila:
-                  existingDraft.presentAddressUpazila ?? "",
+                applicantWorkplace: formSource.applicantWorkplace ?? "",
+                presentAddressDistrict: formSource.presentAddressDistrict ?? "",
+                presentAddressUpazila: formSource.presentAddressUpazila ?? "",
                 presentAddressPostOffice:
-                  existingDraft.presentAddressPostOffice ?? "",
-                presentAddressVillage:
-                  existingDraft.presentAddressVillage ?? "",
+                  formSource.presentAddressPostOffice ?? "",
+                presentAddressVillage: formSource.presentAddressVillage ?? "",
                 permanentSameAsPresent:
-                  existingDraft.permanentSameAsPresent ?? false,
+                  formSource.permanentSameAsPresent ?? false,
                 permanentAddressDistrict:
-                  existingDraft.permanentAddressDistrict ?? "",
+                  formSource.permanentAddressDistrict ?? "",
                 permanentAddressUpazila:
-                  existingDraft.permanentAddressUpazila ?? "",
+                  formSource.permanentAddressUpazila ?? "",
                 permanentAddressPostOffice:
-                  existingDraft.permanentAddressPostOffice ?? "",
+                  formSource.permanentAddressPostOffice ?? "",
                 permanentAddressVillage:
-                  existingDraft.permanentAddressVillage ?? "",
-                // Page 2
-                fatherName: existingDraft.fatherName ?? "",
-                fatherAge: existingDraft.fatherAge ?? "",
-                fatherReligion: existingDraft.fatherReligion ?? "",
-                fatherChurchName: existingDraft.fatherChurchName ?? "",
-                motherName: existingDraft.motherName ?? "",
-                motherAge: existingDraft.motherAge ?? "",
-                motherReligion: existingDraft.motherReligion ?? "",
-                motherChurchName: existingDraft.motherChurchName ?? "",
-                familyMobileNo: existingDraft.familyMobileNo ?? "",
-                familyEmail: existingDraft.familyEmail ?? "",
-                // Page 3
+                  formSource.permanentAddressVillage ?? "",
+                // Page 2 — family details
+                fatherName: formSource.fatherName ?? "",
+                fatherAge: formSource.fatherAge ?? "",
+                fatherReligion: formSource.fatherReligion ?? "",
+                fatherChurchName: formSource.fatherChurchName ?? "",
+                motherName: formSource.motherName ?? "",
+                motherAge: formSource.motherAge ?? "",
+                motherReligion: formSource.motherReligion ?? "",
+                motherChurchName: formSource.motherChurchName ?? "",
+                familyMobileNo: formSource.familyMobileNo ?? "",
+                familyEmail: formSource.familyEmail ?? "",
+                // Page 3 — education (from formData JSON)
                 educationEntries:
-                  (fd?.education as Array<{
+                  ((formSource.formData as Record<string, unknown>)
+                    ?.education as Array<{
                     id: string;
                     degree: string;
                     institutionName: string;
                     gpa: string;
                     passingYear: string;
                   }> | null) ?? null,
-                // Page 4
-                missionaryDesire: fd?.missionaryDesire?.toString() ?? "",
+                // Page 4 — application section (from formData JSON)
+                missionaryDesire:
+                  (
+                    formSource.formData as Record<string, unknown>
+                  )?.missionaryDesire?.toString() ?? "",
                 courtRecord:
-                  fd?.courtRecord != null ? String(fd.courtRecord) : "",
+                  (formSource.formData as Record<string, unknown>)
+                    ?.courtRecord != null
+                    ? String(
+                        (formSource.formData as Record<string, unknown>)
+                          .courtRecord,
+                      )
+                    : "",
                 healthCondition:
-                  fd?.healthCondition != null ? String(fd.healthCondition) : "",
-                badHabits: fd?.badHabits != null ? String(fd.badHabits) : "",
-                // Uploaded documents
-                documents: existingDraft.documents.map((doc) => ({
-                  kind: doc.kind,
-                  fileName: doc.fileName,
-                  educationEntryIndex: doc.educationEntryIndex,
-                })),
+                  (formSource.formData as Record<string, unknown>)
+                    ?.healthCondition != null
+                    ? String(
+                        (formSource.formData as Record<string, unknown>)
+                          .healthCondition,
+                      )
+                    : "",
+                badHabits:
+                  (formSource.formData as Record<string, unknown>)?.badHabits !=
+                  null
+                    ? String(
+                        (formSource.formData as Record<string, unknown>)
+                          .badHabits,
+                      )
+                    : "",
               }
             : null
         }

@@ -196,7 +196,7 @@ export default function StatisticsSection() {
               className="text-transparent bg-clip-text"
               style={{
                 backgroundImage:
-                  "linear-gradient(90deg, #4ade80 0%, #f97316 100%)",
+                  "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
               }}
             >
               Faithful Service

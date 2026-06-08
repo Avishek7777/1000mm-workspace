@@ -1,6 +1,8 @@
 import { requireRole } from "@/lib/auth/helpers";
+import { isSettingEnabled, SETTINGS } from "@/lib/settings";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 const MISSION_COLORS: Record<
   string,
@@ -34,6 +36,10 @@ const MISSION_COLORS: Record<
 
 export default async function DirectorDashboardPage() {
   const user = await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+  if (user.role === "MAIN_DIRECTOR") {
+    const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_WINDOWS);
+    if (!allowed) redirect("/dashboard/director");
+  }
 
   const currentYear = new Date().getFullYear();
 

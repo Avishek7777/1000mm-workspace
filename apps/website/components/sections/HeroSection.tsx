@@ -70,7 +70,7 @@ export default function HeroSection() {
             className="text-transparent bg-clip-text"
             style={{
               backgroundImage:
-                "linear-gradient(90deg, #4ade80 0%, #f97316 100%)",
+                "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
             }}
           >
             Join the Movement.
@@ -105,7 +105,7 @@ export default function HeroSection() {
             href="#how-to-join"
             className="px-8 py-4 rounded-full font-bold text-white text-base shadow-xl hover:shadow-orange-500/30 hover:scale-105 transition-all duration-300"
             style={{
-              background: "linear-gradient(90deg, #16a34a 0%, #f97316 100%)",
+              background: "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
             }}
           >
             Apply Now

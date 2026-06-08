@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
 import { TrainingCategory, ApplicationWindowState } from "@1000mm/db";
 import { headers } from "next/headers";
+import { isSettingEnabled, SETTINGS } from "@/lib/settings";
 
 export type ActionResult = {
   ok: boolean;
@@ -25,6 +26,10 @@ async function requireDirector() {
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user || !["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role)) {
     redirect("/dashboard");
+  }
+  if (user.role === "MAIN_DIRECTOR") {
+    const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_PROGRAMS);
+    if (!allowed) redirect("/dashboard/director");
   }
   return user;
 }
@@ -341,6 +346,10 @@ export async function createWindowAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireDirector();
+  if (user.role === "MAIN_DIRECTOR") {
+    const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_WINDOWS);
+    if (!allowed) return { ok: false, error: "Not permitted." };
+  }
 
   const program = await prisma.trainingProgram.findFirst({
     where: { id: programId, deletedAt: null },
@@ -400,6 +409,10 @@ export async function openWindowAction(
   windowId: string,
 ): Promise<ActionResult> {
   const user = await requireDirector();
+  if (user.role === "MAIN_DIRECTOR") {
+    const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_WINDOWS);
+    if (!allowed) return { ok: false, error: "Not permitted." };
+  }
 
   const window = await prisma.applicationWindow.findFirst({
     where: { id: windowId, deletedAt: null },
@@ -443,6 +456,10 @@ export async function closeWindowAction(
   windowId: string,
 ): Promise<ActionResult> {
   const user = await requireDirector();
+  if (user.role === "MAIN_DIRECTOR") {
+    const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_WINDOWS);
+    if (!allowed) return { ok: false, error: "Not permitted." };
+  }
 
   const window = await prisma.applicationWindow.findFirst({
     where: { id: windowId, deletedAt: null },
@@ -479,7 +496,7 @@ export async function closeWindowAction(
 export async function archiveWindowAction(
   windowId: string,
 ): Promise<ActionResult> {
-  await requireDirector();
+  const user = await requireDirector();
 
   const window = await prisma.applicationWindow.findFirst({
     where: { id: windowId, deletedAt: null },

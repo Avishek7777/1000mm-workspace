@@ -2,6 +2,8 @@ import { requireRole } from "@/lib/auth/helpers";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
 import { PublishToggle } from "./_components/PublishToggle";
+import { redirect } from "next/navigation";
+import { isSettingEnabled, SETTINGS } from "@/lib/settings";
 
 const CATEGORY_LABELS: Record<string, string> = {
   SPIRITUAL: "Spiritual",
@@ -21,7 +23,12 @@ const WINDOW_STATE_COLORS: Record<string, string> = {
 const MAX_ACTIVE = 5;
 
 export default async function ProgramsPage() {
-  await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+  const user = await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+
+  if (user.role === "MAIN_DIRECTOR") {
+    const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_PROGRAMS);
+    if (!allowed) redirect("/dashboard/director");
+  }
 
   const programs = await prisma.trainingProgram.findMany({
     where: { deletedAt: null },

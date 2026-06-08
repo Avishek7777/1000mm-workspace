@@ -17,7 +17,7 @@ const navLinks = [
     href: "#projects",
     submenu: [
       { label: "Current Projects", href: "#current-projects" },
-      { label: "Support a Missionary", href: "#support-missionary" },
+      { label: "Support a Missionary", href: "#support-a-missionary" },
     ],
   },
   {
@@ -25,7 +25,18 @@ const navLinks = [
     href: "#donate",
     submenu: [
       { label: "Donate Now", href: "#donate-now" },
-      { label: "How to Donate", href: "#how-to-donate" },
+      { label: "How to Donate", href: "/how-to-donate" },
+    ],
+  },
+  {
+    label: "Resources",
+    href: "#resources",
+    submenu: [
+      { label: "Documents", href: "#documents" },
+      { label: "Training Schedule", href: "#training-schedule" },
+      { label: "Blog", href: "#blog" },
+      { label: "Media", href: "#media" },
+      { label: "FAQs", href: "#faqs" },
     ],
   },
 ];
@@ -59,7 +70,7 @@ export default function NavBar() {
       }`}
       style={{
         background: scrolled
-          ? "linear-gradient(90deg, rgba(0,127,152,0.75) 0%, rgba(249,115,22,0.75) 100%)"
+          ? "linear-gradient(90deg, rgba(0,127,152,0.6) 0%, rgba(249,115,22,0.6) 100%)"
           : "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
         backdropFilter: scrolled ? "blur(12px)" : "none",
         WebkitBackdropFilter: scrolled ? "blur(12px)" : "none",
@@ -151,18 +162,11 @@ export default function NavBar() {
           )}
 
           <Link
-            href={`${PORTAL_URL}/register`}
+            href={`${PORTAL_URL}`}
             target="_blank"
             className="ml-2 px-5 py-2 rounded-full bg-white/20 border border-white/50 text-white text-sm font-semibold hover:bg-white/30 transition-all duration-200"
           >
-            Apply Now
-          </Link>
-          <Link
-            href={PORTAL_URL}
-            target="_blank"
-            className="px-5 py-2 rounded-full bg-white text-orange-500 text-sm font-semibold hover:bg-white/90 transition-all duration-200 shadow-md"
-          >
-            Login
+            Register / Login
           </Link>
         </div>
 

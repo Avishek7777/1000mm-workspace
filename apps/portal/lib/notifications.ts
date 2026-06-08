@@ -66,10 +66,10 @@ export async function notifyAllActiveUsers(
   );
 }
 
-// ── Notify staff about a complaint (LMD of mission + UD + SA) ────────────────
+// ── Notify staff about a complaint (UD + SA only — LMD does not see complaints) ──
 
 export async function notifyStaffAboutComplaint(
-  missionCode: string | null | undefined,
+  _missionCode: string | null | undefined, // kept for backwards compat — not used
   input: Omit<CreateNotificationInput, "userId">,
   excludeUserId?: string,
 ) {
@@ -77,18 +77,7 @@ export async function notifyStaffAboutComplaint(
     where: {
       isActive: true,
       deletedAt: null,
-      OR: [
-        { role: "MAIN_DIRECTOR" },
-        { role: "SYSTEM_ADMIN" },
-        ...(missionCode
-          ? [
-              {
-                role: "LOCAL_DIRECTOR" as const,
-                homeMission: { code: missionCode as any },
-              },
-            ]
-          : []),
-      ],
+      role: { in: ["MAIN_DIRECTOR", "SYSTEM_ADMIN"] },
       ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
     },
     select: { id: true },

@@ -37,9 +37,30 @@ model LocalMission {
   complaints         Complaint[]
   director           User?               @relation("MissionDirector", fields: [directorId], references: [id])
   users              User[]              @relation("UserHomeMission")
+  lmdReports         LmdReport[]         @relation("LmdReportMission")
 
   @@index([code])
   @@map("local_missions")
+}
+
+model UserFlagRequest {
+  id            String          @id @default(cuid())
+  targetUserId  String
+  requestedById String
+  reason        String
+  status        FlagRequestStatus @default(PENDING)
+  resolvedById  String?
+  resolvedAt    DateTime?
+  resolverNote  String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  targetUser    User            @relation("FlaggedUser", fields: [targetUserId], references: [id])
+  requestedBy   User            @relation("FlagRequestedBy", fields: [requestedById], references: [id])
+  resolvedBy    User?           @relation("FlagResolvedBy", fields: [resolvedById], references: [id])
+
+  @@index([status])
+  @@index([targetUserId])
+  @@map("user_flag_requests")
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────
@@ -82,6 +103,12 @@ model User {
   homeMission             LocalMission             @relation("UserHomeMission", fields: [homeMissionId], references: [id])
   trainingsAsTrainer      TrainingProgram[]        @relation("ProgramTrainers")
   deploymentAssignments   ProgramEnrollment[]      @relation("DeploymentAssignedBy")
+  fieldReportComments     FieldReportComment[]     @relation("FieldReportCommentAuthor")
+  lmdReportWindowsCreated LmdReportWindow[]        @relation("LmdReportWindowCreatedBy")
+  lmdReports              LmdReport[]              @relation("LmdReportAuthor")
+  flagRequests            UserFlagRequest[]        @relation("FlaggedUser")
+  flagRequestsMade        UserFlagRequest[]        @relation("FlagRequestedBy")
+  flagRequestsResolved    UserFlagRequest[]        @relation("FlagResolvedBy")
 
   @@index([email])
   @@index([homeMissionId])
@@ -417,29 +444,69 @@ model ApplicationDocument {
 
 // ─── Field Reports ────────────────────────────────────────────────────────────
 model FieldReport {
-  id                String          @id @default(cuid())
-  traineeId         String
-  applicationId     String
-  programId         String
-  reportMonth       Int
-  reportYear        Int
-  activitiesSummary String
-  peopleReached     Int?
-  challengesFaced   String?
-  prayerRequests    String?
-  attachments       Json?
-  submittedAt       DateTime        @default(now())
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  trainee           User            @relation(fields: [traineeId], references: [id])
-  application       Application     @relation(fields: [applicationId], references: [id])
-  program           TrainingProgram @relation(fields: [programId], references: [id])
+  id            String   @id @default(cuid())
+  traineeId     String
+  applicationId String
+  programId     String
+  reportMonth   Int      // 1–12
+  reportYear    Int
+
+  // Auto-filled at submit time
+  workplaceSnapshot String?
+  lmdNameSnapshot   String?
+
+  // Activity metrics
+  totalActivities           Int @default(0)
+  daysOfWork                Int @default(0)
+  hoursOfWork               Int @default(0)
+  nonSdaHomeVisits          Int @default(0)
+  bibleStudiesConducted     Int @default(0)
+  medicalVisits             Int @default(0)
+  worshipSessionsTaken      Int @default(0)
+  newGroupsMade             Int @default(0)
+  baptismCandidatesPrepared Int @default(0)
+  numberOfBaptisms          Int @default(0)
+
+  // Narrative fields
+  activitiesSummary     String
+  trainingReceived      String?
+  storyOrWitness        String?
+  commentsOrSuggestions String?
+  challengesFaced       String?
+  prayerRequests        String?
+  peopleReached         Int?
+
+  // Attachments
+  attachments Json?
+
+  submittedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trainee     User               @relation(fields: [traineeId], references: [id])
+  application Application        @relation(fields: [applicationId], references: [id])
+  program     TrainingProgram    @relation(fields: [programId], references: [id])
+  comments    FieldReportComment[]
 
   @@unique([traineeId, reportMonth, reportYear])
   @@index([traineeId])
   @@index([programId])
   @@index([reportYear, reportMonth])
   @@map("field_reports")
+}
+
+model FieldReportComment {
+  id        String      @id @default(cuid())
+  reportId  String
+  authorId  String
+  comment   String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  report    FieldReport @relation(fields: [reportId], references: [id])
+  author    User        @relation("FieldReportCommentAuthor", fields: [authorId], references: [id])
+
+  @@index([reportId])
+  @@map("field_report_comments")
 }
 
 // ─── Complaints ───────────────────────────────────────────────────────────────
@@ -580,9 +647,77 @@ model SystemSetting {
   @@map("system_settings")
 }
 
+// ─── LMD Report Windows ───────────────────────────────────────────────────────
+// Opened by UD/SA. When OPEN, LMDs can submit their monthly summary report.
+model LmdReportWindow {
+  id          String             @id @default(cuid())
+  reportMonth Int                // 1–12
+  reportYear  Int
+  state       LmdReportWindowState @default(OPEN)
+  notes       String?
+  createdById String
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  createdBy   User               @relation("LmdReportWindowCreatedBy", fields: [createdById], references: [id])
+  reports     LmdReport[]
+
+  @@unique([reportMonth, reportYear])
+  @@index([state])
+  @@map("lmd_report_windows")
+}
+
+// ─── LMD Reports ─────────────────────────────────────────────────────────────
+// Monthly summary report submitted by an LMD covering all their trainees.
+model LmdReport {
+  id          String          @id @default(cuid())
+  windowId    String
+  lmdId       String
+  missionId   String
+  reportMonth Int
+  reportYear  Int
+
+  // ── Aggregated metrics (from trainee field reports) ──
+  totalTrainees            Int @default(0)
+  totalActivities          Int @default(0)
+  totalDaysOfWork          Int @default(0)
+  totalHoursOfWork         Int @default(0)
+  totalNonSdaHomeVisits    Int @default(0)
+  totalBibleStudies        Int @default(0)
+  totalMedicalVisits       Int @default(0)
+  totalWorshipSessions     Int @default(0)
+  totalNewGroups           Int @default(0)
+  totalBaptismCandidates   Int @default(0)
+  totalBaptisms            Int @default(0)
+  totalPeopleReached       Int @default(0)
+
+  // ── LMD narrative ──
+  overallSummary           String
+  challengesAndNeeds       String?
+  recommendationsToDirector String?
+  prayerRequests           String?
+
+  submittedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  window  LmdReportWindow @relation(fields: [windowId], references: [id])
+  lmd     User            @relation("LmdReportAuthor", fields: [lmdId], references: [id])
+  mission LocalMission    @relation("LmdReportMission", fields: [missionId], references: [id])
+
+  @@unique([lmdId, reportMonth, reportYear])
+  @@index([windowId])
+  @@index([missionId])
+  @@map("lmd_reports")
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // ENUMS
 // ═══════════════════════════════════════════════════════════════════════════════
+enum FlagRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
 
 enum LocalMissionCode {
   EBM
@@ -590,6 +725,13 @@ enum LocalMissionCode {
   SBM
   WBM
 }
+
+enum LmdReportWindowState {
+  OPEN
+  CLOSED
+}
+
+
 
 enum UserRole {
   TRAINEE
@@ -756,6 +898,9 @@ enum AuditAction {
   DONATION_INITIATED
   DONATION_COMPLETED
   DONATION_REFUNDED
+  USER_FLAG_REQUESTED
+  USER_FLAG_APPROVED
+  USER_FLAG_REJECTED
 }
 
 enum AuditSeverity {
