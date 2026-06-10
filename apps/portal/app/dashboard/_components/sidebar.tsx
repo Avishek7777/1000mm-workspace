@@ -532,13 +532,20 @@ type SidebarProps = {
     homeMissionCode: LocalMissionCode;
   };
   unreadCount?: number;
+  className?: string;
 };
 
-export default function Sidebar({ user, unreadCount = 0 }: SidebarProps) {
+export default function Sidebar({
+  user,
+  unreadCount = 0,
+  className,
+}: SidebarProps) {
   const displayName = user.name ?? user.email ?? "User";
 
   return (
-    <aside className="flex h-full w-56 flex-col border-r border-gray-200 bg-white">
+    <aside
+      className={`flex h-full flex-col border-r border-gray-200 bg-white ${className ?? "w-56"}`}
+    >
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 py-5">
         <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-teal-700 text-sm font-medium text-teal-100">
