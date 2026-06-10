@@ -16,7 +16,7 @@ const navLinks = [
     label: "Projects",
     href: "#projects",
     submenu: [
-      { label: "Current Projects", href: "#current-projects" },
+      { label: "Current Projects", href: "/current-projects" },
       { label: "Support a Missionary", href: "#support-a-missionary" },
     ],
   },
@@ -24,8 +24,9 @@ const navLinks = [
     label: "Donate",
     href: "#donate",
     submenu: [
-      { label: "Donate Now", href: "#donate-now" },
+      { label: "Donate Now", href: "/donate-now" },
       { label: "How to Donate", href: "/how-to-donate" },
+      { label: "Donation Proceeds", href: "/donation-proceeds" },
     ],
   },
   {

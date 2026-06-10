@@ -11,6 +11,7 @@ import Testimonies from "@/components/sections/Testimonies";
 import HowToJoin from "@/components/sections/HowToJoin";
 import ContactUs from "@/components/sections/ContactUs";
 import Footer from "@/components/sections/Footer";
+import CurrentProjectsSection from "@/components/sections/CurrentProjectsSection";
 
 export default function LandingPage() {
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function LandingPage() {
       <NavBar />
       <HeroSection />
       <DirectorsMessage />
+      <CurrentProjectsSection />
       <StatisticsSection />
       <AboutUs />
       <Testimonies />

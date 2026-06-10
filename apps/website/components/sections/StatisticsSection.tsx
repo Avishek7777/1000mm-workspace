@@ -86,7 +86,7 @@ function StatCard({
 
       {/* Number */}
       <div
-        className="text-5xl md:text-6xl font-bold mb-2 tabular-nums"
+        className="text-5xl md:text-6xl font-bold pb-2 mb-2 tabular-nums"
         style={{
           fontFamily: "Georgia, serif",
           background:

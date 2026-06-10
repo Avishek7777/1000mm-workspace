@@ -12,7 +12,7 @@ const quickLinks = [
   { label: "Home", href: "/" },
   { label: "How to Join", href: "#how-to-join" },
   { label: "About Us", href: "#about-us" },
-  { label: "Donate Now", href: "#donate" },
+  { label: "Donate Now", href: "/donate-now" },
   { label: "Login", href: "#login" },
 ];
 
@@ -83,7 +83,8 @@ export default function Footer() {
                 style={{ fontFamily: "Georgia, serif", fontSize: "0.9rem" }}
               >
                 {/* 1000<span className="font-light opacity-70">MM</span> */}
-                An official website of the Seventh-day Adventist Church.
+                An official website of the Seventh-day Adventist Church of
+                Bangladesh.
               </span>
             </Link>
 
@@ -205,7 +206,7 @@ export default function Footer() {
 
             {/* Donate CTA */}
             <Link
-              href="#donate"
+              href="/donate-now"
               className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-bold text-white text-sm hover:opacity-90 hover:scale-105 transition-all duration-300 shadow-lg w-fit"
               style={{
                 background: "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
