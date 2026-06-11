@@ -8,6 +8,8 @@ import {
   UserCheck,
   Send,
   CheckCircle2,
+  Download,
+  ExternalLink,
 } from "lucide-react";
 
 import Link from "next/link";
@@ -19,6 +21,7 @@ const steps = [
     title: "Download Requirements",
     description:
       "Download all the required documents. Review the qualifications and prepare everything you need before proceeding.",
+    href: "/documents", // ← links to the documents page
   },
   {
     number: "02",
@@ -26,6 +29,7 @@ const steps = [
     title: "Check & Prepare Documents",
     description:
       "Go through each document carefully. Make sure all photocopies, IDs, and certificates are complete and ready for submission.",
+    href: null,
   },
   {
     number: "03",
@@ -33,6 +37,7 @@ const steps = [
     title: "Fill Up the Bio Data Form",
     description:
       "Complete your Bio-Data Form online. Download it once filled and keep it ready alongside your other documents.",
+    href: null,
   },
   {
     number: "04",
@@ -40,7 +45,14 @@ const steps = [
     title: "Submit Your Application",
     description:
       "Fill out and submit the Application Form online. This is your official step into the 1000 Missionary Movement.",
+    href: null,
   },
+];
+
+const downloadableFiles = [
+  { label: "Letter of Intent", file: "letter-of-intent.pdf" },
+  { label: "Parent's Consent", file: "parents-consent.pdf" },
+  { label: "Sworn Statement", file: "sworn-statement.pdf" },
 ];
 
 const accordionItems = [
@@ -81,6 +93,7 @@ const accordionItems = [
       "Letter of Intent/Commitment",
       "Sworn Statement and Undertaking",
     ],
+    hasDownloads: true, // ← triggers the download buttons
   },
   {
     id: "bring",
@@ -152,18 +165,53 @@ function RequirementCard({
             </li>
           ))}
         </ul>
+
+        {/* Download buttons — only on the "Download, Accomplish & Submit" card */}
+        {item.hasDownloads && (
+          <div className="mt-5 space-y-2">
+            <p
+              className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-3"
+              style={{ fontFamily: "Georgia, serif" }}
+            >
+              Download forms directly
+            </p>
+            {downloadableFiles.map((doc) => (
+              <a
+                key={doc.file}
+                href={`/downloads/${doc.file}`}
+                download={doc.file}
+                className="flex items-center justify-between rounded-xl border border-stone-100 bg-stone-50 px-4 py-2.5 text-sm transition-colors hover:border-teal-200 hover:bg-teal-50 group/dl"
+              >
+                <span
+                  className="font-medium text-stone-700 group-hover/dl:text-teal-800"
+                  style={{ fontFamily: "Georgia, serif" }}
+                >
+                  {doc.label}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-teal-600 group-hover/dl:text-teal-700">
+                  <Download className="h-3.5 w-3.5" />
+                  PDF
+                </span>
+              </a>
+            ))}
+
+            {/* Link to full documents page */}
+            <Link
+              href="/documents"
+              className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-orange-500 hover:text-orange-700 transition-colors"
+              style={{ fontFamily: "Georgia, serif" }}
+            >
+              <ExternalLink className="h-3 w-3" />
+              View all documents
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 export default function HowToJoin() {
-  const [openId, setOpenId] = useState<string | null>("qualifications");
-
-  const toggle = (id: string) => {
-    setOpenId((prev) => (prev === id ? null : id));
-  };
-
   return (
     <section
       id="how-to-join"
@@ -244,77 +292,102 @@ export default function HowToJoin() {
 
         {/* Steps */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-15">
-          {steps.map((step, i) => (
-            <motion.div
-              key={step.number}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.1 }}
-              transition={{ duration: 0.6, delay: i * 0.12 }}
-              className="relative rounded-3xl p-6 flex flex-col gap-4 overflow-hidden group"
-              style={{
-                background:
-                  "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)",
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              {/* Step number watermark */}
-              <div
-                className="absolute -top-3 -right-2 text-7xl font-bold text-white/[0.04] select-none leading-none"
-                style={{ fontFamily: "Georgia, serif" }}
-                aria-hidden="true"
-              >
-                {step.number}
-              </div>
-
-              {/* Icon */}
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
+          {steps.map((step, i) => {
+            const card = (
+              <motion.div
+                key={step.number}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: false, amount: 0.1 }}
+                transition={{ duration: 0.6, delay: i * 0.12 }}
+                className={`relative rounded-3xl p-6 flex flex-col gap-4 overflow-hidden group transition-all duration-300 ${
+                  step.href ? "cursor-pointer hover:scale-[1.02]" : ""
+                }`}
                 style={{
                   background:
-                    i % 2 === 0
-                      ? "linear-gradient(135deg, #16a34a, #4ade80)"
-                      : "linear-gradient(135deg, #f97316, #fb923c)",
+                    "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)",
+                  border: step.href
+                    ? "1px solid rgba(249,115,22,0.35)"
+                    : "1px solid rgba(255,255,255,0.08)",
                 }}
               >
-                <step.icon className="w-5 h-5 text-white" />
-              </div>
-
-              {/* Text */}
-              <div>
-                <p
-                  className="text-white font-bold text-base mb-1"
+                {/* Step number watermark */}
+                <div
+                  className="absolute -top-3 -right-2 text-7xl font-bold text-white/[0.04] select-none leading-none"
                   style={{ fontFamily: "Georgia, serif" }}
+                  aria-hidden="true"
                 >
-                  {step.title}
-                </p>
-                <p
-                  className="text-white/50 text-sm leading-relaxed"
-                  style={{ fontFamily: "Georgia, serif" }}
-                >
-                  {step.description}
-                </p>
-              </div>
-
-              {/* Connector arrow — not on last */}
-              {i < steps.length - 1 && (
-                <div className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 z-10">
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-white/30 text-xs"
-                    style={{
-                      background: "rgba(255,255,255,0.05)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                    }}
-                  >
-                    →
-                  </div>
+                  {step.number}
                 </div>
-              )}
-            </motion.div>
-          ))}
+
+                {/* Icon */}
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
+                  style={{
+                    background:
+                      i % 2 === 0
+                        ? "linear-gradient(135deg, #16a34a, #4ade80)"
+                        : "linear-gradient(135deg, #f97316, #fb923c)",
+                  }}
+                >
+                  <step.icon className="w-5 h-5 text-white" />
+                </div>
+
+                {/* Text */}
+                <div>
+                  <p
+                    className="text-white font-bold text-base mb-1"
+                    style={{ fontFamily: "Georgia, serif" }}
+                  >
+                    {step.title}
+                  </p>
+                  <p
+                    className="text-white/50 text-sm leading-relaxed"
+                    style={{ fontFamily: "Georgia, serif" }}
+                  >
+                    {step.description}
+                  </p>
+                </div>
+
+                {/* CTA hint on step 01 */}
+                {step.href && (
+                  <span
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-orange-400 group-hover:text-orange-300 transition-colors"
+                    style={{ fontFamily: "Georgia, serif" }}
+                  >
+                    <Download className="w-3 h-3" />
+                    Download forms →
+                  </span>
+                )}
+
+                {/* Connector arrow — not on last */}
+                {i < steps.length - 1 && (
+                  <div className="hidden lg:block absolute -right-3 top-1/2 -translate-y-1/2 z-10">
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-white/30 text-xs"
+                      style={{
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      →
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            );
+
+            return step.href ? (
+              <Link key={step.number} href={step.href}>
+                {card}
+              </Link>
+            ) : (
+              card
+            );
+          })}
         </div>
 
-        {/* Cards grid — replace the accordion block */}
+        {/* Cards grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -338,7 +411,7 @@ export default function HowToJoin() {
         <div className="flex justify-center mt-10">
           <Link
             href="/become-a-trainer"
-            className="inline-flex  mx-auto items-center justify-center gap-2 px-6 py-3 rounded-full font-bold text-white text-sm hover:opacity-90 hover:scale-105 transition-all duration-300 shadow-lg mx-auto"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-bold text-white text-sm hover:opacity-90 hover:scale-105 transition-all duration-300 shadow-lg"
             style={{
               background: "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
               fontFamily: "Georgia, serif",

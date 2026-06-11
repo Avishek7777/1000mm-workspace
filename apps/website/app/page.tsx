@@ -1,7 +1,4 @@
-// apps/website/src/app/page.tsx
-"use client";
-
-import { useEffect } from "react";
+// apps/website/app/page.tsx
 import NavBar from "@/components/NavBar";
 import HeroSection from "@/components/sections/HeroSection";
 import DirectorsMessage from "@/components/sections/DirectorsMessage";
@@ -12,26 +9,12 @@ import HowToJoin from "@/components/sections/HowToJoin";
 import ContactUs from "@/components/sections/ContactUs";
 import Footer from "@/components/sections/Footer";
 import CurrentProjectsSection from "@/components/sections/CurrentProjectsSection";
+import PageShowFix from "@/components/PageShowFix";
 
 export default function LandingPage() {
-  useEffect(() => {
-    const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) {
-        // Force all framer-motion elements to be visible
-        document
-          .querySelectorAll<HTMLElement>("[style*='opacity: 0']")
-          .forEach((el) => {
-            el.style.opacity = "1";
-            el.style.transform = "none";
-          });
-      }
-    };
-    window.addEventListener("pageshow", handlePageShow);
-    return () => window.removeEventListener("pageshow", handlePageShow);
-  }, []);
-
   return (
     <main className="relative">
+      <PageShowFix />
       <NavBar />
       <HeroSection />
       <DirectorsMessage />

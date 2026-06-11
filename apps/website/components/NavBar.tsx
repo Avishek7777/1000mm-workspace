@@ -33,9 +33,9 @@ const navLinks = [
     label: "Resources",
     href: "#resources",
     submenu: [
-      { label: "Documents", href: "#documents" },
+      { label: "Documents", href: "/documents" },
       { label: "Become a Trainer", href: "/become-a-trainer" },
-      { label: "Training Schedule", href: "#training-schedule" },
+      { label: "Training Schedule", href: "/training-schedule" },
       { label: "Blog", href: "#blog" },
       { label: "Media", href: "#media" },
       { label: "FAQs", href: "#faqs" },

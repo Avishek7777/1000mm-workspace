@@ -1,6 +1,7 @@
 import Link from "next/link";
 import SignOutButton from "./sign-out-button";
 import { UserRole, LocalMissionCode } from "@1000mm/db";
+import Image from "next/image";
 
 type NavItem = {
   label: string;
@@ -612,7 +613,12 @@ export default function Sidebar({
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 py-5">
         <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-teal-700 text-sm font-medium text-teal-100">
-          M
+          <Image
+            src="/logos/1000mm-logo.png"
+            alt="1000MM Logo"
+            width={32}
+            height={32}
+          />
         </div>
         <div>
           <p className="text-sm font-medium leading-tight text-gray-900">

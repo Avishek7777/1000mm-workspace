@@ -11,6 +11,7 @@ import {
   XCircle,
   ChevronRight,
 } from "lucide-react";
+import { ExportButtons } from "./_components/ExportButtons";
 
 export const metadata = { title: "Trainer Applications" };
 
@@ -80,6 +81,7 @@ export default async function TrainerApplicationsPage({
             {totalPending} pending
           </span>
         )}
+        <ExportButtons />
       </div>
 
       {/* Status filter tabs */}

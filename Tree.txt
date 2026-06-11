@@ -3,33 +3,268 @@
 ├── apps
 │   ├── portal
 │   │   ├── actions
-│   │   │   └── application.ts
+│   │   │   ├── announcements.ts
+│   │   │   ├── application.ts
+│   │   │   ├── complaints.ts
+│   │   │   ├── director.ts
+│   │   │   ├── fieldReports.ts
+│   │   │   ├── lmdReports.ts
+│   │   │   ├── lmd.ts
+│   │   │   ├── missions.ts
+│   │   │   ├── notifications.ts
+│   │   │   ├── programs.ts
+│   │   │   ├── salary.ts
+│   │   │   ├── settings.ts
+│   │   │   ├── trainees.ts
+│   │   │   ├── trainerApplications.ts
+│   │   │   └── users.ts
 │   │   ├── app
 │   │   │   ├── api
-│   │   │   │   └── auth
+│   │   │   │   ├── application
+│   │   │   │   │   └── [applicationId]
+│   │   │   │   │       ├── documents
+│   │   │   │   │       │   └── zip
+│   │   │   │   │       │       └── route.ts
+│   │   │   │   │       ├── pdf-data
+│   │   │   │   │       │   └── route.ts
+│   │   │   │   │       └── recommendation-pdf-data
+│   │   │   │   │           └── route.ts
+│   │   │   │   ├── auth
+│   │   │   │   │   └── [...nextauth]
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── export
+│   │   │   │   │   ├── applicants
+│   │   │   │   │   │   ├── pdf
+│   │   │   │   │   │   │   └── route.ts
+│   │   │   │   │   │   └── xlsx
+│   │   │   │   │   │       └── route.ts
+│   │   │   │   │   └── trainers
+│   │   │   │   │       ├── excel
+│   │   │   │   │       │   └── route.ts
+│   │   │   │   │       └── pdf
+│   │   │   │   │           └── route.ts
+│   │   │   │   ├── id-cards
+│   │   │   │   │   ├── route.ts
+│   │   │   │   │   └── trainees
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── public
+│   │   │   │   │   └── programs
+│   │   │   │   │       ├── [id]
+│   │   │   │   │       │   └── route.ts
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── reports
+│   │   │   │   │   ├── ai-insights
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   └── data
+│   │   │   │   │       └── route.ts
+│   │   │   │   └── uploads
+│   │   │   │       └── [...path]
+│   │   │   │           └── route.ts
 │   │   │   ├── (auth)
 │   │   │   │   ├── forgot-password
+│   │   │   │   │   └── page.tsx
 │   │   │   │   ├── register
+│   │   │   │   │   └── page.tsx
 │   │   │   │   └── reset-password
+│   │   │   │       └── page.tsx
 │   │   │   ├── dashboard
+│   │   │   │   ├── audit
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── complaints
+│   │   │   │   │   ├── [complaintId]
+│   │   │   │   │   │   ├── _components
+│   │   │   │   │   │   │   └── RespondForm.tsx
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   ├── new
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   └── page.tsx
 │   │   │   │   ├── _components
+│   │   │   │   │   ├── dashboard-shell.tsx
+│   │   │   │   │   ├── ExportButtons.tsx
+│   │   │   │   │   ├── sidebar.tsx
+│   │   │   │   │   └── sign-out-button.tsx
+│   │   │   │   ├── director
+│   │   │   │   │   ├── applications
+│   │   │   │   │   │   ├── [applicationId]
+│   │   │   │   │   │   │   ├── _components
+│   │   │   │   │   │   │   │   └── DirectorActionPanel.tsx
+│   │   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   ├── field-reports
+│   │   │   │   │   │   ├── page.tsx
+│   │   │   │   │   │   └── stats
+│   │   │   │   │   │       ├── _components
+│   │   │   │   │   │       │   └── FieldReportStatsClient.tsx
+│   │   │   │   │   │       └── page.tsx
+│   │   │   │   │   ├── lmd-reports
+│   │   │   │   │   │   ├── _components
+│   │   │   │   │   │   │   └── WindowControls.tsx
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   │   ├── programs
+│   │   │   │   │   │   ├── _components
+│   │   │   │   │   │   │   └── PublishToggle.tsx
+│   │   │   │   │   │   ├── new
+│   │   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   │   ├── page.tsx
+│   │   │   │   │   │   └── [programId]
+│   │   │   │   │   │       ├── _components
+│   │   │   │   │   │       │   └── ProgramComponents.tsx
+│   │   │   │   │   │       └── page.tsx
+│   │   │   │   │   ├── reports
+│   │   │   │   │   │   ├── _components
+│   │   │   │   │   │   │   ├── ReportsClient.tsx
+│   │   │   │   │   │   │   └── ReportWidgets.tsx
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   └── windows
+│   │   │   │   │       ├── _components
+│   │   │   │   │       │   ├── NewWindowButton.tsx
+│   │   │   │   │       │   └── WindowActions.tsx
+│   │   │   │   │       └── page.tsx
+│   │   │   │   ├── field-reports
+│   │   │   │   │   ├── new
+│   │   │   │   │   │   ├── NewFieldReportForm.tsx
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   │   └── [reportId]
+│   │   │   │   │       ├── _components
+│   │   │   │   │       │   └── CommentForm.tsx
+│   │   │   │   │       └── page.tsx
+│   │   │   │   ├── id-cards
+│   │   │   │   │   ├── _components
+│   │   │   │   │   │   └── IdCardsClient.tsx
+│   │   │   │   │   └── page.tsx
 │   │   │   │   ├── layout.tsx
+│   │   │   │   ├── lmd
+│   │   │   │   │   ├── applications
+│   │   │   │   │   │   ├── [applicationId]
+│   │   │   │   │   │   │   ├── _components
+│   │   │   │   │   │   │   │   ├── ActionPanel.tsx
+│   │   │   │   │   │   │   │   └── LmdRecommendationPDF.tsx
+│   │   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   │   ├── _components
+│   │   │   │   │   │   │   └── ExportButton.tsx
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   ├── field-reports
+│   │   │   │   │   │   ├── page.tsx
+│   │   │   │   │   │   └── stats
+│   │   │   │   │   │       └── page.tsx
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   │   ├── reports
+│   │   │   │   │   │   ├── new
+│   │   │   │   │   │   │   ├── _components
+│   │   │   │   │   │   │   │   └── LmdReportForm.tsx
+│   │   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   │   ├── page.tsx
+│   │   │   │   │   │   └── [reportId]
+│   │   │   │   │   │       └── page.tsx
+│   │   │   │   │   └── salary
+│   │   │   │   │       ├── _components
+│   │   │   │   │       │   └── LmdSalaryAssignForm.tsx
+│   │   │   │   │       └── page.tsx
+│   │   │   │   ├── missions
+│   │   │   │   │   ├── _components
+│   │   │   │   │   │   └── MissionCard.tsx
+│   │   │   │   │   └── page.tsx
 │   │   │   │   ├── my-application
+│   │   │   │   │   ├── _components
+│   │   │   │   │   │   └── PdfDownloadButton.tsx
+│   │   │   │   │   ├── new
+│   │   │   │   │   │   ├── _components
+│   │   │   │   │   │   │   ├── BioDataForm.tsx
+│   │   │   │   │   │   │   ├── BioDataPDF.tsx
+│   │   │   │   │   │   │   ├── FormFields.tsx
+│   │   │   │   │   │   │   ├── FormProgress.tsx
+│   │   │   │   │   │   │   ├── Page1PersonalDetails.tsx
+│   │   │   │   │   │   │   ├── Page2FamilyDetails.tsx
+│   │   │   │   │   │   │   ├── Page3Education.tsx
+│   │   │   │   │   │   │   └── Page4Application.tsx
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── my-program
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── news
+│   │   │   │   │   ├── announcements
+│   │   │   │   │   │   ├── _components
+│   │   │   │   │   │   │   └── AnnouncementActions.tsx
+│   │   │   │   │   │   ├── new
+│   │   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── notifications
+│   │   │   │   │   ├── _components
+│   │   │   │   │   │   └── NotificationActions.tsx
+│   │   │   │   │   └── page.tsx
 │   │   │   │   ├── page.tsx
+│   │   │   │   ├── salary
+│   │   │   │   │   ├── _components
+│   │   │   │   │   │   └── SalaryRangeForm.tsx
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   │   └── requests
+│   │   │   │   │       ├── _components
+│   │   │   │   │       │   └── SalaryRequestActions.tsx
+│   │   │   │   │       └── page.tsx
+│   │   │   │   ├── salary-request
+│   │   │   │   │   ├── _components
+│   │   │   │   │   │   └── SalaryRequestButton.tsx
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── settings
+│   │   │   │   │   ├── _components
+│   │   │   │   │   │   └── SettingsClient.tsx
+│   │   │   │   │   └── page.tsx
 │   │   │   │   ├── system-admin
-│   │   │   │   └── trainee
+│   │   │   │   │   ├── _components
+│   │   │   │   │   │   ├── missions-breakdown.tsx
+│   │   │   │   │   │   ├── pending-actions.tsx
+│   │   │   │   │   │   └── stat-cards.tsx
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   │   └── trainer-applications
+│   │   │   │   │       ├── _components
+│   │   │   │   │       │   └── ExportButtons.tsx
+│   │   │   │   │       ├── [id]
+│   │   │   │   │       │   └── page.tsx
+│   │   │   │   │       └── page.tsx
+│   │   │   │   ├── trainee
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── trainees
+│   │   │   │   │   ├── _components
+│   │   │   │   │   │   ├── AssignDeploymentButton.tsx
+│   │   │   │   │   │   └── ProgramFilter.tsx
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   │   └── [traineeId]
+│   │   │   │   │       └── page.tsx
+│   │   │   │   ├── trainer
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── users
+│   │   │   │       ├── _components
+│   │   │   │       │   └── CreateLmdButton.tsx
+│   │   │   │       ├── flag-requests
+│   │   │   │       │   ├── _components
+│   │   │   │       │   │   └── FlagActions.tsx
+│   │   │   │       │   └── page.tsx
+│   │   │   │       ├── page.tsx
+│   │   │   │       └── [userId]
+│   │   │   │           ├── _components
+│   │   │   │           │   ├── FlagUserForm.tsx
+│   │   │   │           │   ├── MissionaryToggle.tsx
+│   │   │   │           │   └── UserActions.tsx
+│   │   │   │           └── page.tsx
+│   │   │   ├── error.tsx
 │   │   │   ├── favicon.ico
 │   │   │   ├── globals.css
 │   │   │   ├── layout.tsx
 │   │   │   ├── login
 │   │   │   │   └── LoginForm.tsx
-│   │   │   └── page.tsx
+│   │   │   ├── not-found.tsx
+│   │   │   ├── page.tsx
+│   │   │   └── proxy.ts
 │   │   ├── components
 │   │   │   └── ui
 │   │   │       └── button.tsx
 │   │   ├── components.json
 │   │   ├── data
 │   │   │   └── bd-address-map.json
+│   │   ├── Dockerfile
 │   │   ├── eslint.config.mjs
 │   │   ├── lib
 │   │   │   ├── auth
@@ -37,21 +272,38 @@
 │   │   │   │   ├── config.ts
 │   │   │   │   ├── edge.config.ts
 │   │   │   │   └── helpers.ts
+│   │   │   ├── exports
+│   │   │   │   ├── ApplicantListPdf.tsx
+│   │   │   │   └── IdCardPdf.tsx
+│   │   │   ├── fieldReportStats.ts
+│   │   │   ├── notifications.ts
 │   │   │   ├── r2.ts
+│   │   │   ├── reports
+│   │   │   │   ├── pdf
+│   │   │   │   │   ├── Report1PipelinePdf.tsx
+│   │   │   │   │   ├── ReportCharts.tsx
+│   │   │   │   │   ├── ReportPdfShell.tsx
+│   │   │   │   │   └── ReportPdfs.tsx
+│   │   │   │   └── queries.ts
+│   │   │   ├── settings.ts
 │   │   │   └── utils.ts
-│   │   ├── middleware.ts
 │   │   ├── next.config.ts
 │   │   ├── next-env.d.ts
 │   │   ├── node_modules
 │   │   │   ├── @auth
 │   │   │   │   └── prisma-adapter -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@auth+prisma-adapter@2.11.2_acb7cbca5e770bacb34e5ecb1ec49235/node_modules/@auth/prisma-adapter
+│   │   │   ├── @aws-sdk
+│   │   │   │   └── client-s3 -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@aws-sdk+client-s3@3.1060.0/node_modules/@aws-sdk/client-s3
 │   │   │   ├── bcrypt -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/bcrypt@6.0.0/node_modules/bcrypt
+│   │   │   ├── bcryptjs -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/bcryptjs@3.0.3/node_modules/bcryptjs
 │   │   │   ├── class-variance-authority -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/class-variance-authority@0.7.1/node_modules/class-variance-authority
 │   │   │   ├── clsx -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/clsx@2.1.1/node_modules/clsx
 │   │   │   ├── dotenv -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/dotenv@17.4.2/node_modules/dotenv
 │   │   │   ├── eslint -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/eslint@9.39.4_jiti@2.7.0/node_modules/eslint
 │   │   │   ├── eslint-config-next -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/eslint-config-next@16.2.6_@_f084f045d20d8210561d68baf06d6aff/node_modules/eslint-config-next
 │   │   │   ├── eslint-config-prettier -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/eslint-config-prettier@10.1.8_eslint@9.39.4_jiti@2.7.0_/node_modules/eslint-config-prettier
+│   │   │   ├── exceljs -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/exceljs@4.4.0/node_modules/exceljs
+│   │   │   ├── fflate -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/fflate@0.8.3/node_modules/fflate
 │   │   │   ├── fs -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/fs@0.0.1-security/node_modules/fs
 │   │   │   ├── @hookform
 │   │   │   │   └── resolvers -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@hookform+resolvers@5.4.0_r_75d575960b8b67cd64d4025d9ab60cbd/node_modules/@hookform/resolvers
@@ -60,9 +312,6 @@
 │   │   │   ├── next-auth -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/next-auth@5.0.0-beta.31_nex_b669b8016ef5843c2baf9d3e57af13db/node_modules/next-auth
 │   │   │   ├── next-intl -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/next-intl@4.12.0_@swc+helpe_281724a7faea4490df231ffa7810cc1a/node_modules/next-intl
 │   │   │   ├── prettier -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/prettier@3.8.3/node_modules/prettier
-│   │   │   ├── @prisma
-│   │   │   │   └── client -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@prisma+client@6.19.3_prism_1d040ab5215f59f0e27ddee7f0cf082e/node_modules/@prisma/client
-│   │   │   ├── prisma -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/prisma@6.19.3_typescript@5.9.3/node_modules/prisma
 │   │   │   ├── radix-ui -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/radix-ui@1.4.3_@types+react_06ef3c23bb18eacb8f97d1bb8edbc095/node_modules/radix-ui
 │   │   │   ├── react -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/react@19.2.4/node_modules/react
 │   │   │   ├── react-dom -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/react-dom@19.2.4_react@19.2.4/node_modules/react-dom
@@ -72,6 +321,7 @@
 │   │   │   ├── react-hook-form -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/react-hook-form@7.76.1_react@19.2.4/node_modules/react-hook-form
 │   │   │   ├── @react-pdf
 │   │   │   │   └── renderer -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@react-pdf+renderer@4.5.1_react@19.2.4/node_modules/@react-pdf/renderer
+│   │   │   ├── recharts -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/recharts@3.8.1_@types+react_5cc731cb959436aac741075d0fdf58b5/node_modules/recharts
 │   │   │   ├── resend -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/resend@6.12.4_@react-email+_7e7d99626e3e372ff48a81d837e3d2c9/node_modules/resend
 │   │   │   ├── server-only -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/server-only@0.0.1/node_modules/server-only
 │   │   │   ├── shadcn -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/shadcn@4.8.1_@types+node@20.19.41_typescript@5.9.3/node_modules/shadcn
@@ -90,28 +340,94 @@
 │   │   │   ├── @vitest
 │   │   │   │   └── ui -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@vitest+ui@4.1.7_vitest@4.1.7/node_modules/@vitest/ui
 │   │   │   ├── vitest -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/vitest@4.1.7_@types+node@20_338a20d93150897c2ded105246f1a5ec/node_modules/vitest
+│   │   │   ├── xlsx -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/xlsx@0.18.5/node_modules/xlsx
 │   │   │   └── zod -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/zod@4.4.3/node_modules/zod
 │   │   ├── package.json
+│   │   ├── pnpm-lock.yaml
 │   │   ├── pnpm-workspace.yaml
 │   │   ├── postcss.config.mjs
 │   │   ├── public
 │   │   │   ├── file.svg
 │   │   │   ├── globe.svg
+│   │   │   ├── logos
+│   │   │   │   ├── 1000mm-logo.png
+│   │   │   │   └── sda-logo.png
 │   │   │   ├── next.svg
+│   │   │   ├── uploads
+│   │   │   │   ├── app-docs
+│   │   │   │   │   └── 2026
+│   │   │   │   │       ├── 2451f32757da5b5a1ab207d17e436806.pdf
+│   │   │   │   │       ├── 3fd6c0583c4a4b71a665a157a9c5e53f.pdf
+│   │   │   │   │       ├── 46e48d86710821e6977979f56bf00142.pdf
+│   │   │   │   │       ├── 77de1740d2d6e98c58bc793f3562c24e.pdf
+│   │   │   │   │       ├── 93999b5f71c045fc68682e762ac82666.pdf
+│   │   │   │   │       ├── a722a3e9726516cfe00a2c7c37bacd4a.pdf
+│   │   │   │   │       └── adcb1b135335131a8805c11bcc64c84b.pdf
+│   │   │   │   ├── education-certs
+│   │   │   │   │   └── 2026
+│   │   │   │   │       └── 595be18d6a746baddf14ff29043620b7.pdf
+│   │   │   │   ├── family-nids
+│   │   │   │   │   └── 2026
+│   │   │   │   │       ├── 3ee3846efe903cf06eee07da44c0b59d.pdf
+│   │   │   │   │       └── 91861ba42944b4e8e6f348c7411feb5a.pdf
+│   │   │   │   ├── lmd-docs
+│   │   │   │   │   └── 2026
+│   │   │   │   │       ├── 238b9dcefa3f5a37daa04dd6228c0359.pdf
+│   │   │   │   │       ├── 28dba3689a0ee14db650e285ce2ac938.pdf
+│   │   │   │   │       └── 92c517fd11662844cb3bb086ce24535b.pdf
+│   │   │   │   └── profile-photos
+│   │   │   │       └── 2026
+│   │   │   │           └── 6b60c0b06c9d38c0d9ceb44a0ab180b6.jpeg
 │   │   │   ├── vercel.svg
 │   │   │   └── window.svg
 │   │   └── tsconfig.json
 │   └── website
 │       ├── app
+│       │   ├── api
+│       │   │   └── trainer-application
+│       │   │       └── route.ts
+│       │   ├── become-a-trainer
+│       │   │   └── page.tsx
+│       │   ├── current-projects
+│       │   │   ├── batch-29
+│       │   │   │   ├── _components
+│       │   │   │   │   └── Batch29Slider.tsx
+│       │   │   │   └── page.tsx
+│       │   │   ├── _components
+│       │   │   │   └── ProjectsGrid.tsx
+│       │   │   ├── page.tsx
+│       │   │   └── training-center
+│       │   │       ├── _components
+│       │   │       │   └── GroundbreakingSlider.tsx
+│       │   │       └── page.tsx
+│       │   ├── documents
+│       │   │   └── page.tsx
+│       │   ├── donate-now
+│       │   │   └── page.tsx
+│       │   ├── donation-proceeds
+│       │   │   ├── _components
+│       │   │   │   └── ProceedsSlider.tsx
+│       │   │   └── page.tsx
 │       │   ├── favicon.ico
 │       │   ├── globals.css
+│       │   ├── how-to-donate
+│       │   │   └── page.tsx
 │       │   ├── layout.tsx
-│       │   └── page.tsx
+│       │   ├── page.tsx
+│       │   ├── thank-you
+│       │   │   └── page.tsx
+│       │   └── training-schedule
+│       │       ├── [id]
+│       │       │   └── page.tsx
+│       │       └── page.tsx
 │       ├── components
 │       │   ├── NavBar.tsx
+│       │   ├── PageShowFix.tsx
 │       │   ├── sections
 │       │   │   ├── AboutUs.tsx
+│       │   │   ├── ContactUsClient.tsx
 │       │   │   ├── ContactUs.tsx
+│       │   │   ├── CurrentProjectsSection.tsx
 │       │   │   ├── DirectorsMessage.tsx
 │       │   │   ├── Footer.tsx
 │       │   │   ├── HeroSection.tsx
@@ -125,8 +441,10 @@
 │       │       ├── input.tsx
 │       │       └── textarea.tsx
 │       ├── components.json
+│       ├── Dockerfile
 │       ├── eslint.config.mjs
 │       ├── lib
+│       │   ├── projects.ts
 │       │   └── utils.ts
 │       ├── next.config.ts
 │       ├── next-env.d.ts
@@ -159,8 +477,37 @@
 │       ├── pnpm-workspace.yaml
 │       ├── postcss.config.mjs
 │       ├── public
+│       │   ├── downloads
+│       │   │   ├── letter-of-intent.pdf
+│       │   │   ├── parents-concent.pdf
+│       │   │   └── sworn-statement.pdf
 │       │   ├── file.svg
 │       │   ├── globe.svg
+│       │   ├── images
+│       │   │   ├── director-current.jpeg
+│       │   │   ├── director-former.jpeg
+│       │   │   ├── hero-bg.png
+│       │   │   ├── proceeds
+│       │   │   │   ├── cafeteria.jpg
+│       │   │   │   ├── facilities.jpg
+│       │   │   │   ├── stipends.jpg
+│       │   │   │   └── training.jpg
+│       │   │   └── projects
+│       │   │       ├── batch-29
+│       │   │       │   ├── batch-29-1.jpg
+│       │   │       │   ├── batch-29-2.jpg
+│       │   │       │   ├── batch-29-3.jpg
+│       │   │       │   ├── batch-29-4.jpg
+│       │   │       │   ├── batch-29-5.jpg
+│       │   │       │   └── batch-29-6.jpg
+│       │   │       ├── groundbreaking-1.jpg
+│       │   │       ├── groundbreaking-2.jpg
+│       │   │       ├── groundbreaking-3.jpg
+│       │   │       ├── groundbreaking-4.jpg
+│       │   │       └── training-center.jpg
+│       │   ├── logos
+│       │   │   ├── 1000mm-logo.png
+│       │   │   └── sda-nsd.png
 │       │   ├── next.svg
 │       │   ├── vercel.svg
 │       │   └── window.svg
@@ -171,56 +518,6 @@
 ├── docs
 │   └── PROGRESS.md
 ├── node_modules
-│   ├── @alloc
-│   ├── @auth
-│   ├── @babel
-│   ├── @dotenvx
-│   ├── @ecies
-│   ├── @esbuild
-│   ├── @eslint
-│   ├── @eslint-community
-│   ├── @floating-ui
-│   ├── @formatjs
-│   ├── @hono
-│   ├── @hookform
-│   ├── @humanfs
-│   ├── @humanwhocodes
-│   ├── @img
-│   ├── @inquirer
-│   ├── @jridgewell
-│   ├── @modelcontextprotocol
-│   ├── @mswjs
-│   ├── @napi-rs
-│   ├── @next
-│   ├── @noble
-│   ├── @nodelib
-│   ├── @nolyfill
-│   ├── @open-draft
-│   ├── @oxc-project
-│   ├── @panva
-│   ├── @parcel
-│   ├── @polka
-│   ├── @prisma
-│   ├── @radix-ui
-│   ├── @react-email
-│   ├── @react-pdf
-│   ├── @rolldown
-│   ├── @rtsao
-│   ├── @schummar
-│   ├── @sec-ant
-│   ├── @selderee
-│   ├── @sindresorhus
-│   ├── @socket.io
-│   ├── @stablelib
-│   ├── @standard-schema
-│   ├── @swc
-│   ├── @tailwindcss
-│   ├── @ts-morph
-│   ├── @tybys
-│   ├── @types
-│   ├── @typescript-eslint
-│   ├── @unrs
-│   └── @vitest
 ├── package.json
 ├── package-lock.json
 ├── packages
@@ -228,7 +525,6 @@
 │       ├── node_modules
 │       │   ├── bcrypt -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/bcrypt@6.0.0/node_modules/bcrypt
 │       │   ├── dotenv -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/dotenv@17.4.2/node_modules/dotenv
-│       │   ├── path -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/path@0.12.7/node_modules/path
 │       │   ├── @prisma
 │       │   │   └── client -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/@prisma+client@6.19.3_prism_1d040ab5215f59f0e27ddee7f0cf082e/node_modules/@prisma/client
 │       │   ├── prisma -> /mnt/c/Users/avishek/Documents/Dev/Projects/project-1000mmbd/node_modules/.pnpm/prisma@6.19.3_typescript@5.9.3/node_modules/prisma
@@ -240,10 +536,24 @@
 │       ├── prisma
 │       │   ├── migrations
 │       │   │   ├── 20260604025215_add_deployment_location_to_enrollment
+│       │   │   │   └── migration.sql
+│       │   │   ├── 20260605093921_add_lmd_rejection_and_doc_kinds
+│       │   │   │   └── migration.sql
+│       │   │   ├── 20260606125503_add_lmd_rejection_reason
+│       │   │   │   └── migration.sql
+│       │   │   ├── 20260607042254_add_field_report_details
+│       │   │   │   └── migration.sql
+│       │   │   ├── 20260607142611_add_lmd_reports
+│       │   │   │   └── migration.sql
+│       │   │   ├── 20260608033130_add_user_flag_requests
+│       │   │   │   └── migration.sql
+│       │   │   ├── 20260610044703_add_salary_and_missionary
+│       │   │   │   └── migration.sql
+│       │   │   ├── 20260611041928_added_trainer
+│       │   │   │   └── migration.sql
 │       │   │   └── migration_lock.toml
 │       │   ├── schema.prisma
 │       │   └── seed.ts
-│       ├── prisma.config.ts
 │       ├── src
 │       │   ├── base.ts
 │       │   ├── index.ts
@@ -252,6 +562,7 @@
 ├── pnpm-lock.yaml
 ├── pnpm-workspace.yaml
 ├── README.md
+├── TESTING.md
 └── Tree.txt
 
-172 directories, 83 files
+270 directories, 296 files

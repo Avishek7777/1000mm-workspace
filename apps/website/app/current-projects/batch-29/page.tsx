@@ -53,7 +53,7 @@ const purposes = [
 const budgetRows = [
   { label: "Training Program Budget (A)", bdt: "796,700" },
   { label: "Essential Supplies (B)", bdt: "181,700" },
-  { label: "Camera & Media Equipment (C)", bdt: "912,982" },
+  { label: "Media & Equipment", bdt: "912,982" },
 ];
 
 const outcomes = [

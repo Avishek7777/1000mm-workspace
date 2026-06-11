@@ -63,7 +63,7 @@ export default function ProceedsSlider() {
             className="text-2xl md:text-3xl font-bold"
             style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}
           >
-            Where Every Taka Goes
+            How Your Support Makes an Impact
           </h2>
         </motion.div>
 

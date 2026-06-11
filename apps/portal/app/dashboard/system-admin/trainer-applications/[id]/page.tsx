@@ -16,12 +16,12 @@ import {
   Mail,
   Phone,
   Briefcase,
-  TicketCheck,
 } from "lucide-react";
 import {
   approveTrainerApplicationAction,
   rejectTrainerApplicationAction,
 } from "@/actions/trainerApplications";
+import { ExportButtons } from "../_components/ExportButtons";
 
 export const metadata = { title: "Trainer Application Review" };
 
@@ -81,6 +81,7 @@ export default async function TrainerApplicationDetailPage({
             </p>
           </div>
           <StatusBadge status={application.status} />
+          <ExportButtons trainerId={application.createdUser?.id} />
         </div>
       </div>
 

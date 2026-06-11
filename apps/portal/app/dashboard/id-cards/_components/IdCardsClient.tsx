@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toggleIdCardPrintingAction } from "@/actions/settings";
+import { toggleSettingAction } from "@/actions/settings";
 
 type Program = { id: string; code: string; title: string };
 type Trainee = {
@@ -94,7 +94,7 @@ export function IdCardsClient({
 
   async function handleToggleAccess() {
     setTogglingAccess(true);
-    const result = await toggleIdCardPrintingAction(!accessEnabled);
+    const result = await toggleSettingAction("idCardPrinting", !accessEnabled);
     if (result.ok) {
       setAccessEnabled(!accessEnabled);
       startTransition(() => router.refresh());

@@ -1,8 +1,6 @@
 import { requireRole } from "@/lib/auth/helpers";
-import { isSettingEnabled, SETTINGS } from "@/lib/settings";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 const MISSION_COLORS: Record<
   string,
@@ -36,29 +34,23 @@ const MISSION_COLORS: Record<
 
 export default async function DirectorDashboardPage() {
   const user = await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
-  if (user.role === "MAIN_DIRECTOR") {
-    const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_WINDOWS);
-    if (!allowed) redirect("/dashboard/director");
-  }
+  // ⚠ No settings gate here — gates belong on the pages they protect,
+  //   never on the page you'd redirect TO (causes infinite loop).
 
   const currentYear = new Date().getFullYear();
 
-  // ── Cross-mission stat counts ─────────────────────────────────────────────
   const [
     awaitingDecision,
     acceptedThisCycle,
     rejectedThisCycle,
     returnedToLmd,
-    totalRecommended,
   ] = await Promise.all([
-    // Awaiting decision = RECOMMENDED + UNDER_MAIN_DIRECTOR_REVIEW
     prisma.application.count({
       where: {
         deletedAt: null,
         status: { in: ["RECOMMENDED", "UNDER_MAIN_DIRECTOR_REVIEW"] },
       },
     }),
-    // Accepted this year
     prisma.application.count({
       where: {
         deletedAt: null,
@@ -69,29 +61,22 @@ export default async function DirectorDashboardPage() {
         },
       },
     }),
-    // Rejected this year (by Director — rejectionReason field)
     prisma.application.count({
       where: {
         deletedAt: null,
         status: "REJECTED",
-        rejectionReason: { not: null }, // Director rejections only
+        rejectionReason: { not: null },
         lastTransitionAt: {
           gte: new Date(`${currentYear}-01-01`),
           lt: new Date(`${currentYear + 1}-01-01`),
         },
       },
     }),
-    // Returned to LMD
     prisma.application.count({
       where: { deletedAt: null, status: "RETURNED_TO_LMD" },
     }),
-    // All-time recommended (for context)
-    prisma.application.count({
-      where: { deletedAt: null, status: { not: "DRAFT" } },
-    }),
   ]);
 
-  // ── Per-mission breakdown ─────────────────────────────────────────────────
   const missions = await prisma.localMission.findMany({
     where: { deletedAt: null },
     orderBy: { code: "asc" },
@@ -128,7 +113,6 @@ export default async function DirectorDashboardPage() {
     }),
   );
 
-  // ── Most recent recommended applications ─────────────────────────────────
   const recentRecommended = await prisma.application.findMany({
     where: {
       deletedAt: null,
@@ -208,7 +192,7 @@ export default async function DirectorDashboardPage() {
         )}
       </div>
 
-      {/* Top stat cards — all clickable */}
+      {/* Stat cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {topStats.map((s) => (
           <Link
@@ -222,9 +206,8 @@ export default async function DirectorDashboardPage() {
         ))}
       </div>
 
-      {/* Per-mission breakdown + recent recommended */}
+      {/* Mission breakdown + recent recommended */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Mission breakdown */}
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <h2 className="mb-4 text-sm font-semibold text-gray-900">
             Breakdown by Mission
@@ -276,7 +259,6 @@ export default async function DirectorDashboardPage() {
           </div>
         </div>
 
-        {/* Recently recommended — needs a decision */}
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">
@@ -346,93 +328,78 @@ export default async function DirectorDashboardPage() {
 
       {/* Quick actions */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Link
-          href="/dashboard/director/applications"
-          className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 hover:border-teal-300 hover:shadow-sm transition-all"
-        >
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-teal-50">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-teal-600"
+        {[
+          {
+            href: "/dashboard/director/applications",
+            label: "All Applications",
+            sub: "Cross-mission view",
+            color: "teal",
+            icon: (
+              <>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </>
+            ),
+          },
+          {
+            href: "/dashboard/director/programs",
+            label: "Training Programs",
+            sub: "Manage cycles & windows",
+            color: "blue",
+            icon: (
+              <>
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                <path d="M6 12v5c3 3 9 3 12 0v-5" />
+              </>
+            ),
+          },
+          {
+            href: "/dashboard/director/reports",
+            label: "Reports",
+            sub: "Analytics & exports",
+            color: "purple",
+            icon: (
+              <>
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+              </>
+            ),
+          },
+        ].map((a) => (
+          <Link
+            key={a.href}
+            href={a.href}
+            className={`flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 hover:border-${a.color}-300 hover:shadow-sm transition-all`}
+          >
+            <div
+              className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-${a.color}-50`}
             >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-900">
-              All Applications
-            </p>
-            <p className="text-xs text-gray-500">Cross-mission view</p>
-          </div>
-        </Link>
-
-        <Link
-          href="/dashboard/director/programs"
-          className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 hover:border-blue-300 hover:shadow-sm transition-all"
-        >
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-blue-600"
-            >
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-              <path d="M6 12v5c3 3 9 3 12 0v-5" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-900">
-              Training Programs
-            </p>
-            <p className="text-xs text-gray-500">Manage cycles & windows</p>
-          </div>
-        </Link>
-
-        <Link
-          href="/dashboard/director/reports"
-          className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 hover:border-purple-300 hover:shadow-sm transition-all"
-        >
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-purple-50">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-purple-600"
-            >
-              <line x1="18" y1="20" x2="18" y2="10" />
-              <line x1="12" y1="20" x2="12" y2="4" />
-              <line x1="6" y1="20" x2="6" y2="14" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-900">Reports</p>
-            <p className="text-xs text-gray-500">Analytics & exports</p>
-          </div>
-        </Link>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`text-${a.color}-600`}
+              >
+                {a.icon}
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900">{a.label}</p>
+              <p className="text-xs text-gray-500">{a.sub}</p>
+            </div>
+          </Link>
+        ))}
       </div>
 
-      {/* News / Announcements placeholder */}
+      {/* Announcements */}
       <div className="rounded-xl border border-gray-200 bg-white p-5">
         <h2 className="mb-3 text-sm font-medium text-gray-900">Latest News</h2>
         <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 py-8 text-center">
