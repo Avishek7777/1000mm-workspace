@@ -23,7 +23,7 @@ const contactInfo = {
   contact: {
     icon: Phone,
     title: "Contact",
-    lines: ["+880 1314-333300", "info@1000mm.org.bd", "www.1000mm.org.bd"],
+    lines: ["+880 1324-333377", "info@1000mm.org.bd", "www.1000mm.org.bd"],
   },
   schedule: {
     icon: Calendar,

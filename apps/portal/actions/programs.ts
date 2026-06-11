@@ -106,7 +106,14 @@ export async function createProgramAction(
   const user = await requireDirector();
 
   const raw = Object.fromEntries(formData.entries());
-  const parsed = programSchema.safeParse(raw);
+
+  const schemaWithIsMain = programSchema.and(
+    z.object({
+      isMain: z.preprocess((v) => v === "on", z.boolean()).optional(),
+    }),
+  );
+
+  const parsed = schemaWithIsMain.safeParse(raw);
 
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -119,7 +126,6 @@ export async function createProgramAction(
 
   const d = parsed.data;
 
-  // Check for duplicate code
   const existing = await prisma.trainingProgram.findUnique({
     where: { code: d.code },
   });
@@ -138,6 +144,7 @@ export async function createProgramAction(
       category: d.category,
       summary: d.summary || null,
       summaryBangla: d.summaryBangla || null,
+      isMain: d.isMain ?? false,
       startDate: new Date(d.startDate),
       endDate: new Date(d.endDate),
       location: d.location || null,
@@ -159,6 +166,13 @@ export async function createProgramAction(
       details: { code: program.code, title: program.title },
     },
   });
+
+  if (d.isMain) {
+    await prisma.user.updateMany({
+      where: { isMissionary: true },
+      data: { isMissionary: false },
+    });
+  }
 
   revalidatePath("/dashboard/director/programs");
   return { ok: true, programId: program.id };

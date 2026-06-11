@@ -3,6 +3,8 @@ import { prisma } from "@1000mm/db";
 import Link from "next/link";
 import { WindowActions } from "./_components/WindowActions";
 import { NewWindowButton } from "./_components/NewWindowButton";
+import { redirect } from "next/navigation";
+import { isSettingEnabled, SETTINGS } from "@/lib/settings";
 
 const STATE_CONFIG = {
   OPEN: {
@@ -90,7 +92,11 @@ export default async function WindowsPage({
 }: {
   searchParams: Promise<{ state?: string; year?: string }>;
 }) {
-  await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+  const user = await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+  if (user.role === "MAIN_DIRECTOR") {
+    const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_WINDOWS);
+    if (!allowed) redirect("/dashboard/director");
+  }
   const { state: stateFilter, year: yearFilter } = await searchParams;
 
   const allWindows = await prisma.applicationWindow.findMany({

@@ -110,6 +110,10 @@ const ROUTE_GUARDS: RouteGuard[] = [
     [SYSTEM_ADMIN, MAIN_DIRECTOR, LOCAL_DIRECTOR, TRAINEE],
   ],
 
+  ["/dashboard/salary", ADMIN_ROLES],
+  ["/dashboard/lmd/salary", [SYSTEM_ADMIN, MAIN_DIRECTOR, LOCAL_DIRECTOR]],
+  ["/dashboard/salary-request", [TRAINEE]],
+
   // Everything else under /dashboard → all authenticated roles
   ["/dashboard", ALL_ROLES],
 ];

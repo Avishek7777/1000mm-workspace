@@ -1,15 +1,16 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useState } from "react";
 import {
   FileDown,
   ClipboardCheck,
   UserCheck,
   Send,
-  ChevronDown,
   CheckCircle2,
 } from "lucide-react";
+
+import Link from "next/link";
 
 const steps = [
   {
@@ -333,6 +334,20 @@ export default function HowToJoin() {
             ))}
           </div>
         </motion.div>
+
+        <div className="flex justify-center mt-10">
+          <Link
+            href="/become-a-trainer"
+            className="inline-flex  mx-auto items-center justify-center gap-2 px-6 py-3 rounded-full font-bold text-white text-sm hover:opacity-90 hover:scale-105 transition-all duration-300 shadow-lg mx-auto"
+            style={{
+              background: "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
+              fontFamily: "Georgia, serif",
+            }}
+          >
+            Become a Trainer
+            <span>→</span>
+          </Link>
+        </div>
       </div>
     </section>
   );

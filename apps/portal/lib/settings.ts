@@ -15,6 +15,8 @@ export const SETTING_KEYS = {
   UD_CAN_RESPOND_COMPLAINTS: "ud.can_respond_complaints",
   UD_CAN_OPEN_LMD_REPORT_WINDOWS: "ud.can_open_lmd_report_windows",
   ID_CARDS_PRINTING_ENABLED: "idcards.printing_enabled",
+  SALARY_WINDOW_START: "salary.request_window_start",
+  SALARY_WINDOW_END: "salary.request_window_end",
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];

@@ -11,29 +11,14 @@ import {
   MapPin,
   Calendar,
 } from "lucide-react";
-
-const projects = [
-  {
-    slug: "training-center",
-    status: "Active",
-    title: "1000MM Bangladesh Training Center",
-    subtitle: "A Legacy in the Making",
-    description:
-      "Groundbreaking held on December 10, 2025 at BASC Campus. Help complete a fully functioning missionary training center that will prepare generations of gospel workers for Bangladesh and beyond.",
-    location: "BASC Campus, Bangladesh",
-    date: "Dec 10, 2025 — Ongoing",
-    image: "/images/projects/training-center.jpg",
-    tags: ["Construction", "Training", "Mission"],
-  },
-  // Add more projects here — each becomes a new slide
-];
+import { PROJECTS } from "@/lib/projects";
 
 const AUTOPLAY_MS = 5500;
 
 export default function CurrentProjectsSection() {
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
-  const total = projects.length;
+  const total = PROJECTS.length;
 
   const next = useCallback(() => setCurrent((c) => (c + 1) % total), [total]);
   const prev = () => setCurrent((c) => (c - 1 + total) % total);
@@ -44,7 +29,7 @@ export default function CurrentProjectsSection() {
     return () => clearInterval(t);
   }, [paused, next, total]);
 
-  const project = projects[current];
+  const project = PROJECTS[current];
 
   return (
     <section className="bg-white py-20 border-y border-amber-100">
@@ -99,7 +84,6 @@ export default function CurrentProjectsSection() {
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
-          {/* Slides */}
           <AnimatePresence mode="wait">
             <motion.div
               key={current}
@@ -109,7 +93,6 @@ export default function CurrentProjectsSection() {
               transition={{ duration: 0.65, ease: "easeInOut" }}
               className="absolute inset-0"
             >
-              {/* Background image */}
               <Image
                 src={project.image}
                 alt={project.title}
@@ -117,8 +100,6 @@ export default function CurrentProjectsSection() {
                 className="object-cover object-center"
                 priority={current === 0}
               />
-
-              {/* Gradient — dark on left for text, lighter right */}
               <div
                 className="absolute inset-0"
                 style={{
@@ -127,9 +108,8 @@ export default function CurrentProjectsSection() {
                 }}
               />
 
-              {/* Content — left-aligned */}
+              {/* Content */}
               <div className="absolute inset-0 flex flex-col justify-center px-10 md:px-16 max-w-2xl">
-                {/* Status + tags */}
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -156,7 +136,6 @@ export default function CurrentProjectsSection() {
                   ))}
                 </motion.div>
 
-                {/* Subtitle */}
                 <motion.p
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -167,7 +146,6 @@ export default function CurrentProjectsSection() {
                   {project.subtitle}
                 </motion.p>
 
-                {/* Title */}
                 <motion.h3
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -178,7 +156,6 @@ export default function CurrentProjectsSection() {
                   {project.title}
                 </motion.h3>
 
-                {/* Description */}
                 <motion.p
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -189,7 +166,6 @@ export default function CurrentProjectsSection() {
                   {project.description}
                 </motion.p>
 
-                {/* Meta */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -210,7 +186,6 @@ export default function CurrentProjectsSection() {
                   </span>
                 </motion.div>
 
-                {/* CTAs */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -240,7 +215,7 @@ export default function CurrentProjectsSection() {
             </motion.div>
           </AnimatePresence>
 
-          {/* Prev / Next — only show if more than 1 project */}
+          {/* Prev / Next */}
           {total > 1 && (
             <>
               <button
@@ -285,10 +260,10 @@ export default function CurrentProjectsSection() {
           )}
         </div>
 
-        {/* Dots — only show if more than 1 project */}
+        {/* Dots */}
         {total > 1 && (
           <div className="flex items-center justify-center gap-2.5 mt-5">
-            {projects.map((_, i) => (
+            {PROJECTS.map((_, i) => (
               <button
                 key={i}
                 onClick={() => {

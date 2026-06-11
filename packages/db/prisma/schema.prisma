@@ -38,6 +38,9 @@ model LocalMission {
   director           User?               @relation("MissionDirector", fields: [directorId], references: [id])
   users              User[]              @relation("UserHomeMission")
   lmdReports         LmdReport[]         @relation("LmdReportMission")
+  salaryRanges            SalaryRange[]
+  salaryAssignments       SalaryAssignment[]
+  salaryRequests          SalaryRequest[]
 
   @@index([code])
   @@map("local_missions")
@@ -63,6 +66,59 @@ model UserFlagRequest {
   @@map("user_flag_requests")
 }
 
+// ─── Salary ───────────────────────────────────────────────────────────────────
+model SalaryRange {
+  id          String       @id @default(cuid())
+  missionId   String       @unique
+  minAmount   Int
+  maxAmount   Int
+  cycle       Int
+  createdById String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  mission     LocalMission @relation(fields: [missionId], references: [id])
+  createdBy   User         @relation("SalaryRangeCreatedBy", fields: [createdById], references: [id])
+}
+
+model SalaryAssignment {
+  id           String       @id @default(cuid())
+  missionaryId String
+  missionId    String
+  amount       Int
+  deploymentLocation String?
+  cycle        Int
+  assignedById String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  missionary   User         @relation("MissionarySalaryAssignments", fields: [missionaryId], references: [id])
+  mission      LocalMission @relation(fields: [missionId], references: [id])
+  assignedBy   User         @relation("SalaryAssignedBy", fields: [assignedById], references: [id])
+
+  @@unique([missionaryId, cycle])
+  @@map("salary_assignments")
+}
+
+model SalaryRequest {
+  id           String              @id @default(cuid())
+  missionaryId String
+  missionId    String
+  amount       Int
+  month        Int
+  year         Int
+  status       SalaryRequestStatus @default(PENDING)
+  reviewedById String?
+  reviewedAt   DateTime?
+  notes        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  missionary   User                @relation("MissionarySalaryRequests", fields: [missionaryId], references: [id])
+  mission      LocalMission        @relation(fields: [missionId], references: [id])
+  reviewedBy   User?               @relation("SalaryRequestReviewedBy", fields: [reviewedById], references: [id])
+
+  @@unique([missionaryId, month, year])
+  @@map("salary_requests")
+}
+
 // ─── Users ────────────────────────────────────────────────────────────────────
 model User {
   id                      String                   @id @default(cuid())
@@ -78,6 +134,7 @@ model User {
   homeMissionId           String
   isActive                Boolean                  @default(true)
   failedLoginCount        Int                      @default(0)
+  isMissionary            Boolean                  @default(false)
   lockedUntil             DateTime?
   lastLoginAt             DateTime?
   createdAt               DateTime                 @default(now())
@@ -109,6 +166,13 @@ model User {
   flagRequests            UserFlagRequest[]        @relation("FlaggedUser")
   flagRequestsMade        UserFlagRequest[]        @relation("FlagRequestedBy")
   flagRequestsResolved    UserFlagRequest[]        @relation("FlagResolvedBy")
+  salaryRangesCreated     SalaryRange[]            @relation("SalaryRangeCreatedBy")
+  salaryAssignments       SalaryAssignment[]       @relation("MissionarySalaryAssignments")
+  salaryAssignmentsMade   SalaryAssignment[]       @relation("SalaryAssignedBy")
+  salaryRequests          SalaryRequest[]          @relation("MissionarySalaryRequests")
+  salaryRequestsReviewed  SalaryRequest[]          @relation("SalaryRequestReviewedBy")
+  trainerApplicationsReviewed TrainerApplication[] @relation("TrainerApplicationReviewedBy")
+  trainerApplicationCreated   TrainerApplication?  @relation("TrainerApplicationCreatedUser")
 
   @@index([email])
   @@index([homeMissionId])
@@ -173,6 +237,48 @@ model EmailVerificationToken {
   @@map("email_verification_tokens")
 }
 
+// ─── Trainer ────────────────────────────────────────────────────────────
+model TrainerApplication {
+  id              String                    @id @default(cuid())
+
+  // Personal info
+  fullName        String
+  email           String
+  phone           String?
+  fullAddress     String
+  specialization  String                    // free text — what they teach / area of expertise
+
+  // Uploaded file storage keys (served via /api/uploads/[...path])
+  cvStorageKey          String?             // kind: TRAINER_CV
+  passportStorageKey    String?             // kind: TRAINER_PASSPORT
+  photoStorageKey       String?             // kind: TRAINER_PHOTO (PP sized)
+
+  // Checkbox acknowledgements
+  acceptsSelfFunding    Boolean             @default(false)  // "responsible for own expenses"
+  requestsInvitationLetter Boolean          @default(false)  // "needs invitation letter"
+
+  // Workflow
+  status          TrainerApplicationStatus  @default(PENDING)
+  reviewedById    String?
+  reviewedAt      DateTime?
+  reviewNote      String?                   // SA internal note (rejection reason or approval note)
+
+  // If approved — link to the created User account
+  createdUserId   String?                   @unique
+
+  ipAddress       String?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  reviewedBy      User?                     @relation("TrainerApplicationReviewedBy", fields: [reviewedById], references: [id])
+  createdUser     User?                     @relation("TrainerApplicationCreatedUser", fields: [createdUserId], references: [id])
+
+  @@index([status])
+  @@index([email])
+  @@index([createdAt])
+  @@map("trainer_applications")
+}
+
 // ─── Announcements ────────────────────────────────────────────────────────────
 model Announcement {
   id            String    @id @default(cuid())
@@ -216,6 +322,7 @@ model TrainingProgram {
   enrollments        ProgramEnrollment[]
   fieldReports       FieldReport[]
   trainers           User[]              @relation("ProgramTrainers")
+  isMain                  Boolean                  @default(false)
 
   @@index([category])
   @@index([startDate])
@@ -842,6 +949,12 @@ enum DocumentKind {
 
   // ── Misc ──
   SUPPORTING_DOCUMENT
+
+  // ── Trainer ──
+  TRAINER_CV
+  TRAINER_PASSPORT
+  TRAINER_PHOTO
+
 }
 
 enum ComplaintCategory {
@@ -901,6 +1014,15 @@ enum AuditAction {
   USER_FLAG_REQUESTED
   USER_FLAG_APPROVED
   USER_FLAG_REJECTED
+  TRAINER_APPLICATION_SUBMITTED
+  TRAINER_ACCOUNT_CREATED
+  TRAINER_APPLICATION_REJECTED
+}
+
+enum TrainerApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum AuditSeverity {
@@ -913,4 +1035,10 @@ enum AuditSeverity {
 enum NotificationChannel {
   EMAIL
   IN_APP
+}
+
+enum SalaryRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

@@ -80,10 +80,10 @@ const paymentMethods = [
 ];
 
 const impactStats = [
-  { value: "83,583", label: "Baptisms" },
-  { value: "12,287", label: "Missionaries Sent" },
-  { value: "1,501", label: "Churches Established" },
-  { value: "66", label: "Countries Involved" },
+  { value: "4,962", label: "Baptisms" },
+  { value: "1,084", label: "Missionaries Sent" },
+  { value: "60", label: "Churches Established" },
+  { value: "4", label: "Sections Involved" },
 ];
 
 const whereItGoes = [

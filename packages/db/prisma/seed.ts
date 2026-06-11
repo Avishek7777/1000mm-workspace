@@ -1,27 +1,44 @@
 /**
  * Prisma Seed Script — 1000MM Training Platform
- * Includes rich test data: programs, windows, and applicants across all missions
+ *
+ * Run from repository root:
+ *   pnpm --filter @1000mm/db db:seed
+ *
+ * This seed creates:
+ *   - 4 Local Missions
+ *   - admin, director, 4 LMDs, 2 trainers, 4 trainees
+ *   - 5 programs with windows in OPEN/CLOSED/ARCHIVED/DRAFT states
+ *   - applications across roles, statuses, and missions
+ *   - notifications, complaints, announcements, donations, and field reports
  */
-/// <reference types="node" />
-import * as dotenv from "dotenv";
-import * as path from "path";
+import dotenv from "dotenv";
+import path from "path";
+import bcrypt from "bcrypt";
+import {
+  PrismaClient,
+  LocalMissionCode,
+  UserRole,
+  Gender,
+  MaritalStatus,
+  ApplicationStatus,
+  ApplicationWindowState,
+  TrainingCategory,
+  DocumentKind,
+  ComplaintCategory,
+  DonationStatus,
+  PaymentGateway,
+  NotificationChannel,
+  Denomination,
+  Religion,
+} from "@prisma/client";
+
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
-import { PrismaClient, LocalMissionCode, UserRole } from "@prisma/client";
-import bcrypt from "bcrypt";
-
 const prisma = new PrismaClient();
+const BCRYPT_ROUNDS = 10;
 
-const BCRYPT_ROUNDS = 10; // lower for seed speed
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function randomFrom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function randomInt(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+function randomItem<T>(items: readonly T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
 }
 
 function randomDate(start: Date, end: Date) {
@@ -30,49 +47,29 @@ function randomDate(start: Date, end: Date) {
   );
 }
 
-// ─── Bangladeshi names for realistic test data ─────────────────────────────
+function randomPhone() {
+  return `01${randomInt(11, 99)}${randomInt(100000, 999999)}`;
+}
 
-const FIRST_NAMES_MALE = [
+function randomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+const FIRST_NAMES = [
   "Rahul",
   "Arif",
   "Sumon",
-  "Rajib",
-  "Tanvir",
-  "Sabbir",
-  "Milon",
-  "Ripon",
-  "Sajib",
-  "Farhan",
-  "Imran",
-  "Karim",
-  "Nabil",
-  "Omi",
-  "Palash",
-  "Rohan",
-  "Sohel",
-  "Tushar",
-  "Utpal",
-  "Wahid",
-];
-const FIRST_NAMES_FEMALE = [
   "Priya",
   "Sonia",
   "Riya",
-  "Mitu",
-  "Lipi",
+  "Rajib",
   "Tania",
-  "Ruma",
-  "Shila",
-  "Puja",
-  "Nila",
-  "Mim",
-  "Lima",
-  "Kona",
-  "Jharna",
-  "Ira",
-  "Hema",
-  "Gitika",
-  "Faria",
+  "Tanvir",
+  "Mitu",
+  "Sabbir",
+  "Rohan",
+  "Lipi",
+  "Nabil",
   "Eva",
   "Dipa",
 ];
@@ -87,15 +84,8 @@ const LAST_NAMES = [
   "Saha",
   "Dey",
   "Nath",
-  "Barman",
-  "Chakraborty",
-  "Haldar",
-  "Islam",
-  "Rahman",
-  "Hossain",
   "Ahmed",
   "Khan",
-  "Akter",
   "Begum",
 ];
 const DISTRICTS = [
@@ -107,10 +97,6 @@ const DISTRICTS = [
   "Barisal",
   "Rangpur",
   "Mymensingh",
-  "Comilla",
-  "Gazipur",
-  "Narayanganj",
-  "Tangail",
 ];
 const CHURCHES = [
   "Dhaka SDA Church",
@@ -120,8 +106,26 @@ const CHURCHES = [
   "Khulna SDA Church",
   "Barisal SDA Church",
 ];
+const TRAINING_CATEGORIES: TrainingCategory[] = [
+  TrainingCategory.SPIRITUAL,
+  TrainingCategory.MENTAL,
+  TrainingCategory.PHYSICAL,
+  TrainingCategory.SOCIAL,
+];
+const BLOOD_TYPES = [
+  "A_POS",
+  "A_NEG",
+  "B_POS",
+  "B_NEG",
+  "AB_POS",
+  "AB_NEG",
+  "O_POS",
+  "O_NEG",
+] as const;
 
-// ─── SEED LOCAL MISSIONS ──────────────────────────────────────────────────────
+function buildName(seed: string) {
+  return `${seed} ${randomItem(LAST_NAMES)}`;
+}
 
 async function seedLocalMissions() {
   const missions = [
@@ -150,687 +154,703 @@ async function seedLocalMissions() {
       description: "Serving the western divisions of Bangladesh.",
     },
   ];
-  for (const m of missions) {
-    await prisma.localMission.upsert({
-      where: { code: m.code },
-      update: {
-        name: m.name,
-        nameBangla: m.nameBangla,
-        description: m.description,
-      },
-      create: m,
+
+  const created = {} as Record<LocalMissionCode, { id: string }>;
+  for (const mission of missions) {
+    const record = await prisma.localMission.upsert({
+      where: { code: mission.code },
+      update: mission,
+      create: mission,
     });
+    created[mission.code] = record;
   }
-  console.log("✓ Seeded 4 Local Missions");
+
+  console.log("✓ Local missions seeded");
+  return created;
 }
 
-// ─── SEED SYSTEM ADMIN ────────────────────────────────────────────────────────
+async function seedUsers(missions: Record<LocalMissionCode, { id: string }>) {
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe!Now";
+  const directorPassword =
+    process.env.SEED_DIRECTOR_PASSWORD ?? "DirectorPass!2026";
+  const lmdPassword = process.env.SEED_LMD_PASSWORD ?? "LmdPass!2026";
 
-async function seedSystemAdmin() {
-  const email = process.env.SEED_ADMIN_EMAIL;
-  const password = process.env.SEED_ADMIN_PASSWORD;
-  const fullName = process.env.SEED_ADMIN_NAME ?? "System Administrator";
-  if (!email || !password) {
-    console.warn("⚠ Skipping System Admin seed");
-    return;
-  }
-  const ebm = await prisma.localMission.findUniqueOrThrow({
-    where: { code: LocalMissionCode.EBM },
-  });
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const passwordHashes = {
+    admin: await bcrypt.hash(adminPassword, BCRYPT_ROUNDS),
+    director: await bcrypt.hash(directorPassword, BCRYPT_ROUNDS),
+    lmd: await bcrypt.hash(lmdPassword, BCRYPT_ROUNDS),
+    trainer: await bcrypt.hash("Trainer!2026", BCRYPT_ROUNDS),
+    trainee: await bcrypt.hash("Trainee!2026", BCRYPT_ROUNDS),
+  };
+
   const admin = await prisma.user.upsert({
-    where: { email },
+    where: { email: process.env.SEED_ADMIN_EMAIL ?? "admin@1000mm.local" },
     update: {},
     create: {
-      email,
-      passwordHash,
-      fullName,
+      email: process.env.SEED_ADMIN_EMAIL ?? "admin@1000mm.local",
+      passwordHash: passwordHashes.admin,
+      fullName: process.env.SEED_ADMIN_NAME ?? "System Administrator",
       role: UserRole.SYSTEM_ADMIN,
-      homeMissionId: ebm.id,
+      homeMissionId: missions.EBM.id,
       emailVerified: new Date(),
       isActive: true,
     },
   });
-  console.log(`✓ Seeded System Admin: ${email}`);
-  return admin;
-}
 
-// ─── SEED UNION DIRECTOR ──────────────────────────────────────────────────────
-
-async function seedDirector() {
-  const email = process.env.SEED_DIRECTOR_EMAIL ?? "director@1000mm.local";
-  const password = process.env.SEED_DIRECTOR_PASSWORD ?? "DirectorPass!2026";
-  const fullName = process.env.SEED_DIRECTOR_NAME ?? "Union Director";
-  const ebm = await prisma.localMission.findUniqueOrThrow({
-    where: { code: LocalMissionCode.EBM },
-  });
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-  await prisma.user.upsert({
-    where: { email },
+  const director = await prisma.user.upsert({
+    where: {
+      email: process.env.SEED_DIRECTOR_EMAIL ?? "director@1000mm.local",
+    },
     update: {},
     create: {
-      email,
-      passwordHash,
-      fullName,
+      email: process.env.SEED_DIRECTOR_EMAIL ?? "director@1000mm.local",
+      passwordHash: passwordHashes.director,
+      fullName: process.env.SEED_DIRECTOR_NAME ?? "Union Director",
       role: UserRole.MAIN_DIRECTOR,
-      homeMissionId: ebm.id,
+      homeMissionId: missions.EBM.id,
       emailVerified: new Date(),
       isActive: true,
     },
   });
-  console.log(`✓ Seeded Union Director: ${email}`);
-}
 
-// ─── SEED LMDs ────────────────────────────────────────────────────────────────
-
-async function seedLmds() {
-  const defaultPassword = process.env.SEED_LMD_PASSWORD ?? "LmdPass!2026";
-  const passwordHash = await bcrypt.hash(defaultPassword, BCRYPT_ROUNDS);
-  const lmdDefs = [
-    {
-      code: LocalMissionCode.EBM,
-      email: process.env.SEED_LMD_EBM_EMAIL ?? "lmd.ebm@1000mm.local",
-      fullName: "EBM Local Director",
-    },
-    {
-      code: LocalMissionCode.NBM,
-      email: process.env.SEED_LMD_NBM_EMAIL ?? "lmd.nbm@1000mm.local",
-      fullName: "NBM Local Director",
-    },
-    {
-      code: LocalMissionCode.SBM,
-      email: process.env.SEED_LMD_SBM_EMAIL ?? "lmd.sbm@1000mm.local",
-      fullName: "SBM Local Director",
-    },
-    {
-      code: LocalMissionCode.WBM,
-      email: process.env.SEED_LMD_WBM_EMAIL ?? "lmd.wbm@1000mm.local",
-      fullName: "WBM Local Director",
-    },
-  ];
-  for (const def of lmdDefs) {
-    const mission = await prisma.localMission.findUniqueOrThrow({
-      where: { code: def.code },
-    });
-    const lmd = await prisma.user.upsert({
-      where: { email: def.email },
-      update: {},
-      create: {
-        email: def.email,
-        passwordHash,
-        fullName: def.fullName,
-        role: UserRole.LOCAL_DIRECTOR,
-        homeMissionId: mission.id,
-        emailVerified: new Date(),
-        isActive: true,
-      },
-    });
-    if (!mission.directorId || mission.directorId === lmd.id) {
-      await prisma.localMission.update({
-        where: { id: mission.id },
-        data: { directorId: lmd.id },
-      });
-    }
-    console.log(`✓ Seeded LMD for ${def.code}: ${def.email}`);
-  }
-}
-
-// ─── SEED TRAINING PROGRAMS ───────────────────────────────────────────────────
-
-async function seedPrograms(adminId: string) {
-  const programs = [
-    // 2024 — archived cycle
-    {
-      code: "1000MM-2024",
-      title: "1000MM Missionary Training Program 2024",
-      titleBangla: "১০০০এমএম মিশনারি প্রশিক্ষণ কার্যক্রম ২০২৪",
-      category: "SPIRITUAL" as const,
-      summary: "The 2024 missionary training cycle.",
-      startDate: new Date("2024-07-01"),
-      endDate: new Date("2024-12-31"),
-      location: "Dhaka, Bangladesh",
-      targetIntake: 80,
-      isPublished: false,
-      windowState: "ARCHIVED" as const,
-      windowOpen: new Date("2024-01-01"),
-      windowClose: new Date("2024-05-31"),
-      trainingStart: new Date("2024-07-01"),
-    },
-    // 2025 — closed cycle
-    {
-      code: "1000MM-2025",
-      title: "1000MM Missionary Training Program 2025",
-      titleBangla: "১০০০এমএম মিশনারি প্রশিক্ষণ কার্যক্রম ২০২৫",
-      category: "SPIRITUAL" as const,
-      summary: "The 2025 missionary training cycle.",
-      startDate: new Date("2025-07-01"),
-      endDate: new Date("2025-12-31"),
-      location: "Dhaka, Bangladesh",
-      targetIntake: 90,
-      isPublished: false,
-      windowState: "CLOSED" as const,
-      windowOpen: new Date("2025-01-15"),
-      windowClose: new Date("2025-05-31"),
-      trainingStart: new Date("2025-07-01"),
-    },
-    // 2026 — active open
-    {
-      code: "1000MM-2026",
-      title: "1000MM Missionary Training Program 2026",
-      titleBangla: "১০০০এমএম মিশনারি প্রশিক্ষণ কার্যক্রম ২০২৬",
-      category: "SPIRITUAL" as const,
-      summary: "A comprehensive missionary training program for Bangladesh.",
-      startDate: new Date("2026-07-01"),
-      endDate: new Date("2026-12-31"),
-      location: "Dhaka, Bangladesh",
-      targetIntake: 100,
-      isPublished: true,
-      windowState: "OPEN" as const,
-      windowOpen: new Date("2026-01-01"),
-      windowClose: new Date("2026-12-31"),
-      trainingStart: new Date("2026-07-01"),
-    },
-    // 2026 Leadership — second active program
-    {
-      code: "1000MM-2026-L",
-      title: "1000MM Leadership Development Program 2026",
-      titleBangla: "১০০০এমএম নেতৃত্ব উন্নয়ন কার্যক্রম ২০২৬",
-      category: "MENTAL" as const,
-      summary: "Leadership and discipleship training for senior missionaries.",
-      startDate: new Date("2026-08-01"),
-      endDate: new Date("2026-11-30"),
-      location: "Chittagong, Bangladesh",
-      targetIntake: 40,
-      isPublished: true,
-      windowState: "OPEN" as const,
-      windowOpen: new Date("2026-03-01"),
-      windowClose: new Date("2026-07-31"),
-      trainingStart: new Date("2026-08-01"),
-    },
-    // 2027 — draft for next cycle
-    {
-      code: "1000MM-2027",
-      title: "1000MM Missionary Training Program 2027",
-      titleBangla: "১০০০এমএম মিশনারি প্রশিক্ষণ কার্যক্রম ২০২৭",
-      category: "SPIRITUAL" as const,
-      summary: "Upcoming 2027 cycle.",
-      startDate: new Date("2027-07-01"),
-      endDate: new Date("2027-12-31"),
-      location: "Dhaka, Bangladesh",
-      targetIntake: 120,
-      isPublished: false,
-      windowState: "DRAFT" as const,
-      windowOpen: new Date("2027-01-01"),
-      windowClose: new Date("2027-12-31"),
-      trainingStart: new Date("2027-07-01"),
-    },
-  ];
-
-  const createdPrograms: Record<string, string> = {}; // code → id
-
-  for (const p of programs) {
-    const program = await prisma.trainingProgram.upsert({
-      where: { code: p.code },
-      update: { isPublished: p.isPublished },
-      create: {
-        code: p.code,
-        title: p.title,
-        titleBangla: p.titleBangla,
-        category: p.category,
-        summary: p.summary,
-        startDate: p.startDate,
-        endDate: p.endDate,
-        location: p.location,
-        targetIntake: p.targetIntake,
-        isPublished: p.isPublished,
-      },
-    });
-    createdPrograms[p.code] = program.id;
-
-    // Create window if not exists
-    const existingWindow = await prisma.applicationWindow.findFirst({
-      where: { programId: program.id, deletedAt: null },
-    });
-
-    if (!existingWindow) {
-      await prisma.applicationWindow.create({
-        data: {
-          programId: program.id,
-          scopedToMissionId: null,
-          state: p.windowState,
-          advertisingStartDate: p.windowOpen,
-          applicationOpenDate: p.windowOpen,
-          applicationCloseDate: p.windowClose,
-          trainingStartDate: p.trainingStart,
-          targetIntake: p.targetIntake,
-          notes: `Dev seed window for ${p.code}.`,
-          createdById: adminId,
-        },
-      });
-    } else {
-      await prisma.applicationWindow.update({
-        where: { id: existingWindow.id },
-        data: { state: p.windowState },
-      });
-    }
-
-    console.log(`✓ Seeded program: ${p.code} (${p.windowState})`);
-  }
-
-  return createdPrograms;
-}
-
-// ─── SEED APPLICANTS ──────────────────────────────────────────────────────────
-
-type AppStatus =
-  | "SUBMITTED"
-  | "UNDER_LMD_REVIEW"
-  | "RETURNED_TO_APPLICANT"
-  | "RECOMMENDED"
-  | "UNDER_MAIN_DIRECTOR_REVIEW"
-  | "ACCEPTED"
-  | "REJECTED"
-  | "WITHDRAWN";
-
-async function seedApplicants(programCodes: Record<string, string>) {
-  const APPLICANT_PASSWORD_HASH = await bcrypt.hash(
-    "Trainee!2026",
-    BCRYPT_ROUNDS,
-  );
-  const missions = await prisma.localMission.findMany({
-    where: { deletedAt: null },
-  });
-  const missionMap = Object.fromEntries(missions.map((m) => [m.code, m]));
-
-  // Get windows for each program
-  const windows = await prisma.applicationWindow.findMany({
-    where: { programId: { in: Object.values(programCodes) }, deletedAt: null },
-  });
-  const windowByProgram = Object.fromEntries(
-    windows.map((w) => [w.programId, w]),
-  );
-
-  // Distribution: most apps in 2026, fewer in 2025 and 2024
-  const BATCHES: Array<{
-    programCode: string;
-    count: number;
-    statuses: AppStatus[];
-  }> = [
-    {
-      programCode: "1000MM-2024",
-      count: 18,
-      statuses: [
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "REJECTED",
-        "REJECTED",
-        "REJECTED",
-        "WITHDRAWN",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "REJECTED",
-        "ACCEPTED",
-        "ACCEPTED",
-      ],
-    },
-    {
-      programCode: "1000MM-2025",
-      count: 28,
-      statuses: [
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "REJECTED",
-        "REJECTED",
-        "REJECTED",
-        "REJECTED",
-        "REJECTED",
-        "RETURNED_TO_APPLICANT",
-        "WITHDRAWN",
-        "WITHDRAWN",
-        "RECOMMENDED",
-        "RECOMMENDED",
-        "UNDER_MAIN_DIRECTOR_REVIEW",
-        "ACCEPTED",
-        "ACCEPTED",
-      ],
-    },
-    {
-      programCode: "1000MM-2026",
-      count: 47,
-      statuses: [
-        // Pipeline mix for current year — most still in progress
-        "SUBMITTED",
-        "SUBMITTED",
-        "SUBMITTED",
-        "SUBMITTED",
-        "SUBMITTED",
-        "UNDER_LMD_REVIEW",
-        "UNDER_LMD_REVIEW",
-        "UNDER_LMD_REVIEW",
-        "UNDER_LMD_REVIEW",
-        "UNDER_LMD_REVIEW",
-        "UNDER_LMD_REVIEW",
-        "UNDER_LMD_REVIEW",
-        "UNDER_LMD_REVIEW",
-        "RETURNED_TO_APPLICANT",
-        "RETURNED_TO_APPLICANT",
-        "RETURNED_TO_APPLICANT",
-        "RECOMMENDED",
-        "RECOMMENDED",
-        "RECOMMENDED",
-        "RECOMMENDED",
-        "RECOMMENDED",
-        "RECOMMENDED",
-        "RECOMMENDED",
-        "UNDER_MAIN_DIRECTOR_REVIEW",
-        "UNDER_MAIN_DIRECTOR_REVIEW",
-        "UNDER_MAIN_DIRECTOR_REVIEW",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "REJECTED",
-        "REJECTED",
-        "REJECTED",
-        "REJECTED",
-        "WITHDRAWN",
-        "WITHDRAWN",
-        "SUBMITTED",
-        "SUBMITTED",
-        "SUBMITTED",
-      ],
-    },
-    {
-      programCode: "1000MM-2026-L",
-      count: 14,
-      statuses: [
-        "SUBMITTED",
-        "SUBMITTED",
-        "UNDER_LMD_REVIEW",
-        "UNDER_LMD_REVIEW",
-        "UNDER_LMD_REVIEW",
-        "RECOMMENDED",
-        "RECOMMENDED",
-        "RECOMMENDED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "ACCEPTED",
-        "REJECTED",
-        "WITHDRAWN",
-      ],
-    },
-  ];
-
-  let totalCreated = 0;
-
-  for (const batch of BATCHES) {
-    const programId = programCodes[batch.programCode];
-    if (!programId) continue;
-    const window = windowByProgram[programId];
-    if (!window) continue;
-
-    const missionCodes = [
-      LocalMissionCode.EBM,
-      LocalMissionCode.NBM,
-      LocalMissionCode.SBM,
-      LocalMissionCode.WBM,
-    ];
-
-    for (let i = 0; i < batch.count; i++) {
-      const gender = Math.random() > 0.35 ? "MALE" : "FEMALE";
-      const firstName =
-        gender === "MALE"
-          ? randomFrom(FIRST_NAMES_MALE)
-          : randomFrom(FIRST_NAMES_FEMALE);
-      const lastName = randomFrom(LAST_NAMES);
-      const fullName = `${firstName} ${lastName}`;
-      const emailLocal = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${batch.programCode.toLowerCase().replace(/-/g, "")}.${i}`;
-      const email = `${emailLocal}@test.local`;
-      const missionCode = missionCodes[i % 4];
-      const mission = missionMap[missionCode];
-      const status = batch.statuses[i] ?? "SUBMITTED";
-      const dob = randomDate(new Date("1990-01-01"), new Date("2005-01-01"));
-      const age = new Date().getFullYear() - dob.getFullYear();
-      const submittedAt = randomDate(
-        new Date(window.applicationOpenDate),
-        new Date(Math.min(window.applicationCloseDate.getTime(), Date.now())),
-      );
-
-      // Create user if not exists
+  const lmds = await Promise.all(
+    Object.entries(missions).map(async ([code, mission]) => {
+      const email = `lmd.${code.toLowerCase()}@1000mm.local`;
+      const fullName = `${code} Local Director`;
       const user = await prisma.user.upsert({
         where: { email },
         update: {},
         create: {
           email,
-          passwordHash: APPLICANT_PASSWORD_HASH,
+          passwordHash: passwordHashes.lmd,
           fullName,
+          role: UserRole.LOCAL_DIRECTOR,
+          homeMissionId: mission.id,
+          emailVerified: new Date(),
+          isActive: true,
+        },
+      });
+      await prisma.localMission.update({
+        where: { id: mission.id },
+        data: { directorId: user.id },
+      });
+      return user;
+    }),
+  );
+
+  const trainers = await Promise.all(
+    ["sabin", "nushrat"].map(async (name, index) => {
+      const email = `trainer${index + 1}@1000mm.local`;
+      return prisma.user.upsert({
+        where: { email },
+        update: {},
+        create: {
+          email,
+          passwordHash: passwordHashes.trainer,
+          fullName: `${name[0].toUpperCase()}${name.slice(1)} Trainer`,
+          role: UserRole.TRAINER,
+          homeMissionId: missions.WBM.id,
+          emailVerified: new Date(),
+          isActive: true,
+        },
+      });
+    }),
+  );
+
+  const trainees = await Promise.all(
+    ["raju", "mina", "hasan", "tania"].map(async (name, index) => {
+      const email = `trainee${index + 1}@1000mm.local`;
+      const mission =
+        missions[Object.keys(missions)[index % 4] as LocalMissionCode];
+      return prisma.user.upsert({
+        where: { email },
+        update: {},
+        create: {
+          email,
+          passwordHash: passwordHashes.trainee,
+          fullName: `${name[0].toUpperCase()}${name.slice(1)} Trainee`,
           role: UserRole.TRAINEE,
           homeMissionId: mission.id,
           emailVerified: new Date(),
           isActive: true,
         },
       });
+    }),
+  );
 
-      // Skip if application already exists for this user+window
-      const existing = await prisma.application.findFirst({
-        where: { applicantId: user.id, windowId: window.id },
-      });
-      if (existing) continue;
+  console.log("✓ Users seeded");
+  return { admin, director, lmds, trainers, trainees };
+}
 
-      // Generate reference number
-      const year = submittedAt.getFullYear();
-      const counter = await prisma.applicationCounter.upsert({
-        where: { missionCode_year: { missionCode, year } },
-        update: { lastSerial: { increment: 1 } },
-        create: { missionCode, year, lastSerial: 1 },
-      });
-      const referenceNumber = `${missionCode}-${year}-${String(counter.lastSerial).padStart(5, "0")}`;
+async function seedPrograms(adminId: string) {
+  const programs = [
+    {
+      code: "1000MM-2025",
+      title: "1000MM Missionary Training Program 2025",
+      titleBangla: "১০০০এমএম মিশনারি প্রশিক্ষণ কার্যক্রম ২০২৫",
+      category: TrainingCategory.SPIRITUAL,
+      summary: "A previous cycle that is now closed.",
+      startDate: new Date("2025-07-01"),
+      endDate: new Date("2025-12-31"),
+      location: "Dhaka",
+      targetIntake: 70,
+      isPublished: false,
+      window: {
+        state: ApplicationWindowState.CLOSED,
+        advertisingStartDate: new Date("2025-01-15"),
+        applicationOpenDate: new Date("2025-01-15"),
+        applicationCloseDate: new Date("2025-05-31"),
+        trainingStartDate: new Date("2025-07-01"),
+        targetIntake: 70,
+      },
+    },
+    {
+      code: "1000MM-2026",
+      title: "1000MM Missionary Training Program 2026",
+      titleBangla: "১০০০এমএম মিশনারি প্রশিক্ষণ কার্যক্রম ২০২৬",
+      category: TrainingCategory.SPIRITUAL,
+      summary: "The current active missionary training program.",
+      startDate: new Date("2026-07-01"),
+      endDate: new Date("2026-12-31"),
+      location: "Dhaka",
+      targetIntake: 90,
+      isPublished: true,
+      window: {
+        state: ApplicationWindowState.OPEN,
+        advertisingStartDate: new Date("2026-01-01"),
+        applicationOpenDate: new Date("2026-01-01"),
+        applicationCloseDate: new Date("2026-12-31"),
+        trainingStartDate: new Date("2026-07-01"),
+        targetIntake: 90,
+      },
+    },
+    {
+      code: "1000MM-2026-L",
+      title: "1000MM Leadership Development Program 2026",
+      titleBangla: "১০০০এমএম নেতৃত্ব উন্নয়ন কার্যক্রম ২০২৬",
+      category: TrainingCategory.MENTAL,
+      summary: "Leadership training for senior missionaries.",
+      startDate: new Date("2026-08-01"),
+      endDate: new Date("2026-11-30"),
+      location: "Chittagong",
+      targetIntake: 40,
+      isPublished: true,
+      window: {
+        state: ApplicationWindowState.OPEN,
+        advertisingStartDate: new Date("2026-03-01"),
+        applicationOpenDate: new Date("2026-03-01"),
+        applicationCloseDate: new Date("2026-07-31"),
+        trainingStartDate: new Date("2026-08-01"),
+        targetIntake: 40,
+      },
+    },
+    {
+      code: "1000MM-2024",
+      title: "1000MM Missionary Training Program 2024",
+      titleBangla: "১০০০এমএম মিশনারি প্রশিক্ষণ কার্যক্রম ২০২৪",
+      category: TrainingCategory.SPIRITUAL,
+      summary: "An archived 2024 cycle for historical testing.",
+      startDate: new Date("2024-07-01"),
+      endDate: new Date("2024-12-31"),
+      location: "Sylhet",
+      targetIntake: 80,
+      isPublished: false,
+      window: {
+        state: ApplicationWindowState.ARCHIVED,
+        advertisingStartDate: new Date("2024-01-01"),
+        applicationOpenDate: new Date("2024-01-01"),
+        applicationCloseDate: new Date("2024-05-31"),
+        trainingStartDate: new Date("2024-07-01"),
+        targetIntake: 80,
+      },
+    },
+    {
+      code: "1000MM-2027",
+      title: "1000MM Missionary Training Program 2027",
+      titleBangla: "১০০০এমএম মিশনারি প্রশিক্ষণ কার্যক্রম ২০২৭",
+      category: TrainingCategory.SPIRITUAL,
+      summary: "A draft 2027 cycle that is not yet open.",
+      startDate: new Date("2027-07-01"),
+      endDate: new Date("2027-12-31"),
+      location: "Gazipur",
+      targetIntake: 120,
+      isPublished: false,
+      window: {
+        state: ApplicationWindowState.DRAFT,
+        advertisingStartDate: new Date("2027-01-01"),
+        applicationOpenDate: new Date("2027-01-01"),
+        applicationCloseDate: new Date("2027-12-31"),
+        trainingStartDate: new Date("2027-07-01"),
+        targetIntake: 120,
+      },
+    },
+  ];
 
-      // Determine timestamps based on status
-      const lmdReviewStartedAt = [
-        "UNDER_LMD_REVIEW",
-        "RETURNED_TO_APPLICANT",
-        "RECOMMENDED",
-        "UNDER_MAIN_DIRECTOR_REVIEW",
-        "ACCEPTED",
-        "REJECTED",
-      ].includes(status)
-        ? new Date(submittedAt.getTime() + randomInt(1, 5) * 86400000)
-        : null;
-      const lmdReviewCompletedAt =
-        [
-          "RECOMMENDED",
-          "UNDER_MAIN_DIRECTOR_REVIEW",
-          "ACCEPTED",
-          "REJECTED",
-        ].includes(status) && lmdReviewStartedAt
-          ? new Date(lmdReviewStartedAt.getTime() + randomInt(2, 14) * 86400000)
-          : null;
-      const directorReviewStartedAt =
-        ["UNDER_MAIN_DIRECTOR_REVIEW", "ACCEPTED", "REJECTED"].includes(
-          status,
-        ) && lmdReviewCompletedAt
-          ? new Date(
-              lmdReviewCompletedAt.getTime() + randomInt(1, 3) * 86400000,
-            )
-          : null;
-      const directorReviewCompletedAt =
-        ["ACCEPTED", "REJECTED"].includes(status) && directorReviewStartedAt
-          ? new Date(
-              directorReviewStartedAt.getTime() + randomInt(1, 7) * 86400000,
-            )
-          : null;
+  const created = {} as Record<
+    string,
+    {
+      program: { id: string; code: string };
+      window: { id: string; state: ApplicationWindowState };
+    }
+  >;
 
-      const application = await prisma.application.create({
-        data: {
-          referenceNumber,
-          applicantId: user.id,
-          windowId: window.id,
-          submittedFromMissionId: mission.id,
+  for (const program of programs) {
+    const createdProgram = await prisma.trainingProgram.upsert({
+      where: { code: program.code },
+      update: {
+        title: program.title,
+        titleBangla: program.titleBangla,
+        category: program.category,
+        summary: program.summary,
+        startDate: program.startDate,
+        endDate: program.endDate,
+        location: program.location,
+        targetIntake: program.targetIntake,
+        isPublished: program.isPublished,
+      },
+      create: {
+        code: program.code,
+        title: program.title,
+        titleBangla: program.titleBangla,
+        category: program.category,
+        summary: program.summary,
+        startDate: program.startDate,
+        endDate: program.endDate,
+        location: program.location,
+        targetIntake: program.targetIntake,
+        isPublished: program.isPublished,
+      },
+    });
+
+    const existingWindow = await prisma.applicationWindow.findFirst({
+      where: { programId: createdProgram.id, deletedAt: null },
+    });
+
+    const window = existingWindow
+      ? await prisma.applicationWindow.update({
+          where: { id: existingWindow.id },
+          data: {
+            state: program.window.state,
+            advertisingStartDate: program.window.advertisingStartDate,
+            applicationOpenDate: program.window.applicationOpenDate,
+            applicationCloseDate: program.window.applicationCloseDate,
+            trainingStartDate: program.window.trainingStartDate,
+            targetIntake: program.window.targetIntake,
+            notes: `${program.code} application window`,
+            createdById: adminId,
+          },
+        })
+      : await prisma.applicationWindow.create({
+          data: {
+            programId: createdProgram.id,
+            scopedToMissionId: null,
+            state: program.window.state,
+            advertisingStartDate: program.window.advertisingStartDate,
+            applicationOpenDate: program.window.applicationOpenDate,
+            applicationCloseDate: program.window.applicationCloseDate,
+            trainingStartDate: program.window.trainingStartDate,
+            targetIntake: program.window.targetIntake,
+            notes: `${program.code} application window`,
+            createdById: adminId,
+          },
+        });
+
+    created[program.code] = { program: createdProgram, window };
+  }
+
+  console.log("✓ Programs and windows seeded");
+  return created;
+}
+
+function buildApplicantData(user: {
+  id: string;
+  fullName: string;
+  email: string;
+  homeMissionId: string;
+}) {
+  const nameParts = user.fullName.split(" ");
+  const gender =
+    nameParts[0].toLowerCase().includes("mina") ||
+    nameParts[0].toLowerCase().includes("tania")
+      ? Gender.FEMALE
+      : Gender.MALE;
+  const age = randomInt(19, 34);
+  const dob = new Date();
+  dob.setFullYear(dob.getFullYear() - age);
+  return {
+    applicantFullName: user.fullName,
+    applicantFullNameBangla: null,
+    applicantDateOfBirth: dob,
+    applicantAge: age,
+    applicantGender: gender,
+    applicantBloodType: randomItem(BLOOD_TYPES) as any,
+    applicantMaritalStatus: randomItem([
+      MaritalStatus.SINGLE,
+      MaritalStatus.MARRIED,
+    ]),
+    applicantDenomination: randomItem([
+      Denomination.SEVENTH_DAY_ADVENTIST,
+      Denomination.BAPTIST,
+      Denomination.METHODIST,
+      Denomination.PENTECOSTAL,
+    ]),
+    applicantMobileNo: randomPhone(),
+    applicantEmail: user.email,
+    applicantPlaceOfBirth: randomItem(DISTRICTS),
+    applicantChurchName: randomItem(CHURCHES),
+    applicantWorkplace: "Local church ministry",
+    presentAddressDistrict: randomItem(DISTRICTS),
+    presentAddressUpazila: "Central",
+    presentAddressPostOffice: "Main Post Office",
+    presentAddressVillage: "Local Village",
+    permanentAddressDistrict: randomItem(DISTRICTS),
+    permanentAddressUpazila: "Central",
+    permanentAddressPostOffice: "Main Post Office",
+    permanentAddressVillage: "Home Village",
+    permanentSameAsPresent: true,
+    familyMobileNo: randomPhone(),
+    familyEmail: `family.${user.email}`,
+    formData: {
+      motivation: "I want to serve my community.",
+      education: "High school completed",
+    },
+  };
+}
+
+async function seedApplications(
+  trainees: Array<{
+    id: string;
+    fullName: string;
+    email: string;
+    homeMissionId: string;
+  }>,
+  programs: Record<
+    string,
+    {
+      program: { id: string; code: string };
+      window: { id: string; state: ApplicationWindowState };
+    }
+  >,
+) {
+  const statuses = [
+    ApplicationStatus.SUBMITTED,
+    ApplicationStatus.UNDER_LMD_REVIEW,
+    ApplicationStatus.RECOMMENDED,
+    ApplicationStatus.UNDER_MAIN_DIRECTOR_REVIEW,
+    ApplicationStatus.ACCEPTED,
+    ApplicationStatus.REJECTED,
+    ApplicationStatus.WITHDRAWN,
+    ApplicationStatus.RETURNED_TO_APPLICANT,
+  ];
+
+  const createdApplications: Array<{
+    id: string;
+    applicantId: string;
+    programId: string;
+  }> = [];
+
+  for (const trainee of trainees) {
+    for (const programCode of ["1000MM-2026", "1000MM-2026-L", "1000MM-2025"]) {
+      const program = programs[programCode];
+      if (!program) continue;
+      const status = randomItem(statuses);
+      const referenceNumber = `${program.program.code}-${trainee.email.split("@")[0].toUpperCase()}`;
+      const now = new Date();
+      const submittedAt = randomDate(new Date("2026-01-01"), now);
+      const applicantData = buildApplicantData(trainee);
+
+      const application = await prisma.application.upsert({
+        where: { referenceNumber },
+        update: {
+          applicantId: trainee.id,
+          windowId: program.window.id,
+          submittedFromMissionId: trainee.homeMissionId,
           status,
           submittedAt,
-          lastTransitionAt:
-            directorReviewCompletedAt ??
-            lmdReviewCompletedAt ??
-            lmdReviewStartedAt ??
-            submittedAt,
-          // Personal details
-          applicantFullName: fullName,
-          applicantFullNameBangla: null,
-          applicantDateOfBirth: dob,
-          applicantAge: age,
-          applicantGender: gender as any,
-          applicantBloodType: randomFrom([
-            "A_POS",
-            "A_NEG",
-            "B_POS",
-            "B_NEG",
-            "AB_POS",
-            "O_POS",
-            "O_NEG",
-          ]) as any,
-          applicantMaritalStatus: randomFrom(["SINGLE", "MARRIED"]) as any,
-          applicantDenomination: "SEVENTH_DAY_ADVENTIST" as any,
-          applicantMobileNo: `01${randomInt(700000000, 999999999)}`,
-          applicantEmail: email,
-          applicantPlaceOfBirth: randomFrom(DISTRICTS),
-          applicantHeight: randomInt(155, 185),
-          applicantWeight: randomInt(50, 85),
-          applicantChurchName: randomFrom(CHURCHES),
-          applicantDateOfBaptism: new Date(
-            dob.getTime() + randomInt(10, 20) * 365 * 86400000,
-          ),
-          applicantWorkplace: randomFrom([
-            "Student",
-            "Teacher",
-            "Farmer",
-            "Business",
-            null,
-            null,
-          ]),
-          // Address
-          presentAddressDistrict: randomFrom(DISTRICTS),
-          presentAddressUpazila: "Sadar",
-          presentAddressPostOffice: "Main Post Office",
-          presentAddressVillage: `Village ${randomInt(1, 50)}`,
-          permanentSameAsPresent: Math.random() > 0.4,
-          permanentAddressDistrict: randomFrom(DISTRICTS),
-          permanentAddressUpazila: "Sadar",
-          permanentAddressPostOffice: "Main Post Office",
-          permanentAddressVillage: `Village ${randomInt(1, 50)}`,
-          // Family
-          fatherName: `${randomFrom(FIRST_NAMES_MALE)} ${lastName}`,
-          fatherAge: randomInt(45, 70),
-          fatherReligion: "CHRISTIANITY" as any,
-          fatherChurchName: randomFrom(CHURCHES),
-          motherName: `${randomFrom(FIRST_NAMES_FEMALE)} ${lastName}`,
-          motherAge: randomInt(40, 65),
-          motherReligion: "CHRISTIANITY" as any,
-          motherChurchName: randomFrom(CHURCHES),
-          familyMobileNo: `01${randomInt(700000000, 999999999)}`,
-          // Form data
+          lastTransitionAt: submittedAt,
+          ...applicantData,
           formData: {
-            education: [
-              {
-                id: `edu-${i}-1`,
-                degree: randomFrom(["SSC", "HSC", "Bachelor", "Master"]),
-                institutionName: `${randomFrom(DISTRICTS)} College`,
-                gpa: (randomInt(30, 50) / 10).toFixed(2),
-                passingYear: randomInt(2010, 2023),
-              },
-            ],
-            missionaryDesire:
-              "I feel called to serve the Lord in missionary work and spread the gospel across Bangladesh.",
-            courtRecord: false,
-            healthCondition: false,
-            badHabits: false,
-            declarationAccepted: true,
+            ...applicantData.formData,
+            programInterest: program.program.code,
           },
-          // Review timestamps
-          lmdReviewStartedAt,
-          lmdReviewCompletedAt,
-          directorReviewStartedAt,
-          directorReviewCompletedAt,
-          // Rejection reason for rejected apps
-          rejectionReason:
-            status === "REJECTED" && directorReviewCompletedAt
-              ? "Application did not meet the programme requirements for this cycle."
-              : null,
-          lmdRejectionReason: null,
+          profilePhotoDocumentId: null,
+        },
+        create: {
+          referenceNumber,
+          applicantId: trainee.id,
+          windowId: program.window.id,
+          submittedFromMissionId: trainee.homeMissionId,
+          status,
+          submittedAt,
+          lastTransitionAt: submittedAt,
+          ...applicantData,
+          formData: {
+            ...applicantData.formData,
+            programInterest: program.program.code,
+          },
+          profilePhotoDocumentId: null,
         },
       });
 
-      // Create recommendation for recommended/accepted/director_review apps
-      if (
-        [
-          "RECOMMENDED",
-          "UNDER_MAIN_DIRECTOR_REVIEW",
-          "ACCEPTED",
-          "REJECTED",
-        ].includes(status) &&
-        lmdReviewCompletedAt
-      ) {
-        const lmd = await prisma.user.findFirst({
-          where: { role: "LOCAL_DIRECTOR", homeMissionId: mission.id },
+      await prisma.applicationStatusHistory.create({
+        data: {
+          applicationId: application.id,
+          fromStatus: ApplicationStatus.DRAFT,
+          toStatus: status,
+          triggeredById: trainee.id,
+          comment: `Seeded status ${status}`,
+        },
+      });
+
+      if (status === ApplicationStatus.ACCEPTED) {
+        await prisma.programEnrollment.upsert({
+          where: { applicationId: application.id },
+          update: {
+            attendanceConfirmed: false,
+          },
+          create: {
+            programId: program.program.id,
+            traineeId: trainee.id,
+            applicationId: application.id,
+            attendanceConfirmed: false,
+          },
         });
-        if (lmd) {
-          await prisma.recommendation.upsert({
-            where: { applicationId: application.id },
-            update: {},
-            create: {
-              applicationId: application.id,
-              recommenderId: lmd.id,
-              writtenComment:
-                "I recommend this applicant. They have shown strong commitment to the mission.",
-              recommendedAt: lmdReviewCompletedAt,
+      }
+
+      if (randomInt(1, 3) === 1) {
+        const existingDocument = await prisma.applicationDocument.findFirst({
+          where: {
+            applicationId: application.id,
+            kind: DocumentKind.BIO_DATA_PDF,
+          },
+        });
+
+        if (existingDocument) {
+          await prisma.applicationDocument.update({
+            where: { id: existingDocument.id },
+            data: {
+              fileName: "bio-data.pdf",
+              mimeType: "application/pdf",
+              fileSizeBytes: 125_000,
+              storageKey: `applications/${application.id}/bio-data.pdf`,
+              uploadedById: trainee.id,
             },
           });
-          await prisma.application.update({
-            where: { id: application.id },
-            data: { lmdReviewerId: lmd.id },
+        } else {
+          await prisma.applicationDocument.create({
+            data: {
+              applicationId: application.id,
+              kind: DocumentKind.BIO_DATA_PDF,
+              fileName: "bio-data.pdf",
+              mimeType: "application/pdf",
+              fileSizeBytes: 125_000,
+              storageKey: `applications/${application.id}/bio-data.pdf`,
+              uploadedById: trainee.id,
+            },
           });
         }
       }
 
-      totalCreated++;
+      createdApplications.push({
+        id: application.id,
+        applicantId: trainee.id,
+        programId: program.program.id,
+      });
     }
-
-    console.log(`✓ Seeded ${batch.count} applicants for ${batch.programCode}`);
   }
 
-  console.log(`✓ Total applications created: ${totalCreated}`);
+  console.log(`✓ Seeded ${createdApplications.length} applications`);
+  return createdApplications;
 }
 
-// ─── SEED SYSTEM SETTINGS ─────────────────────────────────────────────────────
+async function seedNotifications(users: Array<{ id: string }>) {
+  const unreadActions = [
+    "New form assigned",
+    "Application update",
+    "Reminder to submit",
+  ].map((message) => ({
+    templateKey: "dashboard.notification",
+    templateData: { message },
+  }));
+
+  await prisma.notification.deleteMany({
+    where: {
+      userId: { in: users.map((user) => user.id) },
+      templateKey: "dashboard.notification",
+    },
+  });
+
+  const created: Array<any> = [];
+  for (const user of users) {
+    const count = randomInt(1, 3);
+    for (let i = 0; i < count; i += 1) {
+      const isUnread = i === 0;
+      const notification = await prisma.notification.create({
+        data: {
+          userId: user.id,
+          channel: NotificationChannel.IN_APP,
+          templateKey: "dashboard.notification",
+          templateData: { message: `Notification ${i + 1}` },
+          sentAt: new Date(),
+          readAt: isUnread ? null : new Date(),
+          actionUrl: "/dashboard/notifications",
+        },
+      });
+      created.push(notification);
+    }
+  }
+
+  console.log(`✓ Seeded ${created.length} notifications`);
+  return created;
+}
+
+async function seedComplaints(users: Array<{ id: string; fullName: string }>) {
+  const complaints = [
+    "Unable to upload documents",
+    "Program application status mismatch",
+    "Login page returns an error",
+    "Suggestion to simplify dashboard flow",
+  ];
+
+  const created = [];
+  for (const [index, user] of users.slice(0, 4).entries()) {
+    const complaint = await prisma.complaint.create({
+      data: {
+        category: ComplaintCategory.GENERAL_FEEDBACK,
+        subject: complaints[index],
+        description: `Seeded complaint from ${user.fullName}`,
+        submittedById: user.id,
+        missionCode: LocalMissionCode.EBM,
+        missionId: null,
+        isResolved: index % 2 === 0,
+        response: index % 2 === 0 ? "Resolved by support team." : null,
+      },
+    });
+    created.push(complaint);
+  }
+
+  console.log(`✓ Seeded ${created.length} complaints`);
+  return created;
+}
+
+async function seedAnnouncements(adminId: string) {
+  const announcements = [
+    {
+      title: "Welcome to the 1000MM Dashboard",
+      body: "This platform is seeded for local testing. Use the seeded credentials in TESTING.md.",
+      publishedAt: new Date(),
+      expiresAt: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 60),
+    },
+    {
+      title: "New training cycle launched",
+      body: "The 2026 missionary and leadership programs are now open for applications.",
+      publishedAt: new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * 7),
+      expiresAt: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 14),
+    },
+  ];
+
+  await prisma.announcement.deleteMany({
+    where: { title: { in: announcements.map((item) => item.title) } },
+  });
+
+  for (const announcement of announcements) {
+    await prisma.announcement.create({
+      data: {
+        createdById: adminId,
+        ...announcement,
+      },
+    });
+  }
+
+  console.log(`✓ Seeded ${announcements.length} announcements`);
+}
+
+async function seedDonations() {
+  const donations = [
+    {
+      donorName: "Sadia Akter",
+      amount: 1500n,
+      currency: "BDT",
+      gateway: PaymentGateway.BKASH,
+      status: DonationStatus.COMPLETED,
+    },
+    {
+      donorName: "John Doe",
+      amount: 25n,
+      currency: "USD",
+      gateway: PaymentGateway.STRIPE,
+      status: DonationStatus.PENDING,
+    },
+    {
+      donorName: "Mina Rahman",
+      amount: 5000n,
+      currency: "BDT",
+      gateway: PaymentGateway.SSLCOMMERZ,
+      status: DonationStatus.COMPLETED,
+    },
+  ];
+
+  for (const donation of donations) {
+    await prisma.donation.upsert({
+      where: {
+        receiptNumber: `${donation.currency}-${donation.amount}-${donation.gateway}`,
+      },
+      update: {
+        isAnonymous: false,
+        gateway: donation.gateway,
+        status: donation.status,
+        completedAt:
+          donation.status === DonationStatus.COMPLETED ? new Date() : null,
+      },
+      create: {
+        donorName: donation.donorName,
+        donorEmail: `${donation.donorName.toLowerCase().replace(/\s+/g, ".")}@example.com`,
+        amountMinor: donation.amount,
+        currency: donation.currency,
+        gateway: donation.gateway,
+        status: donation.status,
+        initiatedAt: new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * 2),
+        completedAt:
+          donation.status === DonationStatus.COMPLETED ? new Date() : null,
+        receiptNumber: `${donation.currency}-${donation.amount}-${donation.gateway}`,
+      },
+    });
+  }
+
+  console.log("✓ Seeded donations");
+}
+
+async function seedFieldReports(
+  applications: Array<{ id: string; applicantId: string; programId: string }>,
+) {
+  const reports = applications.slice(0, 4).map((application, index) => ({
+    traineeId: application.applicantId,
+    applicationId: application.id,
+    programId: application.programId,
+    reportMonth: 4 + index,
+    reportYear: 2026,
+    activitiesSummary: "Visited a local church and coached new trainees.",
+    peopleReached: randomInt(12, 55),
+    challengesFaced: "Weather delays and transport coordination.",
+    prayerRequests: "Strength for upcoming training sessions.",
+  }));
+
+  for (const report of reports) {
+    await prisma.fieldReport.upsert({
+      where: {
+        traineeId_reportMonth_reportYear: {
+          traineeId: report.traineeId,
+          reportMonth: report.reportMonth,
+          reportYear: report.reportYear,
+        },
+      },
+      update: report,
+      create: report,
+    });
+  }
+
+  console.log(`✓ Seeded ${reports.length} field reports`);
+}
 
 async function seedSystemSettings() {
   const defaults = [
@@ -838,11 +858,6 @@ async function seedSystemSettings() {
       key: "site.organization_name_en",
       value: "1000 Missionary Movement Bangladesh",
       description: "Organization display name (English)",
-    },
-    {
-      key: "site.organization_name_bn",
-      value: "১০০০ মিশনারি মুভমেন্ট বাংলাদেশ",
-      description: "Organization display name (Bangla)",
     },
     {
       key: "auth.session_timeout_minutes_staff",
@@ -855,90 +870,60 @@ async function seedSystemSettings() {
       description: "Inactivity timeout for trainee sessions",
     },
     {
-      key: "auth.max_failed_login_attempts",
-      value: 10,
-      description: "Failed logins before account lockout",
-    },
-    {
-      key: "auth.lockout_minutes",
-      value: 15,
-      description:
-        "How long an account stays locked after exceeding failed attempts",
+      key: "donation.preset_amounts_bdt",
+      value: [500, 1000, 2500, 5000, 10000],
+      description: "Preset donation amounts shown to BDT donors",
     },
     {
       key: "application.form_current_version",
       value: 1,
       description: "Bio-data form schema version",
     },
-    {
-      key: "donation.preset_amounts_bdt",
-      value: [500, 1000, 2500, 5000, 10000],
-      description: "Preset donation amounts shown to BDT donors",
-    },
-    {
-      key: "donation.preset_amounts_usd",
-      value: [10, 25, 50, 100, 250],
-      description: "Preset donation amounts shown to USD donors",
-    },
-    {
-      key: "donation.gateways_enabled",
-      value: { STRIPE: false, PAYPAL: false, SSLCOMMERZ: false, BKASH: false },
-      description: "Per-gateway enabled flag",
-    },
   ];
-  for (const s of defaults) {
+
+  for (const item of defaults) {
     await prisma.systemSetting.upsert({
-      where: { key: s.key },
-      update: {},
+      where: { key: item.key },
+      update: {
+        value: item.value as any,
+        description: item.description,
+      },
       create: {
-        key: s.key,
-        value: s.value as never,
-        description: s.description,
+        key: item.key,
+        value: item.value as any,
+        description: item.description,
       },
     });
   }
+
   console.log(`✓ Seeded ${defaults.length} system settings`);
 }
 
-// ─── MAIN ─────────────────────────────────────────────────────────────────────
-
 async function main() {
-  console.log("Seeding 1000MM database with test data…\n");
-  await seedLocalMissions();
-  const admin = await seedSystemAdmin();
-  await seedDirector();
-  await seedLmds();
-  const programCodes = await seedPrograms(
-    admin?.id ??
-      (await prisma.user.findFirstOrThrow({ where: { role: "SYSTEM_ADMIN" } }))
-        .id,
+  console.log("Seeding 1000MM database...");
+  const missions = await seedLocalMissions();
+  const users = await seedUsers(missions);
+  const programs = await seedPrograms(users.admin.id);
+
+  const applications = await seedApplications(users.trainees, programs);
+  await seedNotifications(
+    users.trainees.concat(users.trainers, users.lmds, [
+      users.admin,
+      users.director,
+    ]),
   );
-  await seedApplicants(programCodes);
+  await seedComplaints(users.trainees.slice(0, 4));
+  await seedAnnouncements(users.admin.id);
+  await seedDonations();
+  await seedFieldReports(applications);
   await seedSystemSettings();
 
-  console.log("\n── Dev Credentials ────────────────────────────────────────");
-  console.log("  Admin:    admin@1000mm.local    / ChangeMe!Now");
-  console.log("  Director: director@1000mm.local / DirectorPass!2026");
-  console.log("  LMD EBM:  lmd.ebm@1000mm.local / LmdPass!2026");
-  console.log("  LMD NBM:  lmd.nbm@1000mm.local / LmdPass!2026");
-  console.log("  LMD SBM:  lmd.sbm@1000mm.local / LmdPass!2026");
-  console.log("  LMD WBM:  lmd.wbm@1000mm.local / LmdPass!2026");
-  console.log("  Trainees: {name}.{programcode}.{n}@test.local / Trainee!2026");
-  console.log("────────────────────────────────────────────────────────────");
-  console.log("\n── Test Data Summary ──────────────────────────────────────");
-  console.log(
-    "  Programs:  5  (2024 archived, 2025 closed, 2026 open, 2026-L open, 2027 draft)",
-  );
-  console.log("  Applicants: ~107 across all cycles");
-  console.log(
-    "  Pipeline mix: SUBMITTED → ACCEPTED, REJECTED, RECOMMENDED, etc.",
-  );
-  console.log("────────────────────────────────────────────────────────────");
+  console.log(`\nSeed complete. Credentials are documented in TESTING.md.`);
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
+  .catch((error) => {
+    console.error(error);
     process.exit(1);
   })
   .finally(async () => {

@@ -311,6 +311,27 @@ export default function NewProgramPage() {
             placeholder="বাংলায় সারসংক্ষেপ..."
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500"
           />
+          {/* Main Program toggle — SA only */}
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <input
+              type="checkbox"
+              name="isMain"
+              id="isMain"
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-teal-600"
+            />
+            <div>
+              <label
+                htmlFor="isMain"
+                className="text-sm font-medium text-amber-900 cursor-pointer"
+              >
+                Mark as Main Program
+              </label>
+              <p className="mt-0.5 text-xs text-amber-700">
+                This will reset missionary status for all current missionaries.
+                Only check this when starting a new yearly cycle.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">

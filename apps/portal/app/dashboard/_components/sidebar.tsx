@@ -29,12 +29,7 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
     items: [
       {
         label: "Dashboard",
-        href: (role) => {
-          if (role === "LOCAL_DIRECTOR") return "/dashboard/lmd";
-          if (role === "MAIN_DIRECTOR") return "/dashboard/director";
-          if (role === "SYSTEM_ADMIN") return "/dashboard/system-admin";
-          return "/dashboard";
-        },
+        href: "/dashboard",
         roles: ALL_ROLES,
         icon: (
           <svg
@@ -282,7 +277,7 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+            <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
           </svg>
         ),
       },
@@ -380,6 +375,27 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
           </svg>
         ),
       },
+      {
+        label: "Salary",
+        href: "/dashboard/lmd/salary",
+        roles: ["LOCAL_DIRECTOR"],
+        icon: (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+        ),
+      },
     ],
   },
   {
@@ -449,6 +465,29 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
         ),
       },
       {
+        label: "Trainer Applications",
+        href: "/dashboard/system-admin/trainer-applications",
+        roles: ["SYSTEM_ADMIN"],
+        icon: (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <line x1="19" y1="8" x2="19" y2="14" />
+            <line x1="22" y1="11" x2="16" y2="11" />
+          </svg>
+        ),
+      },
+      {
         label: "Audit Logs",
         href: "/dashboard/audit",
         roles: ["SYSTEM_ADMIN"],
@@ -469,6 +508,27 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
             <line x1="16" y1="13" x2="8" y2="13" />
             <line x1="16" y1="17" x2="8" y2="17" />
             <line x1="10" y1="9" x2="8" y2="9" />
+          </svg>
+        ),
+      },
+      {
+        label: "Salary",
+        href: "/dashboard/salary",
+        roles: ADMIN_ROLES,
+        icon: (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
           </svg>
         ),
       },
@@ -530,14 +590,17 @@ type SidebarProps = {
     email: string | null;
     role: UserRole;
     homeMissionCode: LocalMissionCode;
+    isMissionary?: boolean;
   };
   unreadCount?: number;
+  pendingTrainerApplications?: number;
   className?: string;
 };
 
 export default function Sidebar({
   user,
   unreadCount = 0,
+  pendingTrainerApplications = 0,
   className,
 }: SidebarProps) {
   const displayName = user.name ?? user.email ?? "User";
@@ -573,6 +636,14 @@ export default function Sidebar({
               </p>
               {visibleItems.map((item) => {
                 const href = resolveHref(item.href, user.role);
+                const isTrainerApplications =
+                  item.label === "Trainer Applications";
+                const badge =
+                  item.label === "Notifications"
+                    ? unreadCount
+                    : isTrainerApplications
+                      ? pendingTrainerApplications
+                      : 0;
                 return (
                   <Link
                     key={href}
@@ -581,9 +652,9 @@ export default function Sidebar({
                   >
                     {item.icon}
                     <span className="flex-1">{item.label}</span>
-                    {item.label === "Notifications" && unreadCount > 0 && (
+                    {badge > 0 && (
                       <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-teal-600 px-1 text-[10px] font-semibold text-white">
-                        {unreadCount > 99 ? "99+" : unreadCount}
+                        {badge > 99 ? "99+" : badge}
                       </span>
                     )}
                   </Link>
@@ -592,6 +663,34 @@ export default function Sidebar({
             </div>
           );
         })}
+        {/* Missionary-only: Salary Request */}
+        {user.isMissionary && user.role === "TRAINEE" && (
+          <div className="mb-1">
+            <p className="mb-1 mt-4 px-2 text-[10px] font-medium uppercase tracking-widest text-gray-400">
+              Salary
+            </p>
+            <Link
+              href="/dashboard/salary-request"
+              className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="12" y1="1" x2="12" y2="23" />
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+              <span className="flex-1">Salary Request</span>
+            </Link>
+          </div>
+        )}
       </nav>
 
       {/* User footer */}

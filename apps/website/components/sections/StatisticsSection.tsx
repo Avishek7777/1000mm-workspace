@@ -4,18 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 
 const stats = [
-  { value: 83583, label: "Baptisms", prefix: "", suffix: "+" },
-  { value: 1501, label: "Congregations Established", prefix: "", suffix: "+" },
-  { value: 863, label: "Churches Built", prefix: "", suffix: "+" },
-  { value: 66, label: "Countries Involved", prefix: "", suffix: "" },
+  { value: 4962, label: "Baptisms", prefix: "", suffix: "+" },
+  { value: 29, label: "Congregations Established", prefix: "", suffix: "+" },
+  { value: 60, label: "Churches Built", prefix: "", suffix: "+" },
+  { value: 4, label: "Sections Involved", prefix: "", suffix: "" },
   {
-    value: 47,
-    label: "Countries Receiving Missionaries",
+    value: 4,
+    label: "Sections Receiving Missionaries",
     prefix: "",
     suffix: "",
   },
   {
-    value: 12287,
+    value: 1084,
     label: "Missionaries Trained & Sent",
     prefix: "",
     suffix: "+",

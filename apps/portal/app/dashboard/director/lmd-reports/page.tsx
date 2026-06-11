@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/auth/helpers";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
-import { WindowControls } from "./_componenets/WindowControls";
+import { WindowControls } from "./_components/WindowControls";
 
 const MONTHS = [
   "January",

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { UserActions } from "./_components/UserActions";
 import { FlagUserForm } from "./_components/FlagUserForm";
+import { MissionaryToggle } from "./_components/MissionaryToggle";
 
 const ROLE_LABELS: Record<string, string> = {
   SYSTEM_ADMIN: "System Admin",
@@ -167,6 +168,25 @@ export default async function UserDetailPage({
               </p>
             </div>
           </div>
+          {/* Missionary status — SA only */}
+          {isSA && (
+            <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
+              <div>
+                <p className="text-xs font-medium text-gray-700">
+                  Missionary Status
+                </p>
+                <p className="text-[11px] text-gray-400">
+                  {user.isMissionary
+                    ? "Currently active missionary — can submit salary requests"
+                    : "Not a missionary"}
+                </p>
+              </div>
+              <MissionaryToggle
+                userId={user.id}
+                isMissionary={user.isMissionary}
+              />
+            </div>
+          )}
         </div>
       )}
 
