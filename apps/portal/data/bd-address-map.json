@@ -107,12 +107,7 @@
     "Satkania",
     "Sitakunda"
   ],
-  "Chuadanga": [
-    "Alamdanga",
-    "Chuadanga Sadar",
-    "Damurhuda",
-    "Jibannagar"
-  ],
+  "Chuadanga": ["Alamdanga", "Chuadanga Sadar", "Damurhuda", "Jibannagar"],
   "Comilla": [
     "Barura",
     "Brahmanpara",
@@ -144,11 +139,49 @@
     "Ukhiya"
   ],
   "Dhaka": [
+    "Savar",
+    "Savar Model",
+    "Ashulia",
     "Dhamrai",
-    "Dohar",
     "Keraniganj",
+    "Keraniganj Model",
+    "Dakshin Keraniganj",
     "Nawabganj",
-    "Savar"
+    "Dohar",
+    "Adabor",
+    "Airport",
+    "Badda",
+    "Banani",
+    "Bangshal",
+    "Bhashantek",
+    "Cantonment",
+    "Chawkbazar",
+    "Dakshinkhan",
+    "Darus Salam",
+    "Demra",
+    "Dhanmondi",
+    "Gulshan",
+    "Jatrabari",
+    "Kafrul",
+    "Khilgaon",
+    "Khilkhet",
+    "Kotwali",
+    "Lalbagh",
+    "Mirpur Model",
+    "Mohammadpur",
+    "Motijheel",
+    "Pallabi",
+    "Paltan Model",
+    "Ramna Model",
+    "Rampura",
+    "Shahbag",
+    "Tejgaon",
+    "Turag",
+    "Uttara East",
+    "Uttara West",
+    "Uttarkhan",
+    "Vatara",
+    "Wari"
   ],
   "Dinajpur": [
     "Birampur",
@@ -193,13 +226,7 @@
     "Saghata",
     "Sundarganj"
   ],
-  "Gazipur": [
-    "Gazipur Sadar",
-    "Kaliakair",
-    "Kaliganj",
-    "Kapasia",
-    "Sreepur"
-  ],
+  "Gazipur": ["Gazipur Sadar", "Kaliakair", "Kaliganj", "Kapasia", "Sreepur"],
   "Gopalganj": [
     "Gopalganj Sadar",
     "Kashiani",
@@ -236,12 +263,7 @@
     "Manirampur",
     "Sharsha"
   ],
-  "Jhalakathi": [
-    "Jhalakathi Sadar",
-    "Kathalia",
-    "Nalchity",
-    "Rajapur"
-  ],
+  "Jhalakathi": ["Jhalakathi Sadar", "Kathalia", "Nalchity", "Rajapur"],
   "Jhenaidah": [
     "Harinakundu",
     "Jhenaidah Sadar",
@@ -250,13 +272,7 @@
     "Moheshpur",
     "Shailkupa"
   ],
-  "Joypurhat": [
-    "Akkelpur",
-    "Joypurhat Sadar",
-    "Kalai",
-    "Khetlal",
-    "Panchbibi"
-  ],
+  "Joypurhat": ["Akkelpur", "Joypurhat Sadar", "Kalai", "Khetlal", "Panchbibi"],
   "Khagrachhari": [
     "Dighinala",
     "Guimara",
@@ -327,19 +343,8 @@
     "Lalmonirhat Sadar",
     "Patgram"
   ],
-  "Madaripur": [
-    "Dasar",
-    "Kalkini",
-    "Madaripur Sadar",
-    "Rajoir",
-    "Shibchar"
-  ],
-  "Magura": [
-    "Magura Sadar",
-    "Mohammadpur",
-    "Shalikha",
-    "Sreepur"
-  ],
+  "Madaripur": ["Dasar", "Kalkini", "Madaripur Sadar", "Rajoir", "Shibchar"],
+  "Magura": ["Magura Sadar", "Mohammadpur", "Shalikha", "Sreepur"],
   "Manikganj": [
     "Doulatpur",
     "Gior",
@@ -349,11 +354,7 @@
     "Shibaloy",
     "Singiar"
   ],
-  "Meherpur": [
-    "Gangni",
-    "Meherpur Sadar",
-    "Mujibnagar"
-  ],
+  "Meherpur": ["Gangni", "Meherpur Sadar", "Mujibnagar"],
   "Moulvibazar": [
     "Barlekha",
     "Juri",
@@ -399,11 +400,7 @@
     "Raninagar",
     "Sapahar"
   ],
-  "Narail": [
-    "Kalia",
-    "Lohagara",
-    "Narail Sadar"
-  ],
+  "Narail": ["Kalia", "Lohagara", "Narail Sadar"],
   "Narayanganj": [
     "Araihazar",
     "Bandar",
@@ -470,13 +467,7 @@
     "Santhia",
     "Sujanagar"
   ],
-  "Panchagarh": [
-    "Atwari",
-    "Boda",
-    "Debiganj",
-    "Panchagarh Sadar",
-    "Tetulia"
-  ],
+  "Panchagarh": ["Atwari", "Boda", "Debiganj", "Panchagarh Sadar", "Tetulia"],
   "Patuakhali": [
     "Bauphal",
     "Dashmina",
@@ -496,13 +487,7 @@
     "Pirojpur Sadar",
     "Zianagar"
   ],
-  "Rajbari": [
-    "Baliakandi",
-    "Goalanda",
-    "Kalukhali",
-    "Pangsa",
-    "Rajbari Sadar"
-  ],
+  "Rajbari": ["Baliakandi", "Goalanda", "Kalukhali", "Pangsa", "Rajbari Sadar"],
   "Rajshahi": [
     "Bagha",
     "Bagmara",

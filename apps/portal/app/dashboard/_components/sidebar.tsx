@@ -2,6 +2,7 @@ import Link from "next/link";
 import SignOutButton from "./sign-out-button";
 import { UserRole, LocalMissionCode } from "@1000mm/db";
 import Image from "next/image";
+import { AlertTriangle } from "lucide-react";
 
 type NavItem = {
   label: string;
@@ -513,6 +514,12 @@ const NAV_SECTIONS: { section: string; items: NavItem[] }[] = [
         ),
       },
       {
+        label: "Urgent Reports",
+        href: "/dashboard/system-admin/urgent-reports",
+        roles: ["SYSTEM_ADMIN"],
+        icon: <AlertTriangle />,
+      },
+      {
         label: "Salary",
         href: "/dashboard/salary",
         roles: ADMIN_ROLES,
@@ -696,6 +703,9 @@ export default function Sidebar({
               <span className="flex-1">Salary Request</span>
             </Link>
           </div>
+        )}
+        {user.isMissionary && user.role === "TRAINEE" && (
+          <Link href="/dashboard/urgent-reports">Urgent Reports</Link>
         )}
       </nav>
 

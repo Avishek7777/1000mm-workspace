@@ -81,6 +81,7 @@ const ROUTE_GUARDS: RouteGuard[] = [
   ["/dashboard/system-admin", [SYSTEM_ADMIN]],
   ["/dashboard/audit", [SYSTEM_ADMIN]],
   ["/dashboard/settings", [SYSTEM_ADMIN]],
+  ["/dashboard/system-admin/urgent-reports", [SYSTEM_ADMIN]],
 
   // Admin only (SYSTEM_ADMIN + MAIN_DIRECTOR)
   ["/dashboard/director/lmd-reports", ADMIN_ROLES],
@@ -100,6 +101,7 @@ const ROUTE_GUARDS: RouteGuard[] = [
   ["/dashboard/my-application", [TRAINEE]],
   ["/dashboard/my-program", [TRAINEE]],
   ["/dashboard/trainee", [TRAINEE]],
+  ["/dashboard/urgent-reports", [TRAINEE]],
 
   // Trainees section — directors, admins, trainers
   ["/dashboard/trainees", [...DIRECTOR_ROLES, TRAINER]],

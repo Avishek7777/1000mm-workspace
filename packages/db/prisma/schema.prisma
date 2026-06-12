@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+//  directUrl = env("DIRECT_URL")
 }
 
 // ─── Reference Number Counter ────────────────────────────────────────────────
@@ -119,7 +119,52 @@ model SalaryRequest {
   @@unique([missionaryId, month, year])
   @@map("salary_requests")
 }
+// ─── Urgent Reports ────────────────────────────────────────────────────────────────────
+model UrgentReport {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  issuedById  String
+  // Up to 5 attachment storage keys (local filesystem / R2)
+  attachment1 String?
+  attachment2 String?
+  attachment3 String?
+  attachment4 String?
+  attachment5 String?
+  // Original filenames for display
+  attachment1Name String?
+  attachment2Name String?
+  attachment3Name String?
+  attachment4Name String?
+  attachment5Name String?
 
+  publishedAt DateTime  @default(now())
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  issuedBy    User                    @relation("UrgentReportIssuedBy", fields: [issuedById], references: [id])
+  submissions UrgentReportSubmission[]
+
+  @@index([publishedAt])
+  @@map("urgent_reports")
+}
+
+model UrgentReportSubmission {
+  id       String @id @default(cuid())
+  reportId String
+  userId   String
+  response String?   // optional text from missionary
+  submittedAt DateTime @default(now())
+
+  report UrgentReport @relation(fields: [reportId], references: [id])
+  user   User         @relation("UrgentReportSubmissions", fields: [userId], references: [id])
+
+  @@unique([reportId, userId])   // one submission per missionary per report
+  @@index([reportId])
+  @@index([userId])
+  @@map("urgent_report_submissions")
+}
 // ─── Users ────────────────────────────────────────────────────────────────────
 model User {
   id                      String                   @id @default(cuid())
@@ -174,6 +219,8 @@ model User {
   salaryRequestsReviewed  SalaryRequest[]          @relation("SalaryRequestReviewedBy")
   trainerApplicationsReviewed TrainerApplication[] @relation("TrainerApplicationReviewedBy")
   trainerApplicationCreated   TrainerApplication?  @relation("TrainerApplicationCreatedUser")
+  urgentReportsIssued    UrgentReport[]           @relation("UrgentReportIssuedBy")
+  urgentReportSubmissions UrgentReportSubmission[] @relation("UrgentReportSubmissions")
 
   @@index([email])
   @@index([homeMissionId])
@@ -1018,6 +1065,8 @@ enum AuditAction {
   TRAINER_APPLICATION_SUBMITTED
   TRAINER_ACCOUNT_CREATED
   TRAINER_APPLICATION_REJECTED
+  URGENT_REPORT_ISSUED
+  URGENT_REPORT_SUBMITTED
 }
 
 enum TrainerApplicationStatus {
