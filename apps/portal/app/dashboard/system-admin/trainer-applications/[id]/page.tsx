@@ -1,6 +1,6 @@
 // apps/portal/app/dashboard/system-admin/trainer-applications/[id]/page.tsx
 
-import { db } from "@1000mm/db";
+import { prisma as db } from "@1000mm/db";
 import { auth } from "@/lib/auth/config";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";

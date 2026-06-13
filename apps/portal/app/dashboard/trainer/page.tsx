@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { db } from "@1000mm/db";
+import { prisma as db } from "@1000mm/db";
 import {
   BookOpen,
   Users,

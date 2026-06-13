@@ -89,14 +89,20 @@ function PieChart({
   const r = size / 2 - 4;
   const cx = size / 2;
   const cy = size / 2;
-  let startAngle = -Math.PI / 2;
-  const slices = data.map((d) => {
+  const slices = data.map((d, index) => {
     const angle = (d.value / total) * 2 * Math.PI;
+    const cumulativeAngle = data
+      .slice(0, index)
+      .reduce(
+        (sum, item) => sum + (item.value / total) * 2 * Math.PI,
+        -Math.PI / 2,
+      );
+    const startAngle = cumulativeAngle;
     const x1 = cx + r * Math.cos(startAngle);
     const y1 = cy + r * Math.sin(startAngle);
-    startAngle += angle;
-    const x2 = cx + r * Math.cos(startAngle);
-    const y2 = cy + r * Math.sin(startAngle);
+    const endAngle = startAngle + angle;
+    const x2 = cx + r * Math.cos(endAngle);
+    const y2 = cy + r * Math.sin(endAngle);
     const large = angle > Math.PI ? 1 : 0;
     return { ...d, x1, y1, x2, y2, large };
   });
@@ -250,7 +256,10 @@ export function Report2DemographicsPdf({
         <View
           style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}
         >
-          <PieChart data={genderPie} size={80} />
+          <PieChart
+            data={genderPie.map((d) => ({ ...d, value: d.count }))}
+            size={80}
+          />
           <View style={{ flex: 1 }}>
             {data.genderBreakdown.map((d, i) => (
               <View
@@ -261,12 +270,9 @@ export function Report2DemographicsPdf({
                   marginBottom: 3,
                 }}
               >
-                <Rect
-                  width={8}
-                  height={8}
-                  fill={CHART_COLORS[i]}
-                  style={{ marginRight: 4 }}
-                />
+                <View style={{ marginRight: 4 }}>
+                  <Rect width={8} height={8} fill={CHART_COLORS[i]} />
+                </View>
                 <Text style={{ fontSize: 7.5, color: "#333" }}>
                   {d.label}: {d.count} ({d.pct}%)
                 </Text>
@@ -276,7 +282,10 @@ export function Report2DemographicsPdf({
         </View>
 
         <Text style={sharedStyles.sectionTitle}>AGE DISTRIBUTION</Text>
-        <HorizBar data={data.ageGroups} color="#16a085" />
+        <HorizBar
+          data={data.ageGroups.map((d) => ({ ...d, value: d.count }))}
+          color="#16a085"
+        />
 
         <Text style={sharedStyles.sectionTitle}>MISSION REPRESENTATION</Text>
         <View
@@ -293,12 +302,13 @@ export function Report2DemographicsPdf({
                   marginBottom: 3,
                 }}
               >
-                <Rect
-                  width={8}
-                  height={8}
-                  fill={MISSION_COLORS[d.mission] ?? "#888"}
-                  style={{ marginRight: 4 }}
-                />
+                <View style={{ marginRight: 4 }}>
+                  <Rect
+                    width={8}
+                    height={8}
+                    fill={MISSION_COLORS[d.mission] ?? "#888"}
+                  />
+                </View>
                 <Text style={{ fontSize: 7.5, color: "#333" }}>
                   {d.mission}: {d.count} ({d.pct}%)
                 </Text>
@@ -308,7 +318,12 @@ export function Report2DemographicsPdf({
         </View>
 
         <Text style={sharedStyles.sectionTitle}>DENOMINATION</Text>
-        <HorizBar data={data.denomination.slice(0, 8)} color="#8e44ad" />
+        <HorizBar
+          data={data.denomination
+            .slice(0, 8)
+            .map((d) => ({ ...d, value: d.count }))}
+          color="#8e44ad"
+        />
 
         <Text style={sharedStyles.sectionTitle}>TOP 10 DISTRICTS</Text>
         <View style={sharedStyles.tableHeader}>
@@ -346,9 +361,15 @@ export function Report2DemographicsPdf({
           generatedAt={generatedAt}
         />
         <Text style={sharedStyles.sectionTitle}>MARITAL STATUS</Text>
-        <HorizBar data={data.maritalStatus} color="#2980b9" />
+        <HorizBar
+          data={data.maritalStatus.map((d) => ({ ...d, value: d.count }))}
+          color="#2980b9"
+        />
         <Text style={sharedStyles.sectionTitle}>BLOOD TYPE DISTRIBUTION</Text>
-        <HorizBar data={data.bloodType} color="#c0392b" />
+        <HorizBar
+          data={data.bloodType.map((d) => ({ ...d, value: d.count }))}
+          color="#c0392b"
+        />
         <PdfReportFooter reportName="Applicant Demographics Report" />
       </Page>
 
@@ -441,12 +462,9 @@ export function Report3DecisionsPdf({
                   marginBottom: 4,
                 }}
               >
-                <Rect
-                  width={8}
-                  height={8}
-                  fill={d.color}
-                  style={{ marginRight: 4 }}
-                />
+                <View style={{ marginRight: 4 }}>
+                  <Rect width={8} height={8} fill={d.color} />
+                </View>
                 <Text style={{ fontSize: 7.5, color: "#333" }}>
                   {d.label}: {d.value}
                 </Text>

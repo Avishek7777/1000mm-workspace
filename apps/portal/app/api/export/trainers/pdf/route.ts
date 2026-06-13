@@ -381,7 +381,7 @@ export async function GET(req: NextRequest) {
     const buffer = await renderToBuffer(doc);
     const filename = `trainer-${user.fullName.replace(/\s+/g, "-").toLowerCase()}.pdf`;
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
@@ -526,7 +526,7 @@ export async function GET(req: NextRequest) {
   const buffer = await renderToBuffer(doc);
   const filename = `all-trainers-${new Date().toISOString().slice(0, 10)}.pdf`;
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",

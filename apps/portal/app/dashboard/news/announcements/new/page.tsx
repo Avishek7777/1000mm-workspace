@@ -3,9 +3,12 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createAnnouncementAction } from "@/actions/announcements";
+import {
+  createAnnouncementAction,
+  type ActionResult,
+} from "@/actions/announcements";
 
-const initialState = { ok: false };
+const initialState: ActionResult = { ok: false };
 
 export default function NewAnnouncementPage() {
   const router = useRouter();

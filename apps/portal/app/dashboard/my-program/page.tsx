@@ -202,7 +202,7 @@ export default async function MyProgramPage() {
             },
             {
               label: "Reference No.",
-              value: enrollment.application.referenceNumber ?? "—",
+              value: enrollment.application?.referenceNumber ?? "—",
             },
           ].map((item) => (
             <div key={item.label}>
@@ -236,7 +236,7 @@ export default async function MyProgramPage() {
           <div>
             <p className="text-[11px] text-gray-400">Accepted On</p>
             <p className="font-medium text-gray-900">
-              {formatDate(enrollment.application.directorReviewCompletedAt)}
+              {formatDate(enrollment.application?.directorReviewCompletedAt)}
             </p>
           </div>
           <div>

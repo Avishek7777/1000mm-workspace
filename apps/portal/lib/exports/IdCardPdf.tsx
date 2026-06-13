@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Svg,
   Rect,
-  Line,
   Circle,
 } from "@react-pdf/renderer";
 
@@ -268,9 +267,7 @@ export function IdCardPdf({
 
                   {/* Info */}
                   <View style={styles.info}>
-                    <Text style={styles.name} numberOfLines={2}>
-                      {card.fullName}
-                    </Text>
+                    <Text style={styles.name}>{card.fullName}</Text>
 
                     <View style={styles.refRow}>
                       <Text style={styles.refLabel}>ID:</Text>
@@ -299,7 +296,7 @@ export function IdCardPdf({
                     {card.deploymentLocation && (
                       <View style={styles.fieldRow}>
                         <Text style={styles.fieldLabel}>Deployed</Text>
-                        <Text style={styles.fieldValue} numberOfLines={1}>
+                        <Text style={styles.fieldValue}>
                           {card.deploymentLocation}
                         </Text>
                       </View>

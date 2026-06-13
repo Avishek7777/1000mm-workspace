@@ -5,6 +5,7 @@
  */
 
 import { prisma } from "@1000mm/db";
+import { Prisma } from "@prisma/client";
 
 type CreateNotificationInput = {
   userId: string;
@@ -21,7 +22,7 @@ export async function createNotification(input: CreateNotificationInput) {
       userId: input.userId,
       channel: "IN_APP",
       templateKey: input.templateKey,
-      templateData: input.templateData ?? {},
+      templateData: (input.templateData ?? {}) as Prisma.InputJsonValue,
       actionUrl: input.actionUrl ?? null,
     },
   });
@@ -39,7 +40,7 @@ export async function createNotificationForMany(
       userId,
       channel: "IN_APP" as const,
       templateKey: input.templateKey,
-      templateData: input.templateData ?? {},
+      templateData: (input.templateData ?? {}) as Prisma.InputJsonValue,
       actionUrl: input.actionUrl ?? null,
     })),
     skipDuplicates: true,

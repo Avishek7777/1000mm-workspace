@@ -23,7 +23,7 @@ export type ActionResult = {
 
 const submitSchema = z.object({
   category: z.enum(["GRIEVANCE", "SUGGESTION", "GENERAL_FEEDBACK"], {
-    errorMap: () => ({ message: "Please select a category." }),
+    error: "Please select a category.",
   }),
   subject: z
     .string()
@@ -154,7 +154,7 @@ export async function respondToComplaintAction(
   }
 
   const complaint = await prisma.complaint.findFirst({
-    where: { id: complaintId, deletedAt: undefined },
+    where: { id: complaintId },
   });
   if (!complaint) return { ok: false, error: "Complaint not found." };
 

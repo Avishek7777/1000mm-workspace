@@ -68,7 +68,7 @@ const programSchema = z
     title: z.string().trim().min(3, "Title is required.").max(120),
     titleBangla: optionalStr(120),
     category: z.nativeEnum(TrainingCategory, {
-      errorMap: () => ({ message: "Please select a category." }),
+      error: "Please select a category.",
     }),
     summary: optionalStr(1000),
     summaryBangla: optionalStr(1000),
@@ -83,7 +83,7 @@ const programSchema = z
     location: optionalStr(120),
     locationBangla: optionalStr(120),
     targetIntake: z.coerce
-      .number({ invalid_type_error: "Target intake is required." })
+      .number({ error: "Target intake is required." })
       .int()
       .min(1, "Must be at least 1.")
       .max(10000),

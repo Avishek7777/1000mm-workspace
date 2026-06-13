@@ -1,7 +1,6 @@
 import { requireRole } from "@/lib/auth/helpers";
-import { prisma } from "@1000mm/db";
 import Link from "next/link";
-import type { AuditSeverity } from "@1000mm/db";
+import { AuditAction, AuditSeverity, Prisma, prisma } from "@1000mm/db";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -61,10 +60,20 @@ export default async function AuditLogsPage({
 
   const pageNum = Math.max(1, parseInt(page ?? "1", 10));
 
-  const where = {
+  const matchingActions = q
+    ? Object.values(AuditAction).filter((a) =>
+        a.toLowerCase().includes(q.toLowerCase()),
+      )
+    : [];
+
+  const where: Prisma.AuditLogWhereInput = {
     ...(severity ? { severity: severity as AuditSeverity } : {}),
     ...(action
-      ? { action: { contains: action, mode: "insensitive" as const } }
+      ? {
+          action: Object.values(AuditAction).includes(action as AuditAction)
+            ? (action as AuditAction)
+            : undefined,
+        }
       : {}),
     ...(actor
       ? {
@@ -76,7 +85,9 @@ export default async function AuditLogsPage({
     ...(q
       ? {
           OR: [
-            { action: { contains: q, mode: "insensitive" as const } },
+            ...(matchingActions.length > 0
+              ? [{ action: { in: matchingActions } }]
+              : []),
             { targetType: { contains: q, mode: "insensitive" as const } },
             { targetId: { contains: q, mode: "insensitive" as const } },
             {

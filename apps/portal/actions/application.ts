@@ -139,7 +139,7 @@ const page4Schema = z.object({
   healthCondition: z.string().transform((v) => v === "true"),
   badHabits: z.string().transform((v) => v === "true"),
   declarationAccepted: z.literal("true", {
-    errorMap: () => ({ message: "You must accept the declaration." }),
+    error: "You must accept the declaration.",
   }),
 });
 

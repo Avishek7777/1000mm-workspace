@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { submitComplaintAction } from "@/actions/complaints";
+import { submitComplaintAction, type ActionResult } from "@/actions/complaints";
 
 const CATEGORIES = [
   {
@@ -23,7 +23,7 @@ const CATEGORIES = [
   },
 ];
 
-const initialState = { ok: false };
+const initialState: ActionResult = { ok: false };
 
 export default function NewComplaintPage() {
   const router = useRouter();

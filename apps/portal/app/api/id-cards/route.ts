@@ -130,7 +130,7 @@ export async function GET(req: NextRequest) {
 
   const buffer = await renderToBuffer(IdCardPdf({ cards, generatedAt }));
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="id-cards-${Date.now()}.pdf"`,

@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createProgramAction } from "@/actions/programs";
+import { createProgramAction, type ActionResult } from "@/actions/programs";
 
 const CATEGORIES = [
   { value: "SPIRITUAL", label: "Spiritual" },
@@ -12,7 +12,7 @@ const CATEGORIES = [
   { value: "SOCIAL", label: "Social" },
 ];
 
-const initialState = { ok: false };
+const initialState: ActionResult = { ok: false };
 
 export default function NewProgramPage() {
   const router = useRouter();

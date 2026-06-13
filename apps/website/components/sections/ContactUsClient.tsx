@@ -224,7 +224,10 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
                     </p>
                   ) : (
                     info.programs.map((p) => {
-                      const status = programStatus(p.startDate, p.endDate);
+                      const status = programStatus(
+                        new Date(p.startDate),
+                        new Date(p.endDate),
+                      );
                       return (
                         <div
                           key={p.id}
@@ -253,7 +256,10 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
                             style={{ fontFamily: "Georgia, serif" }}
                           >
                             <Calendar className="h-3 w-3 flex-shrink-0" />
-                            {formatDateRange(p.startDate, p.endDate)}
+                            {formatDateRange(
+                              new Date(p.startDate),
+                              new Date(p.endDate),
+                            )}
                           </p>
 
                           {/* Category + location */}

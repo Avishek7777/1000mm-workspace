@@ -35,7 +35,8 @@ export default async function DashboardPage() {
               Dashboard coming soon
             </p>
             <p className="mt-1 text-sm text-gray-500">
-              Signed in as {user.role.replace(/_/g, " ").toLowerCase()}
+              Signed in as{" "}
+              {(user.role as string).replace(/_/g, " ").toLowerCase()}
             </p>
           </div>
         </div>

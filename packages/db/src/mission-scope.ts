@@ -110,7 +110,8 @@ export function withMissionScope(prisma: PrismaClient, ctx: AuthContext) {
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
-          if (!model) return query(args);
+          const runQuery = () => (query as unknown as (args: any) => any)(args);
+          if (!model) return runQuery();
 
           // Convert "Application" → "application" to look up our maps
           const modelKey = model.charAt(0).toLowerCase() + model.slice(1);
@@ -150,17 +151,23 @@ export function withMissionScope(prisma: PrismaClient, ctx: AuthContext) {
               (args as Record<string, unknown>).where = args.where
                 ? { AND: [args.where, missionFilter] }
                 : missionFilter;
-              return query(args);
+              return runQuery();
             }
             case "update":
             case "delete": {
-              // For single-row updates/deletes, we first verify the row
-              // is in-scope via findFirst, then proceed.
-              // Prisma will throw if the row doesn't exist or is out of scope.
               const where = (args as { where: unknown }).where;
-              const target = await (prisma as never as Record<string, never>)[
-                modelKey
-              ].findFirst({
+              const modelDelegate = (
+                prisma as unknown as Record<
+                  string,
+                  {
+                    findFirst: (args: {
+                      where: unknown;
+                      select: { id: true };
+                    }) => Promise<{ id: string } | null>;
+                  }
+                >
+              )[modelKey];
+              const target = await modelDelegate.findFirst({
                 where: { AND: [where, missionFilter] },
                 select: { id: true },
               });
@@ -169,7 +176,7 @@ export function withMissionScope(prisma: PrismaClient, ctx: AuthContext) {
                   `Row not found within current mission scope (model=${model}, op=${operation})`,
                 );
               }
-              return query(args);
+              return runQuery();
             }
             case "create": {
               // Reject creates that explicitly set a different mission
@@ -185,10 +192,10 @@ export function withMissionScope(prisma: PrismaClient, ctx: AuthContext) {
                   data[directCol] = ctx.homeMissionId;
                 }
               }
-              return query(args);
+              return runQuery();
             }
             default:
-              return query(args);
+              return runQuery();
           }
         },
       },

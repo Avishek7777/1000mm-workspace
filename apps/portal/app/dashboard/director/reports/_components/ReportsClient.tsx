@@ -372,7 +372,13 @@ function DemographicsCharts({ data }: { data: any }) {
                 cx="50%"
                 cy="50%"
                 outerRadius={65}
-                label={({ label, pct }) => `${label} ${pct}%`}
+                label={({
+                  name,
+                  percent,
+                }: {
+                  name?: string;
+                  percent?: number;
+                }) => `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`}
                 labelLine={false}
               >
                 {data.genderBreakdown.map((_: any, i: number) => (
@@ -394,7 +400,13 @@ function DemographicsCharts({ data }: { data: any }) {
                 cx="50%"
                 cy="50%"
                 outerRadius={65}
-                label={({ mission, pct }) => `${mission} ${pct}%`}
+                label={({
+                  name,
+                  percent,
+                }: {
+                  name?: string;
+                  percent?: number;
+                }) => `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`}
                 labelLine={false}
               >
                 {data.missionRepresentation.map((d: any) => (
@@ -549,9 +561,13 @@ function DecisionsCharts({ data }: { data: any }) {
                 cx="50%"
                 cy="50%"
                 outerRadius={80}
-                label={({ name, percent }) =>
-                  `${name} ${(percent * 100).toFixed(0)}%`
-                }
+                label={({
+                  name,
+                  percent,
+                }: {
+                  name?: string;
+                  percent?: number;
+                }) => `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`}
               >
                 {decisionData.map((d, i) => (
                   <Cell key={i} fill={d.fill} />

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "./sidebar";
 import type { UserRole } from "@1000mm/db";
+import type { LocalMissionCode } from "@1000mm/db";
 
 type DashboardShellProps = {
   children: React.ReactNode;
@@ -108,7 +109,12 @@ export default function DashboardShell({
               </button>
             </div>
             <Sidebar
-              user={user}
+              user={{
+                ...user,
+                name: user.name ?? null,
+                email: user.email ?? null,
+                homeMissionCode: user.homeMissionCode as LocalMissionCode,
+              }}
               unreadCount={unreadCount}
               className="h-full w-full"
             />
@@ -117,7 +123,12 @@ export default function DashboardShell({
 
         <div className="hidden md:flex md:w-56 md:flex-shrink-0">
           <Sidebar
-            user={user}
+            user={{
+              ...user,
+              name: user.name ?? null,
+              email: user.email ?? null,
+              homeMissionCode: user.homeMissionCode as LocalMissionCode,
+            }}
             unreadCount={unreadCount}
             className="h-full w-56"
           />

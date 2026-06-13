@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useActionState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -7,7 +8,7 @@ import { resetPasswordAction, type FormState } from "@/lib/auth/actions";
 
 const initial: FormState = { ok: false };
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const params = useSearchParams();
   const token = params.get("token") ?? "";
 
@@ -63,10 +64,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <div>
-          <label
-            htmlFor="confirmPassword"
-            className="block text-sm font-medium mb-1"
-          >
+          <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
             Confirm new password
           </label>
           <input
@@ -91,5 +89,13 @@ export default function ResetPasswordPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

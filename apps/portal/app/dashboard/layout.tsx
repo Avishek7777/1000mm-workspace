@@ -25,11 +25,16 @@ export default async function DashboardLayout({
 
   const user = {
     ...sessionUser,
+    name: sessionUser.name ?? null,
+    email: sessionUser.email ?? null,
     isMissionary: dbUser?.isMissionary ?? false,
   };
 
   return (
-    <DashboardShell user={user} unreadCount={unreadCount}>
+    <DashboardShell
+      user={{ ...user, name: user.name ?? null, email: user.email ?? null }}
+      unreadCount={unreadCount}
+    >
       {children}
     </DashboardShell>
   );

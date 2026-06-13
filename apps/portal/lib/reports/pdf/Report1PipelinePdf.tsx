@@ -221,7 +221,13 @@ export function Report1PipelinePdf({
 
         {/* Funnel chart */}
         <Text style={sharedStyles.sectionTitle}>PIPELINE FUNNEL</Text>
-        <HorizontalBarChart data={data.funnelStages} color="#2980b9" />
+        <HorizontalBarChart
+          data={data.funnelStages.map((s) => ({
+            label: s.stage,
+            value: s.count,
+          }))}
+          color="#2980b9"
+        />
 
         {/* By mission grouped bar */}
         <Text style={sharedStyles.sectionTitle}>BY MISSION</Text>

@@ -110,6 +110,7 @@ export default async function NewApplicationPage() {
           formSource
             ? {
                 id: formSource.id,
+                documents: formSource.documents,
                 // Page 1 — personal details
                 applicantFullName: formSource.applicantFullName ?? "",
                 applicantFullNameBangla:
