@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
       fullName: user.fullName,
       email: user.email,
       phone: app?.phone ?? user.phone ?? "—",
-      mission: `${user.homeMission.name} (${user.homeMission.code})`,
+      mission: `${user.homeMission?.name ?? "—"} (${user.homeMission?.code ?? "—"})`,
       isActive: user.isActive ? "Yes" : "No",
       address: app?.fullAddress ?? "—",
       specialization: app?.specialization ?? "—",

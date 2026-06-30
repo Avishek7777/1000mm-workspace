@@ -143,7 +143,7 @@ export default async function TrainerDashboardPage() {
               const missionCounts = program.enrollments.reduce<
                 Record<string, number>
               >((acc, e) => {
-                const code = e.trainee.homeMission.code;
+                const code = e.trainee.homeMission?.code ?? "—";
                 acc[code] = (acc[code] ?? 0) + 1;
                 return acc;
               }, {});

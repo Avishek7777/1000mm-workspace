@@ -29,7 +29,7 @@ export default async function DirectorFieldReportsPage({
   };
   const periodMode = period === "monthly" ? "monthly"
     : period === "yearly" ? "yearly"
-    : period in QUARTER_LABELS ? period
+    : period != null && period in QUARTER_LABELS ? period
     : null;
 
   const [reports, yearRows] = await Promise.all([

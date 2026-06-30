@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
   const rows = enrollments.map((e) => ({
     fullName: e.trainee.fullName,
     email: e.trainee.email,
-    missionCode: e.trainee.homeMission.code,
+    missionCode: e.trainee.homeMission?.code ?? "—",
     enrolledAt: fmtDate(e.enrolledAt),
     attendanceConfirmed: e.attendanceConfirmed,
   }));

@@ -37,8 +37,8 @@ export default async function NewFieldReportPage() {
       traineeInfo={{
         fullName: user.fullName,
         email: user.email,
-        missionName: user.homeMission.name,
-        lmdName: user.homeMission.director?.fullName ?? null,
+        missionName: user.homeMission?.name ?? "—",
+        lmdName: user.homeMission?.director?.fullName ?? null,
         workplace: enrollment.deploymentLocation ?? null,
         programTitle: `${enrollment.program.code} — ${enrollment.program.title}`,
       }}

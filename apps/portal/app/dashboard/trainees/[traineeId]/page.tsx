@@ -135,7 +135,7 @@ export default async function TraineeDetailPage({
           {trainee.fullName}
         </h1>
         <p className="mt-0.5 text-sm text-gray-500">
-          {trainee.homeMission.name} · {trainee.email}
+          {trainee.homeMission?.name ?? "—"} · {trainee.email}
         </p>
       </div>
 
@@ -148,10 +148,10 @@ export default async function TraineeDetailPage({
           {[
             { label: "Full Name", value: trainee.fullName },
             { label: "Email", value: trainee.email },
-            { label: "Mission", value: trainee.homeMission.name },
+            { label: "Mission", value: trainee.homeMission?.name ?? "—" },
             {
               label: "Local Director",
-              value: trainee.homeMission.director?.fullName ?? "—",
+              value: trainee.homeMission?.director?.fullName ?? "—",
             },
             { label: "Date of Birth", value: formatDate(trainee.dateOfBirth) },
             {

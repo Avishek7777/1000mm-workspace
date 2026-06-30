@@ -98,7 +98,7 @@ export default async function AssignmentDetailPage({
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div>
                   <p className="text-sm font-semibold text-gray-900">{sub.trainee.fullName}</p>
-                  <p className="text-[10px] text-gray-400">{sub.trainee.homeMission.code} · submitted {fmtDateTime(sub.submittedAt)}</p>
+                  <p className="text-[10px] text-gray-400">{sub.trainee.homeMission?.code ?? "—"} · submitted {fmtDateTime(sub.submittedAt)}</p>
                 </div>
                 <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-medium text-teal-700">Submitted</span>
               </div>

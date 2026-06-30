@@ -47,7 +47,7 @@ export default async function ProfilePage() {
         {dbUser.phone && <Row label="Phone" value={dbUser.phone} />}
         <Row
           label="Role"
-          value={`${ROLE_LABELS[dbUser.role] ?? dbUser.role} · ${dbUser.homeMission.name} (${dbUser.homeMission.code})`}
+          value={`${ROLE_LABELS[dbUser.role] ?? dbUser.role} · ${dbUser.homeMission?.name ?? "—"} (${dbUser.homeMission?.code ?? "—"})`}
         />
         <Row
           label="Member since"

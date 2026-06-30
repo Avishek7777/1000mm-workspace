@@ -251,9 +251,9 @@ export async function GET(req: NextRequest) {
             Text,
             { style: styles.profileRole },
             "TRAINER · ",
-            user.homeMission.name,
+            user.homeMission?.name ?? "—",
             " (",
-            user.homeMission.code,
+            user.homeMission?.code ?? "—",
             ")",
           ),
           React.createElement(
@@ -491,7 +491,7 @@ export async function GET(req: NextRequest) {
             React.createElement(
               Text,
               { style: [styles.td, styles.col_mission] },
-              user.homeMission.code,
+              user.homeMission?.code ?? "—",
             ),
             React.createElement(
               Text,

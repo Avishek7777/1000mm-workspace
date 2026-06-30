@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
   const rows = deployments.map((d, i) => ({
     "#": i + 1,
     "Full Name": d.missionary.fullName,
-    "Home Mission": d.missionary.homeMission.code,
+    "Home Mission": d.missionary.homeMission?.code ?? "—",
     Phone: d.missionary.phone ?? "",
     "Date of Birth": fmt(d.missionary.dateOfBirth),
     "Deployed To": d.mission.code,

@@ -250,7 +250,7 @@ export default async function MyProgramPage() {
   const program = enrollment.program;
   const status = programStatus(program.startDate, program.endDate);
   const progress = progressPercent(program.startDate, program.endDate);
-  const lmd = user.homeMission.director;
+  const lmd = user.homeMission?.director;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -403,7 +403,7 @@ export default async function MyProgramPage() {
             <div>
               <p className="text-[11px] text-gray-400">Mission</p>
               <p className="font-medium text-gray-900">
-                {user.homeMission.name}
+                {user.homeMission?.name ?? "—"}
               </p>
             </div>
           </div>
@@ -435,7 +435,7 @@ export default async function MyProgramPage() {
                 {lmd.fullName}
               </p>
               <p className="text-xs text-gray-500">
-                {lmd.email} · {user.homeMission.name}
+                {lmd.email} · {user.homeMission?.name ?? "—"}
               </p>
             </div>
           </div>

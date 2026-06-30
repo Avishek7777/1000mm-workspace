@@ -263,6 +263,9 @@ export async function saveDraftAction(
           data: baseData,
         });
       } else {
+        if (!user.homeMissionId) {
+          return { ok: false, error: "Your account is not assigned to a mission. Contact your administrator." };
+        }
         app = await prisma.application.create({
           data: {
             ...baseData,

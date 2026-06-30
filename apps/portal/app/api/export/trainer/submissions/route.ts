@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
     const sub = submissionMap.get(e.traineeId);
     return {
       fullName: e.trainee.fullName,
-      missionCode: e.trainee.homeMission.code,
+      missionCode: e.trainee.homeMission?.code ?? "—",
       submitted: !!sub,
       submittedAt: sub ? fmtDateTime(sub.submittedAt) : null,
       notes: sub?.notes ?? null,
