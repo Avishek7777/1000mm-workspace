@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { loginAction, type FormState } from "@/lib/auth/actions";
@@ -13,8 +13,11 @@ export default function LoginForm() {
   const params = useSearchParams();
   const from = params.get("from") ?? "";
   const resetSuccess = params.get("reset") === "success";
+  const emailVerified = params.get("verified") === "1";
+  const tokenError = params.get("error");
 
   const [state, formAction, pending] = useActionState(loginAction, initial);
+  const [showPwd, setShowPwd] = useState(false);
 
   return (
     <div
@@ -93,7 +96,19 @@ export default function LoginForm() {
           1000 Missionary Movement Bangladesh
         </p>
 
-        {/* Success banner */}
+        {/* Success banners */}
+        {emailVerified && (
+          <div
+            className="mb-6 rounded-xl px-4 py-3 text-sm text-green-300"
+            style={{
+              background: "rgba(74,222,128,0.10)",
+              border: "1px solid rgba(74,222,128,0.25)",
+              fontFamily: "Georgia, serif",
+            }}
+          >
+            Email verified! You can now sign in.
+          </div>
+        )}
         {resetSuccess && (
           <div
             className="mb-6 rounded-xl px-4 py-3 text-sm text-green-300"
@@ -104,6 +119,20 @@ export default function LoginForm() {
             }}
           >
             Password updated. Please sign in with your new password.
+          </div>
+        )}
+        {tokenError && (
+          <div
+            className="mb-6 rounded-xl px-4 py-3 text-sm text-red-300"
+            style={{
+              background: "rgba(239,68,68,0.10)",
+              border: "1px solid rgba(239,68,68,0.25)",
+              fontFamily: "Georgia, serif",
+            }}
+          >
+            {tokenError === "expired-token"
+              ? "This verification link has expired. Please register again."
+              : "This verification link is invalid."}
           </div>
         )}
 
@@ -168,20 +197,34 @@ export default function LoginForm() {
                 Forgot password?
               </Link>
             </div>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              placeholder="••••••••"
-              className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all duration-200"
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.10)",
-                fontFamily: "Georgia, serif",
-              }}
-            />
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPwd ? "text" : "password"}
+                autoComplete="current-password"
+                required
+                placeholder="••••••••"
+                className="w-full rounded-xl px-4 py-3 pr-11 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all duration-200"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  fontFamily: "Georgia, serif",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                aria-label={showPwd ? "Hide password" : "Show password"}
+              >
+                {showPwd ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Submit */}

@@ -1,6 +1,8 @@
 // apps/website/app/training-schedule/[id]/page.tsx
 // Server component — individual training program detail page.
 
+export const revalidate = 0; // always fetch fresh from portal
+
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -99,7 +101,7 @@ export async function generateMetadata({
     process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3001";
   try {
     const res = await fetch(`${portalUrl}/api/public/programs/${id}`, {
-      next: { revalidate: 120 },
+      cache: "no-store",
     });
     if (res.ok) {
       const p: Program = await res.json();
@@ -121,7 +123,7 @@ export default async function TrainingScheduleDetailPage({
   let program: Program | null = null;
   try {
     const res = await fetch(`${portalUrl}/api/public/programs/${id}`, {
-      next: { revalidate: 120 },
+      cache: "no-store",
     });
     if (res.ok) program = await res.json();
   } catch {}

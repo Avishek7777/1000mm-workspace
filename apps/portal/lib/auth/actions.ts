@@ -1,24 +1,15 @@
-/**
- * Auth-related Server Actions
- *
- * These run on the server in response to <form action={…}> submissions
- * from the login/register/reset pages. They handle the side effects
- * (DB writes, email-token generation) and return either a redirect
- * or a typed error message for the form to render.
- *
- * For dev (no Resend yet), tokens are console-logged instead of emailed.
- * Look for "[DEV EMAIL]" lines in your terminal.
- */
-
 "use server";
 
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
-import { LocalMissionCode } from "@1000mm/db";
 import { prisma } from "@1000mm/db";
 import { signIn, signOut } from "@/lib/auth/config";
+import {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+} from "@/lib/email";
 
 // ─────────────────────────────────────────────────────────────────────
 // Common types
@@ -37,9 +28,7 @@ const registerSchema = z
     fullName: z.string().trim().min(2, "Full name is required."),
     email: z.string().email("Invalid email.").toLowerCase().trim(),
     phone: z.string().trim().optional(),
-    homeMissionCode: z.enum(LocalMissionCode, {
-      message: "Select a Local Mission.",
-    }),
+    homeMissionCode: z.string().min(1, "Select a Local Mission."),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters.")
@@ -68,9 +57,22 @@ export async function registerAction(
   }
   const { fullName, email, phone, homeMissionCode, password } = parsed.data;
 
-  // Reject duplicate email up front (rather than relying on DB unique violation)
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
+    // If the account exists but was never verified, act as a resend rather
+    // than blocking them. A fresh token invalidates the old one via expiresAt.
+    if (!existing.emailVerified && !existing.isActive) {
+      const token = randomBytes(32).toString("hex");
+      await prisma.emailVerificationToken.create({
+        data: {
+          token,
+          userId: existing.id,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+      await sendVerificationEmail(email, existing.fullName, token);
+      return { ok: true };
+    }
     return {
       ok: false,
       fieldErrors: { email: "An account with this email already exists." },
@@ -86,7 +88,7 @@ export async function registerAction(
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       email,
       passwordHash,
@@ -94,26 +96,24 @@ export async function registerAction(
       phone: phone || null,
       role: "TRAINEE",
       homeMissionId: mission.id,
-      // Auto-verified per current decision. Flip to null when enforcing.
-      emailVerified: new Date(),
-      isActive: true,
+      emailVerified: null,
+      isActive: false,
     },
   });
 
-  // For when we DO enforce verification: a token is generated here and
-  // emailed. Keeping this commented as a TODO.
-  //
-  // const token = randomBytes(32).toString("hex");
-  // await prisma.emailVerificationToken.create({...});
-  // await sendVerificationEmail(email, token);
-
-  // Auto-login after registration
-  await signIn("credentials", {
-    email,
-    password,
-    redirect: false,
+  // Generate verification token (24 hours)
+  const token = randomBytes(32).toString("hex");
+  await prisma.emailVerificationToken.create({
+    data: {
+      token,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
   });
-  redirect("/dashboard/my-application/new");
+  await sendVerificationEmail(email, fullName, token);
+
+  // Return ok — RegisterForm will show the check-email state
+  return { ok: true };
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -141,8 +141,8 @@ export async function loginAction(
     return { ok: false, error: "Invalid email or password." };
   }
 
-  // Use the "from" param if it exists and is a relative path
-  const target = from && from.startsWith("/") ? from : "/dashboard";
+  // Only allow relative paths; reject protocol-relative URLs like //attacker.com
+  const target = from && from.startsWith("/") && !from.startsWith("//") ? from : "/dashboard";
   redirect(target);
 }
 
@@ -172,11 +172,10 @@ export async function requestPasswordResetAction(
 
   const { email } = parsed.data;
   const user = await prisma.user.findFirst({
-    where: { email, deletedAt: null, isActive: true },
+    where: { email, deletedAt: null },
   });
 
-  // IMPORTANT: same response whether or not user exists. Otherwise
-  // attackers can probe for valid emails.
+  // Same response whether or not user exists — prevents email enumeration.
   if (user) {
     const token = randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
@@ -186,17 +185,10 @@ export async function requestPasswordResetAction(
     });
 
     const resetUrl = `${process.env.AUTH_URL ?? "http://localhost:3001"}/reset-password?token=${token}`;
-
-    // TODO: replace with Resend send when wired up
-    console.log("\n[DEV EMAIL] Password reset link for", email);
-    console.log("[DEV EMAIL]", resetUrl, "\n");
+    await sendPasswordResetEmail(email, user.fullName, resetUrl);
   }
 
-  return {
-    ok: true,
-    error: undefined,
-    fieldErrors: undefined,
-  };
+  return { ok: true };
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -242,13 +234,20 @@ export async function resetPasswordAction(
   await prisma.$transaction([
     prisma.user.update({
       where: { id: record.userId },
-      data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
+      data: {
+        passwordHash,
+        failedLoginCount: 0,
+        lockedUntil: null,
+        // Activate accounts that haven't been activated yet
+        // (covers the trainer "set password" flow)
+        ...(!record.user.emailVerified && { emailVerified: new Date() }),
+        ...(!record.user.isActive && { isActive: true }),
+      },
     }),
     prisma.passwordResetToken.update({
       where: { id: record.id },
       data: { usedAt: new Date() },
     }),
-    // Invalidate any other outstanding reset tokens for this user
     prisma.passwordResetToken.updateMany({
       where: { userId: record.userId, usedAt: null, id: { not: record.id } },
       data: { usedAt: new Date() },

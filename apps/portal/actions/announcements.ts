@@ -60,32 +60,36 @@ export async function createAnnouncementAction(
   const { title, body, attachmentUrl, publishNow, expiresAt } = parsed.data;
   const publishedAt = publishNow === "on" ? new Date() : null;
 
-  const announcement = await prisma.announcement.create({
-    data: {
-      title,
-      body,
-      attachmentUrl: attachmentUrl || null,
-      publishedAt,
-      expiresAt: expiresAt ? new Date(expiresAt) : null,
-      createdById: user.id,
-    },
-  });
-
-  // If published immediately, notify all users
-  if (publishedAt) {
-    await notifyAllActiveUsers(
-      {
-        templateKey: NOTIFICATION_TEMPLATES.ANNOUNCEMENT_PUBLISHED,
-        templateData: { title, announcementId: announcement.id },
-        actionUrl: "/dashboard/news",
+  try {
+    const announcement = await prisma.announcement.create({
+      data: {
+        title,
+        body,
+        attachmentUrl: attachmentUrl || null,
+        publishedAt,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        createdById: user.id,
       },
-      user.id,
-    );
-  }
+    });
 
-  revalidatePath("/dashboard/announcements");
-  revalidatePath("/dashboard/news");
-  return { ok: true, id: announcement.id };
+    if (publishedAt) {
+      await notifyAllActiveUsers(
+        {
+          templateKey: NOTIFICATION_TEMPLATES.ANNOUNCEMENT_PUBLISHED,
+          templateData: { title, announcementId: announcement.id },
+          actionUrl: "/dashboard/news",
+        },
+        user.id,
+      );
+    }
+
+    revalidatePath("/dashboard/news/announcements");
+    revalidatePath("/dashboard/news");
+    return { ok: true, id: announcement.id };
+  } catch (err) {
+    console.error("[createAnnouncementAction]", err);
+    return { ok: false, error: "Failed to create announcement. Please try again." };
+  }
 }
 
 // ─── PUBLISH ──────────────────────────────────────────────────────────────────
@@ -115,7 +119,7 @@ export async function publishAnnouncementAction(
     user.id,
   );
 
-  revalidatePath("/dashboard/announcements");
+  revalidatePath("/dashboard/news/announcements");
   revalidatePath("/dashboard/news");
   return { ok: true };
 }
@@ -130,7 +134,7 @@ export async function unpublishAnnouncementAction(
     where: { id },
     data: { publishedAt: null },
   });
-  revalidatePath("/dashboard/announcements");
+  revalidatePath("/dashboard/news/announcements");
   revalidatePath("/dashboard/news");
   return { ok: true };
 }
@@ -145,7 +149,7 @@ export async function deleteAnnouncementAction(
     where: { id },
     data: { deletedAt: new Date() },
   });
-  revalidatePath("/dashboard/announcements");
+  revalidatePath("/dashboard/news/announcements");
   revalidatePath("/dashboard/news");
   return { ok: true };
 }

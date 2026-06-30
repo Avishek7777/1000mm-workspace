@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 10,
   },
-  footerCol: { flex: 1, alignItems: "center" },
+  footerCol: { flex: 1, alignItems: "center", justifyContent: "flex-end" },
   footerLabel: { fontSize: 7.5, color: "#555", marginBottom: 20 },
   footerMeta: {
     flexDirection: "row",
@@ -205,6 +205,9 @@ export type BioDataPDFProps = {
   // Mission
   missionName?: string;
   programTitle?: string;
+  // Reviewer names (populated after approval)
+  lmdReviewerName?: string;
+  directorReviewerName?: string;
 };
 
 function LabelValue({ label, value }: { label: string; value?: string }) {
@@ -285,6 +288,8 @@ export function BioDataPDF({
   badHabits,
   missionName,
   programTitle,
+  lmdReviewerName,
+  directorReviewerName,
 }: BioDataPDFProps) {
   const formatDate = (d?: string) =>
     d
@@ -524,7 +529,7 @@ export function BioDataPDF({
         {/* ── Education ── */}
         <View style={styles.section}>
           <SectionTitle title="3. EDUCATIONAL BACKGROUND" />
-          {educationEntries && educationEntries.length > 0 ? (
+          {Array.isArray(educationEntries) && educationEntries.length > 0 ? (
             educationEntries.map((e, i) => (
               <View key={i} style={{ marginBottom: 4 }}>
                 <Row3
@@ -570,6 +575,16 @@ export function BioDataPDF({
           {/* Signature row */}
           <View style={styles.footerSignatures}>
             <View style={styles.footerCol}>
+              <Text
+                style={{
+                  fontSize: 9,
+                  fontFamily: "Helvetica-Oblique",
+                  color: "#111",
+                  marginBottom: 4,
+                }}
+              >
+                {applicantFullName}
+              </Text>
               <View
                 style={{
                   borderTopWidth: 0.5,
@@ -581,6 +596,18 @@ export function BioDataPDF({
               <Text style={styles.footerLabel}>Applicant Signature & Date</Text>
             </View>
             <View style={styles.footerCol}>
+              {lmdReviewerName && (
+                <Text
+                  style={{
+                    fontSize: 9,
+                    fontFamily: "Helvetica-Oblique",
+                    color: "#111",
+                    marginBottom: 4,
+                  }}
+                >
+                  {lmdReviewerName}
+                </Text>
+              )}
               <View
                 style={{
                   borderTopWidth: 0.5,
@@ -590,6 +617,29 @@ export function BioDataPDF({
                 }}
               />
               <Text style={styles.footerLabel}>LMD Signature & Date</Text>
+            </View>
+            <View style={styles.footerCol}>
+              {directorReviewerName && (
+                <Text
+                  style={{
+                    fontSize: 9,
+                    fontFamily: "Helvetica-Oblique",
+                    color: "#111",
+                    marginBottom: 4,
+                  }}
+                >
+                  {directorReviewerName}
+                </Text>
+              )}
+              <View
+                style={{
+                  borderTopWidth: 0.5,
+                  borderTopColor: "#333",
+                  width: "70%",
+                  marginBottom: 4,
+                }}
+              />
+              <Text style={styles.footerLabel}>UD Signature & Date</Text>
             </View>
             <View style={styles.footerCol}>
               <View

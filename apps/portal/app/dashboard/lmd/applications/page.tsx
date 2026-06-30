@@ -34,6 +34,10 @@ type SearchParams = {
   status?: string;
   search?: string;
   page?: string;
+  year?: string;
+  gender?: string;
+  district?: string;
+  programId?: string;
 };
 
 const PAGE_SIZE = 20;
@@ -44,7 +48,7 @@ export default async function LmdApplicationsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const user = await requireRole(["LOCAL_DIRECTOR"]);
-  const { status, search, page } = await searchParams;
+  const { status, search, page, year, gender, district, programId } = await searchParams;
 
   const lmdUser = await prisma.user.findUnique({
     where: { id: user.id },
@@ -53,6 +57,15 @@ export default async function LmdApplicationsPage({
 
   const missionId = lmdUser?.directedMission?.id;
   const pageNum = Math.max(1, parseInt(page ?? "1", 10));
+  const yearNum = year ? parseInt(year, 10) : undefined;
+
+  // Fetch programs available within this mission's windows for filter
+  const programWindows = await prisma.applicationWindow.findMany({
+    where: { scopedToMissionId: missionId },
+    select: { programId: true, program: { select: { id: true, code: true, title: true } } },
+    distinct: ["programId"],
+  });
+  const availablePrograms = programWindows.map((w) => w.program);
 
   const where = {
     submittedFromMissionId: missionId,
@@ -60,15 +73,24 @@ export default async function LmdApplicationsPage({
     status: status
       ? { equals: status as ApplicationStatus }
       : { not: "DRAFT" as ApplicationStatus },
-    ...(search
-      ? {
-          applicantFullName: {
-            contains: search,
-            mode: "insensitive" as const,
-          },
-        }
-      : {}),
+    ...(search ? { applicantFullName: { contains: search, mode: "insensitive" as const } } : {}),
+    ...(yearNum ? { submittedAt: { gte: new Date(`${yearNum}-01-01`), lt: new Date(`${yearNum + 1}-01-01`) } } : {}),
+    ...(gender ? { applicantGender: gender as "MALE" | "FEMALE" } : {}),
+    ...(district ? { presentAddressDistrict: { contains: district, mode: "insensitive" as const } } : {}),
+    ...(programId ? { window: { programId } } : {}),
   };
+
+  // Year options from submitted apps for this mission
+  const yearRows = await prisma.application.findMany({
+    where: { submittedFromMissionId: missionId, deletedAt: null, status: { not: "DRAFT" } },
+    select: { submittedAt: true },
+    orderBy: { submittedAt: "desc" },
+  });
+  const availableYears = [...new Set(
+    yearRows
+      .filter((r) => r.submittedAt)
+      .map((r) => new Date(r.submittedAt!).getFullYear()),
+  )].sort((a, b) => b - a);
 
   const [applications, total] = await Promise.all([
     prisma.application.findMany({
@@ -107,12 +129,12 @@ export default async function LmdApplicationsPage({
       </div>
 
       {/* Filters */}
-      <form method="GET" className="flex flex-wrap gap-3">
+      <form method="GET" className="flex flex-wrap gap-2">
         <input
           type="text"
           name="search"
           defaultValue={search}
-          placeholder="Search by name..."
+          placeholder="Search by name…"
           className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
         />
         <select
@@ -121,29 +143,41 @@ export default async function LmdApplicationsPage({
           className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
         >
           <option value="">All Statuses</option>
-          {(
-            [
-              "SUBMITTED",
-              "UNDER_LMD_REVIEW",
-              "RETURNED_TO_APPLICANT",
-              "RECOMMENDED",
-              "RETURNED_TO_LMD",
-              "ACCEPTED",
-              "REJECTED",
-            ] as ApplicationStatus[]
-          ).map((s) => (
-            <option key={s} value={s}>
-              {STATUS_LABELS[s]}
-            </option>
+          {(["SUBMITTED","UNDER_LMD_REVIEW","RETURNED_TO_APPLICANT","RECOMMENDED","RETURNED_TO_LMD","ACCEPTED","REJECTED"] as ApplicationStatus[]).map((s) => (
+            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
           ))}
         </select>
+        {availableYears.length > 0 && (
+          <select name="year" defaultValue={year ?? ""} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500">
+            <option value="">All Years</option>
+            {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+        )}
+        <select name="gender" defaultValue={gender ?? ""} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500">
+          <option value="">All Genders</option>
+          <option value="MALE">Male</option>
+          <option value="FEMALE">Female</option>
+        </select>
+        {availablePrograms.length > 0 && (
+          <select name="programId" defaultValue={programId ?? ""} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500">
+            <option value="">All Programs</option>
+            {availablePrograms.map((p) => <option key={p.id} value={p.id}>{p.code}</option>)}
+          </select>
+        )}
+        <input
+          type="text"
+          name="district"
+          defaultValue={district}
+          placeholder="District…"
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500 w-32"
+        />
         <button
           type="submit"
           className="rounded-lg bg-teal-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
         >
           Filter
         </button>
-        {(status || search) && (
+        {(status || search || year || gender || district || programId) && (
           <Link
             href="/dashboard/lmd/applications"
             className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
@@ -154,7 +188,7 @@ export default async function LmdApplicationsPage({
       </form>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto overflow-hidden rounded-xl border border-gray-200 bg-white">
         {applications.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-sm text-gray-400">No applications found.</p>
@@ -206,12 +240,28 @@ export default async function LmdApplicationsPage({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/dashboard/lmd/applications/${app.id}`}
-                      className="rounded-lg border border-teal-300 bg-white px-3 py-1 text-xs font-medium text-teal-700 hover:bg-teal-50 transition-colors"
-                    >
-                      Review
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link
+                        href={`/dashboard/lmd/applications/${app.id}/bio-data`}
+                        target="_blank"
+                        className="text-xs text-gray-500 hover:text-gray-700 hover:underline"
+                      >
+                        Bio-Data
+                      </Link>
+                      <Link
+                        href={`/dashboard/lmd/applications/${app.id}/print`}
+                        target="_blank"
+                        className="text-xs text-gray-500 hover:text-gray-700 hover:underline"
+                      >
+                        Print
+                      </Link>
+                      <Link
+                        href={`/dashboard/lmd/applications/${app.id}`}
+                        className="rounded-lg border border-teal-300 bg-white px-3 py-1 text-xs font-medium text-teal-700 hover:bg-teal-50 transition-colors"
+                      >
+                        Review
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -230,7 +280,7 @@ export default async function LmdApplicationsPage({
           <div className="flex gap-2">
             {pageNum > 1 && (
               <Link
-                href={`?${new URLSearchParams({ ...(status ? { status } : {}), ...(search ? { search } : {}), page: String(pageNum - 1) })}`}
+                href={`?${new URLSearchParams({ ...(status ? { status } : {}), ...(search ? { search } : {}), ...(year ? { year } : {}), ...(gender ? { gender } : {}), ...(district ? { district } : {}), ...(programId ? { programId } : {}), page: String(pageNum - 1) })}`}
                 className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
               >
                 ← Prev
@@ -238,7 +288,7 @@ export default async function LmdApplicationsPage({
             )}
             {pageNum < totalPages && (
               <Link
-                href={`?${new URLSearchParams({ ...(status ? { status } : {}), ...(search ? { search } : {}), page: String(pageNum + 1) })}`}
+                href={`?${new URLSearchParams({ ...(status ? { status } : {}), ...(search ? { search } : {}), ...(year ? { year } : {}), ...(gender ? { gender } : {}), ...(district ? { district } : {}), ...(programId ? { programId } : {}), page: String(pageNum + 1) })}`}
                 className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
               >
                 Next →

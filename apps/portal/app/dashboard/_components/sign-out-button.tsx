@@ -7,7 +7,8 @@ export default function SignOutButton() {
     <form action={logoutAction}>
       <button
         type="submit"
-        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs transition-colors hover:bg-gray-100 hover:text-gray-900"
+        style={{ color: "var(--dash-sb-sub)" }}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

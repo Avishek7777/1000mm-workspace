@@ -41,7 +41,7 @@ export default async function AnnouncementsPage() {
           </p>
         </div>
         <Link
-          href="/dashboard/announcements/new"
+          href="/dashboard/news/announcements/new"
           className="inline-flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
         >
           <svg
@@ -65,7 +65,7 @@ export default async function AnnouncementsPage() {
         <div className="rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center">
           <p className="text-sm text-gray-400">No announcements yet.</p>
           <Link
-            href="/dashboard/announcements/new"
+            href="/dashboard/news/announcements/new"
             className="mt-2 inline-block text-xs text-teal-600 hover:underline"
           >
             Create your first announcement →

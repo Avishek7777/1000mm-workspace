@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useActionState, useEffect } from "react";
+import { useState, useTransition, useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   openWindowAction,
@@ -8,13 +8,14 @@ import {
   archiveWindowAction,
   editProgramAction,
 } from "@/actions/programs";
+import { ordinal } from "@/lib/utils";
 
 // ── Window action panel ───────────────────────────────────────────────────────
 
 export function WindowPanel({
   windowId,
   state,
-  programId,
+  programId: _programId,
 }: {
   windowId: string;
   state: string;
@@ -23,7 +24,7 @@ export function WindowPanel({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   async function handle(action: "open" | "close" | "archive") {
     setLoading(true);
@@ -102,6 +103,7 @@ type Program = {
   locationBangla: string | null;
   targetIntake: number;
   maxIntake: number | null;
+  batch: number | null;
 };
 
 const CATEGORIES = [
@@ -113,15 +115,22 @@ const CATEGORIES = [
 
 export function ProgramEditForm({ program }: { program: Program }) {
   const router = useRouter();
+  const [, startTransition] = useTransition();
+  const [batchValue, setBatchValue] = useState<string>(program.batch ? String(program.batch) : "");
 
   const boundAction = editProgramAction.bind(null, program.id);
   const [state, action, pending] = useActionState(boundAction, { ok: false });
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
-    if (state.ok) {
-      router.refresh();
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
     }
-  }, [state.ok]);
+    if (state.ok) {
+      startTransition(() => router.refresh());
+    }
+  }, [state]);
 
   const e = state.fieldErrors ?? {};
 
@@ -138,7 +147,7 @@ export function ProgramEditForm({ program }: { program: Program }) {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-700">
             Category <span className="text-red-500">*</span>
@@ -169,6 +178,27 @@ export function ProgramEditForm({ program }: { program: Program }) {
           {e.targetIntake && (
             <p className="mt-0.5 text-xs text-red-500">{e.targetIntake}</p>
           )}
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-700">
+            Batch <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="number"
+            name="batch"
+            value={batchValue}
+            onChange={(e) => setBatchValue(e.target.value)}
+            placeholder="e.g. 29"
+            min={1}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500"
+          />
+          {e.batch ? (
+            <p className="mt-0.5 text-xs text-red-500">{e.batch}</p>
+          ) : batchValue ? (
+            <p className="mt-0.5 text-xs text-teal-600">
+              Will display as: <strong>{ordinal(Number(batchValue))} Batch</strong>
+            </p>
+          ) : null}
         </div>
       </div>
 

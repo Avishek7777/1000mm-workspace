@@ -1,0 +1,122 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth/config";
+import { prisma } from "@1000mm/db";
+import * as XLSX from "xlsx";
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const ALLOWED = ["MAIN_DIRECTOR", "SYSTEM_ADMIN", "SECRETARY", "ASSOCIATE_DIRECTOR"] as const;
+
+export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return new NextResponse("Unauthorized", { status: 401 });
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, role: true, fullName: true },
+  });
+  if (!user || !ALLOWED.includes(user.role as typeof ALLOWED[number]))
+    return new NextResponse("Forbidden", { status: 403 });
+
+  const { searchParams } = new URL(req.url);
+  const yearParam      = searchParams.get("year")      ?? undefined;
+  const monthParam     = searchParams.get("month")     ?? undefined;
+  const genderParam    = searchParams.get("gender")    ?? undefined;
+  const programIdParam = searchParams.get("programId") ?? undefined;
+  const missionParam   = searchParams.get("mission")   ?? undefined;
+
+  const yearNum  = yearParam  ? parseInt(yearParam,  10) : undefined;
+  const monthNum = monthParam ? parseInt(monthParam, 10) : undefined;
+
+  let enrolledAtFilter: { gte: Date; lt: Date } | undefined;
+  if (yearNum && monthNum) {
+    enrolledAtFilter = { gte: new Date(yearNum, monthNum - 1, 1), lt: new Date(yearNum, monthNum, 1) };
+  } else if (yearNum) {
+    enrolledAtFilter = { gte: new Date(yearNum, 0, 1), lt: new Date(yearNum + 1, 0, 1) };
+  } else if (monthNum) {
+    const cy = new Date().getFullYear();
+    enrolledAtFilter = { gte: new Date(cy, monthNum - 1, 1), lt: new Date(cy, monthNum, 1) };
+  }
+
+  const enrollments = await prisma.programEnrollment.findMany({
+    where: {
+      deletedAt: null,
+      application: {
+        status: "ACCEPTED",
+        ...(genderParam === "MALE" || genderParam === "FEMALE" ? { applicantGender: genderParam } : {}),
+        ...(missionParam ? { submittedFromMission: { code: missionParam } } : {}),
+      },
+      ...(programIdParam ? { programId: programIdParam } : {}),
+      ...(enrolledAtFilter ? { enrolledAt: enrolledAtFilter } : {}),
+    },
+    orderBy: [{ trainee: { homeMission: { code: "asc" } } }, { enrolledAt: "desc" }],
+    include: {
+      trainee: {
+        select: {
+          fullName: true,
+          fullNameBangla: true,
+          phone: true,
+          email: true,
+          homeMission: { select: { code: true, name: true } },
+        },
+      },
+      application: { select: { applicantGender: true, presentAddressDistrict: true, referenceNumber: true } },
+      program: { select: { code: true, title: true } },
+    },
+  });
+
+  const fmt = (d: Date) => new Date(d).toLocaleDateString("en-GB");
+
+  const rows = enrollments.map((e, i) => ({
+    "#":              i + 1,
+    "Name (English)": e.trainee.fullName,
+    "Name (Bangla)":  e.trainee.fullNameBangla ?? "",
+    "Reference No":   e.application?.referenceNumber ?? "",
+    "Mission":        e.trainee.homeMission?.code ?? "",
+    "Mission Name":   e.trainee.homeMission?.name ?? "",
+    "Program":        e.program.code,
+    "Program Title":  e.program.title,
+    "Enrolled Date":  fmt(e.enrolledAt),
+    "Gender":         e.application?.applicantGender === "MALE" ? "Male" : e.application?.applicantGender === "FEMALE" ? "Female" : "",
+    "District":       e.application?.presentAddressDistrict ?? "",
+    "Phone":          e.trainee.phone ?? "",
+    "Email":          e.trainee.email ?? "",
+  }));
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const colWidths = Object.keys(rows[0] ?? {}).map((key) => ({
+    wch: Math.max(key.length, ...rows.map((r) => String(r[key as keyof typeof r] ?? "").length)) + 2,
+  }));
+  ws["!cols"] = colWidths;
+  XLSX.utils.book_append_sheet(wb, ws, "Missionaries");
+
+  const filterLabel = [
+    missionParam ?? "All missions",
+    yearNum  ? String(yearNum)                        : null,
+    monthNum ? MONTHS[monthNum - 1]                   : null,
+    genderParam === "MALE" ? "Male" : genderParam === "FEMALE" ? "Female" : null,
+  ].filter(Boolean).join(" · ");
+
+  const summaryRows = [
+    { Summary: "1000 Missionary Movement Bangladesh", Value: "" },
+    { Summary: "Filter",          Value: filterLabel },
+    { Summary: "",                Value: "" },
+    { Summary: "Total",           Value: enrollments.length },
+    { Summary: "Male",            Value: enrollments.filter((e) => e.application?.applicantGender === "MALE").length },
+    { Summary: "Female",          Value: enrollments.filter((e) => e.application?.applicantGender === "FEMALE").length },
+    { Summary: "",                Value: "" },
+    { Summary: "Generated At",    Value: new Date().toLocaleString("en-GB") },
+    { Summary: "Generated By",    Value: user.fullName },
+  ];
+  const ws2 = XLSX.utils.json_to_sheet(summaryRows);
+  ws2["!cols"] = [{ wch: 30 }, { wch: 35 }];
+  XLSX.utils.book_append_sheet(wb, ws2, "Summary");
+
+  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  return new NextResponse(new Uint8Array(buffer), {
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": `attachment; filename="missionaries.xlsx"`,
+    },
+  });
+}

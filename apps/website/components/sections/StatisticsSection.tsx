@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 
 const stats = [
-  { value: 4962, label: "Baptisms", prefix: "", suffix: "+" },
+  { value: 4962, label: "Decisions", prefix: "", suffix: "+" },
   { value: 29, label: "Congregations Established", prefix: "", suffix: "+" },
   { value: 60, label: "Churches Built", prefix: "", suffix: "+" },
   { value: 4, label: "Sections Involved", prefix: "", suffix: "" },
@@ -191,7 +191,7 @@ export default function StatisticsSection() {
             className="text-4xl md:text-5xl font-bold text-white leading-tight"
             style={{ fontFamily: "Georgia, serif" }}
           >
-            34 Years of{" "}
+            29 Years of{" "}
             <span
               className="text-transparent bg-clip-text"
               style={{
@@ -206,7 +206,7 @@ export default function StatisticsSection() {
             className="text-white/50 mt-3 text-base max-w-md mx-auto"
             style={{ fontFamily: "Georgia, serif" }}
           >
-            From 1992 to 2026 — God&apos;s faithfulness in numbers.
+            From 1997 to 2026 — God&apos;s faithfulness in numbers.
           </p>
         </motion.div>
 

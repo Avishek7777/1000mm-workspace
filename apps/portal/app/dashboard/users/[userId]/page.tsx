@@ -29,7 +29,7 @@ export default async function UserDetailPage({
 }: {
   params: Promise<{ userId: string }>;
 }) {
-  await requireRole(["SYSTEM_ADMIN", "MAIN_DIRECTOR"]);
+  await requireRole(["SYSTEM_ADMIN"]);
   const session = await auth();
   const { userId } = await params;
 

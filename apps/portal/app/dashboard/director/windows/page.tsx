@@ -5,6 +5,8 @@ import { WindowActions } from "./_components/WindowActions";
 import { NewWindowButton } from "./_components/NewWindowButton";
 import { redirect } from "next/navigation";
 import { isSettingEnabled, SETTINGS } from "@/lib/settings";
+import { EditWindowButton } from "./_components/EditWindowButton";
+import { FilterBar } from "../../_components/FilterBar";
 
 const STATE_CONFIG = {
   OPEN: {
@@ -92,8 +94,8 @@ export default async function WindowsPage({
 }: {
   searchParams: Promise<{ state?: string; year?: string }>;
 }) {
-  const user = await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
-  if (user.role === "MAIN_DIRECTOR") {
+  const user = await requireRole(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
+  if (user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR") {
     const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_WINDOWS);
     if (!allowed) redirect("/dashboard/director");
   }
@@ -194,7 +196,7 @@ export default async function WindowsPage({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
           {
             label: "Open window",
@@ -225,44 +227,27 @@ export default async function WindowsPage({
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        {["", "OPEN", "ADVERTISING", "DRAFT", "CLOSED", "ARCHIVED"].map((s) => (
-          <Link
-            key={s}
-            href={`?${new URLSearchParams({ ...(s ? { state: s } : {}), ...(yearFilter ? { year: yearFilter } : {}) })}`}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              stateFilter === s || (!stateFilter && !s)
-                ? "border-teal-400 bg-teal-50 text-teal-800"
-                : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-            }`}
-          >
-            {s || "All"}
-          </Link>
-        ))}
-        <div className="ml-auto flex gap-2">
-          {years.map((y) => (
-            <Link
-              key={y}
-              href={`?${new URLSearchParams({ ...(stateFilter ? { state: stateFilter } : {}), year: String(y) })}`}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                yearFilter === String(y)
-                  ? "border-purple-400 bg-purple-50 text-purple-800"
-                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-              }`}
-            >
-              {y}
-            </Link>
-          ))}
-          {yearFilter && (
-            <Link
-              href={`?${new URLSearchParams(stateFilter ? { state: stateFilter } : {})}`}
-              className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-500 hover:border-gray-300"
-            >
-              ✕ clear year
-            </Link>
-          )}
-        </div>
-      </div>
+      <FilterBar
+        basePath="/dashboard/director/windows"
+        current={{ state: stateFilter ?? "", year: yearFilter ?? "" }}
+        filters={[
+          {
+            name: "state",
+            label: "State",
+            allLabel: "All states",
+            options: ["OPEN", "ADVERTISING", "DRAFT", "CLOSED", "ARCHIVED"].map((s) => ({
+              value: s,
+              label: s.charAt(0) + s.slice(1).toLowerCase(),
+            })),
+          },
+          {
+            name: "year",
+            label: "Year",
+            allLabel: "All years",
+            options: years.map((y) => ({ value: String(y), label: String(y) })),
+          },
+        ]}
+      />
 
       {filtered.length === 0 && (
         <div className="rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center">
@@ -368,7 +353,7 @@ export default async function WindowsPage({
                   </div>
 
                   {/* Stats */}
-                  <div className="mb-3 grid grid-cols-4 gap-3 rounded-lg bg-gray-50 p-3">
+                  <div className="mb-3 grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-3 sm:grid-cols-4">
                     {[
                       { label: "Applications", value: w._count.applications },
                       { label: "Target intake", value: w.targetIntake },
@@ -400,6 +385,7 @@ export default async function WindowsPage({
                       state={w.state}
                       programId={w.program.id}
                     />
+                    <EditWindowButton window={w} />
                     <Link
                       href={`/dashboard/director/applications?programId=${w.program.id}`}
                       className="ml-auto text-xs text-teal-600 hover:underline"
@@ -473,7 +459,7 @@ export default async function WindowsPage({
                     </div>
                   </div>
 
-                  <div className="mb-3 grid grid-cols-4 gap-3 rounded-lg bg-gray-50 p-3">
+                  <div className="mb-3 grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-3 sm:grid-cols-4">
                     {[
                       { label: "Applications", value: w._count.applications },
                       { label: "Target intake", value: w.targetIntake },
@@ -504,6 +490,7 @@ export default async function WindowsPage({
                       state={w.state}
                       programId={w.program.id}
                     />
+                    <EditWindowButton window={w} />
                     <Link
                       href={`/dashboard/director/applications?programId=${w.program.id}`}
                       className="ml-auto text-xs text-teal-600 hover:underline"

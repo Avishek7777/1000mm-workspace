@@ -11,14 +11,38 @@ import {
   MapPin,
   Calendar,
 } from "lucide-react";
-import { PROJECTS } from "@/lib/projects";
+
+export type Project = {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  location: string;
+  date: string;
+  images: string[];
+  tags: string[];
+  status: string;
+  goal?: string | null;
+  participants?: number | null;
+  highlight?: string | null;
+  body?: string | null;
+  budget?: string | null;
+  objectives?: string[];
+};
 
 const AUTOPLAY_MS = 5500;
+const IMG_INTERVAL = 3000;
 
-export default function CurrentProjectsSection() {
+export default function CurrentProjectsSection({
+  projects,
+}: {
+  projects: Project[];
+}) {
   const [current, setCurrent] = useState(0);
+  const [currentImg, setCurrentImg] = useState(0);
   const [paused, setPaused] = useState(false);
-  const total = PROJECTS.length;
+  const total = projects.length;
 
   const next = useCallback(() => setCurrent((c) => (c + 1) % total), [total]);
   const prev = () => setCurrent((c) => (c - 1 + total) % total);
@@ -29,7 +53,20 @@ export default function CurrentProjectsSection() {
     return () => clearInterval(t);
   }, [paused, next, total]);
 
-  const project = PROJECTS[current];
+  const project = projects[current];
+  const imgCount = project?.images?.length ?? 1;
+
+  // Reset image index when project changes
+  useEffect(() => { setCurrentImg(0); }, [current]);
+
+  // Cycle through images within the current project
+  useEffect(() => {
+    if (paused || imgCount <= 1) return;
+    const t = setInterval(() => setCurrentImg((i) => (i + 1) % imgCount), IMG_INTERVAL);
+    return () => clearInterval(t);
+  }, [paused, imgCount, current]);
+
+  if (!project) return null;
 
   return (
     <section className="bg-white py-20 border-y border-amber-100">
@@ -93,13 +130,24 @@ export default function CurrentProjectsSection() {
               transition={{ duration: 0.65, ease: "easeInOut" }}
               className="absolute inset-0"
             >
-              <Image
-                src={project.image}
-                alt={project.title}
-                fill
-                className="object-cover object-center"
-                priority={current === 0}
-              />
+              <AnimatePresence mode="sync">
+                <motion.div
+                  key={`${current}-${currentImg}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.8 }}
+                  className="absolute inset-0"
+                >
+                  <Image
+                    src={project.images[currentImg] ?? project.images[0]}
+                    alt={project.title}
+                    fill
+                    className="object-cover object-center"
+                    priority={current === 0 && currentImg === 0}
+                  />
+                </motion.div>
+              </AnimatePresence>
               <div
                 className="absolute inset-0"
                 style={{
@@ -215,6 +263,25 @@ export default function CurrentProjectsSection() {
             </motion.div>
           </AnimatePresence>
 
+          {/* Image dots — shown when current project has multiple images */}
+          {imgCount > 1 && (
+            <div className="absolute bottom-6 right-6 z-10 flex items-center gap-1.5">
+              {project.images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentImg(i)}
+                  aria-label={`Image ${i + 1}`}
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width: i === currentImg ? "18px" : "6px",
+                    height: "6px",
+                    background: i === currentImg ? "#f97316" : "rgba(255,255,255,0.4)",
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Prev / Next */}
           {total > 1 && (
             <>
@@ -263,7 +330,7 @@ export default function CurrentProjectsSection() {
         {/* Dots */}
         {total > 1 && (
           <div className="flex items-center justify-center gap-2.5 mt-5">
-            {PROJECTS.map((_, i) => (
+            {projects.map((_, i) => (
               <button
                 key={i}
                 onClick={() => {

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ProgramEditForm, WindowPanel } from "./_components/ProgramComponents";
 import { PublishToggle } from "../_components/PublishToggle";
+import { TopicsPanel } from "./_components/TopicsPanel";
 
 const CATEGORY_LABELS: Record<string, string> = {
   SPIRITUAL: "Spiritual",
@@ -46,7 +47,7 @@ export default async function ProgramDetailPage({
 }: {
   params: Promise<{ programId: string }>;
 }) {
-  await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+  await requireRole(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
   const { programId } = await params;
 
   const program = await prisma.trainingProgram.findFirst({
@@ -68,17 +69,34 @@ export default async function ProgramDetailPage({
           certificateIssued: true,
         },
       },
+      topics: {
+        where: { deletedAt: null },
+        orderBy: { order: "asc" },
+        select: {
+          id: true,
+          title: true,
+          order: true,
+          trainer: { select: { id: true, fullName: true } },
+        },
+      },
       _count: { select: { fieldReports: true } },
     },
   });
 
   if (!program) redirect("/dashboard/director/programs");
 
-  const missions = await prisma.localMission.findMany({
-    where: { deletedAt: null },
-    orderBy: { code: "asc" },
-    select: { id: true, code: true, name: true },
-  });
+  const [missions, allTrainers] = await Promise.all([
+    prisma.localMission.findMany({
+      where: { deletedAt: null },
+      orderBy: { code: "asc" },
+      select: { id: true, code: true, name: true },
+    }),
+    prisma.user.findMany({
+      where: { role: "TRAINER", isActive: true, deletedAt: null },
+      orderBy: { fullName: "asc" },
+      select: { id: true, fullName: true, homeMission: { select: { code: true } } },
+    }),
+  ]);
 
   const activeCount = await prisma.trainingProgram.count({
     where: { isPublished: true, deletedAt: null },
@@ -231,6 +249,37 @@ export default async function ProgramDetailPage({
           (w) => !["ARCHIVED"].includes(w.state),
         ) && <CreateWindowSection programId={program.id} missions={missions} />}
       </div>
+
+      {/* Training content quick links */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Link
+          href={`/dashboard/director/programs/${program.id}/assignments`}
+          className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 hover:border-teal-300 hover:shadow-sm transition-all group"
+        >
+          <div>
+            <p className="text-sm font-semibold text-gray-900 group-hover:text-teal-700">Assignments</p>
+            <p className="text-xs text-gray-400 mt-0.5">View all trainee assignment submissions</p>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 group-hover:text-teal-500"><polyline points="9 18 15 12 9 6" /></svg>
+        </Link>
+        <Link
+          href="/dashboard/resources"
+          className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 hover:border-violet-300 hover:shadow-sm transition-all group"
+        >
+          <div>
+            <p className="text-sm font-semibold text-gray-900 group-hover:text-violet-700">Resources</p>
+            <p className="text-xs text-gray-400 mt-0.5">Manage training materials and files</p>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 group-hover:text-violet-500"><polyline points="9 18 15 12 9 6" /></svg>
+        </Link>
+      </div>
+
+      {/* Topics & Trainers */}
+      <TopicsPanel
+        programId={program.id}
+        topics={program.topics}
+        trainers={allTrainers}
+      />
 
       {/* Edit program form */}
       <div className="rounded-xl border border-gray-200 bg-white p-5">

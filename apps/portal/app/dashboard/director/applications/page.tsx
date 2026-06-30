@@ -3,15 +3,7 @@ import { prisma } from "@1000mm/db";
 import Link from "next/link";
 import type { ApplicationStatus } from "@1000mm/db";
 import { ExportButtons } from "@/app/dashboard/_components/ExportButtons";
-
-// In the page header JSX:
-<div className="flex items-center justify-between">
-  <div>
-    <h1 className="text-lg font-semibold text-gray-900">Applications</h1>
-    {/* ... subtitle */}
-  </div>
-  <ExportButtons />
-</div>;
+import { PrintButton } from "@/components/PrintButton";
 
 const STATUS_LABELS: Record<ApplicationStatus, string> = {
   DRAFT: "Draft",
@@ -59,18 +51,26 @@ type SearchParams = {
   status?: string;
   mission?: string;
   search?: string;
+  year?: string;
   page?: string;
 };
 
 const PAGE_SIZE = 20;
+
+// Year dropdown range: current year back to 2023 (self-maintaining).
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from(
+  { length: CURRENT_YEAR - 2023 + 1 },
+  (_, i) => CURRENT_YEAR - i,
+);
 
 export default async function DirectorApplicationsPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
-  const { status, mission, search, page } = await searchParams;
+  await requireRole(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
+  const { status, mission, search, year, page } = await searchParams;
   const pageNum = Math.max(1, parseInt(page ?? "1", 10));
 
   // Fetch missions for filter dropdown
@@ -84,6 +84,9 @@ export default async function DirectorApplicationsPage({
     ? missions.find((m) => m.code === mission)?.id
     : undefined;
 
+  const yearNum = year ? parseInt(year, 10) : NaN;
+  const hasYear = !Number.isNaN(yearNum);
+
   const where = {
     deletedAt: null as null,
     // Default: show all post-LMD statuses; override with specific filter
@@ -94,6 +97,14 @@ export default async function DirectorApplicationsPage({
     ...(search
       ? {
           applicantFullName: { contains: search, mode: "insensitive" as const },
+        }
+      : {}),
+    ...(hasYear
+      ? {
+          submittedAt: {
+            gte: new Date(yearNum, 0, 1),
+            lt: new Date(yearNum + 1, 0, 1),
+          },
         }
       : {}),
   };
@@ -132,6 +143,19 @@ export default async function DirectorApplicationsPage({
     ...(status ? { status } : {}),
     ...(mission ? { mission } : {}),
     ...(search ? { search } : {}),
+    ...(year ? { year } : {}),
+  };
+
+  const hasActiveFilters = Boolean(status || mission || search || year);
+
+  // Filters to forward to the export routes so they export exactly what's shown.
+  // When no status is chosen, send the joined default set so the export's
+  // `{ in: [...] }` matches the page's `{ in: DIRECTOR_STATUSES }`.
+  const exportFilters = {
+    status: status ?? DIRECTOR_STATUSES.join(","),
+    mission,
+    search,
+    year,
   };
 
   return (
@@ -144,16 +168,28 @@ export default async function DirectorApplicationsPage({
             All missions · {total} result{total !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link
-          href="/dashboard/director"
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          ← Dashboard
-        </Link>
+        <div className="flex items-center gap-3">
+          <PrintButton label="Print List" />
+          <Link
+            href="/dashboard/director"
+            className="print:hidden text-sm text-gray-500 hover:text-gray-700"
+          >
+            ← Dashboard
+          </Link>
+        </div>
+      </div>
+
+      {/* Print-only org/date header */}
+      <div className="hidden print:block text-xs text-gray-500 -mt-4">
+        1000 Missionary Movement Bangladesh — Applications List
+        {status ? ` · ${STATUS_LABELS[status as ApplicationStatus] ?? status}` : " · Recommended & Above"}
+        {mission ? ` · ${mission}` : ""}
+        {year ? ` · ${year}` : ""} ·{" "}
+        {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
       </div>
 
       {/* Filters */}
-      <form method="GET" className="flex flex-wrap gap-3">
+      <form method="GET" className="print:hidden flex flex-wrap gap-3">
         <input
           type="text"
           name="search"
@@ -202,14 +238,31 @@ export default async function DirectorApplicationsPage({
           ))}
         </select>
 
+        {/* Year filter */}
+        <select
+          name="year"
+          defaultValue={year ?? ""}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
+        >
+          <option value="">All Years</option>
+          {YEAR_OPTIONS.map((y) => (
+            <option key={y} value={String(y)}>
+              {y}
+            </option>
+          ))}
+        </select>
+
         <button
           type="submit"
           className="rounded-lg bg-teal-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
         >
           Filter
         </button>
+        <div className="ms-auto">
+          <ExportButtons {...exportFilters} />
+        </div>
 
-        {(status || mission || search) && (
+        {hasActiveFilters && (
           <Link
             href="/dashboard/director/applications"
             className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
@@ -220,11 +273,11 @@ export default async function DirectorApplicationsPage({
       </form>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto overflow-hidden rounded-xl border border-gray-200 bg-white">
         {applications.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-sm text-gray-400">No applications found.</p>
-            {(status || mission || search) && (
+            {hasActiveFilters && (
               <Link
                 href="/dashboard/director/applications"
                 className="mt-2 inline-block text-xs text-teal-600 hover:underline"
@@ -309,17 +362,27 @@ export default async function DirectorApplicationsPage({
                         {STATUS_LABELS[app.status]}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/dashboard/director/applications/${app.id}`}
-                        className={`rounded-lg border px-3 py-1 text-xs font-medium transition-colors ${
-                          needsAction
-                            ? "border-teal-300 bg-white text-teal-700 hover:bg-teal-50"
-                            : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {needsAction ? "Review" : "View"}
-                      </Link>
+                    <td className="print:hidden px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/dashboard/director/applications/${app.id}`}
+                          className={`rounded-lg border px-3 py-1 text-xs font-medium transition-colors ${
+                            needsAction
+                              ? "border-teal-300 bg-white text-teal-700 hover:bg-teal-50"
+                              : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          {needsAction ? "Review" : "View"}
+                        </Link>
+                        <Link
+                          href={`/dashboard/director/applications/${app.id}/print`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                          Print
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -331,12 +394,12 @@ export default async function DirectorApplicationsPage({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="print:hidden flex items-center justify-between">
           <p className="text-xs text-gray-500">
             Showing {(pageNum - 1) * PAGE_SIZE + 1}–
             {Math.min(pageNum * PAGE_SIZE, total)} of {total}
           </p>
-          <ExportButtons />
+          <ExportButtons {...exportFilters} />
           <div className="flex gap-2">
             {pageNum > 1 && (
               <Link

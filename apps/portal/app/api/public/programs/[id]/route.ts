@@ -64,7 +64,7 @@ export async function GET(
   return NextResponse.json(program, {
     headers: {
       "Access-Control-Allow-Origin": WEBSITE_URL,
-      "Cache-Control": "public, s-maxage=120, stale-while-revalidate=60",
+      "Cache-Control": "no-store",
     },
   });
 }

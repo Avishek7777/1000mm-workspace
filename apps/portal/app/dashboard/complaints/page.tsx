@@ -43,7 +43,7 @@ export default async function ComplaintsPage() {
   // Only TRAINEE, MAIN_DIRECTOR, SYSTEM_ADMIN can access this page
   // LOCAL_DIRECTOR cannot see complaints
   const canSubmit = ["TRAINEE", "LOCAL_DIRECTOR"].includes(user.role);
-  const isStaff = ["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
+  const isStaff = ["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
 
   // Build query based on role
   let complaints: any[] = [];

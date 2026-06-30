@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { sendTrainerSetupEmail } from "@/lib/email";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -35,10 +36,10 @@ export async function approveTrainerApplicationAction(formData: FormData) {
   const sa = await requireSA();
 
   const applicationId = String(formData.get("applicationId") ?? "");
-  const homeMissionId = String(formData.get("homeMissionId") ?? "");
   const reviewNote = String(formData.get("reviewNote") ?? "").trim() || null;
+  const topicId = String(formData.get("topicId") ?? "").trim() || null;
 
-  if (!applicationId || !homeMissionId)
+  if (!applicationId)
     throw new Error("Missing required fields.");
 
   const application = await prisma.trainerApplication.findUnique({
@@ -48,41 +49,52 @@ export async function approveTrainerApplicationAction(formData: FormData) {
   if (application.status !== "PENDING")
     throw new Error("Application is no longer pending.");
 
-  // Check no user exists with this email already
+  // Check if a portal account already exists for this email
   const existingUser = await prisma.user.findUnique({
     where: { email: application.email },
   });
-  if (existingUser) throw new Error("A user with this email already exists.");
 
-  // 1. Create User (passwordHash is a placeholder — they'll set it via the link)
-  const placeholderHash = await bcrypt.hash(
-    crypto.randomBytes(32).toString("hex"),
-    12,
-  );
+  let newUser: { id: string };
+  let resetUrl: string | null = null;
 
-  const newUser = await prisma.user.create({
-    data: {
-      fullName: application.fullName,
-      email: application.email,
-      phone: application.phone ?? undefined,
-      passwordHash: placeholderHash,
-      role: "TRAINER",
-      homeMissionId,
-      isActive: false, // activated when they set their password
-    },
-  });
+  if (existingUser) {
+    if (existingUser.role !== "TRAINER") {
+      throw new Error(
+        `A portal account with this email already exists (current role: ${existingUser.role.replace(/_/g, " ")}). ` +
+          `Go to Users → find this person → change their role to Trainer first, then approve this application.`,
+      );
+    }
+    // Already a TRAINER — link their existing account without creating a duplicate
+    newUser = existingUser;
+  } else {
+    // 1. Create User (passwordHash is a placeholder — they'll set it via the link)
+    const placeholderHash = await bcrypt.hash(
+      crypto.randomBytes(32).toString("hex"),
+      12,
+    );
 
-  // 2. Create PasswordResetToken (expires in 7 days — generous for email delivery)
-  const rawToken = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    newUser = await prisma.user.create({
+      data: {
+        fullName: application.fullName,
+        email: application.email,
+        phone: application.phone ?? undefined,
+        passwordHash: placeholderHash,
+        role: "TRAINER",
+        isActive: true,
+        emailVerified: new Date(),
+      } as any,
+    });
 
-  await prisma.passwordResetToken.create({
-    data: {
-      token: rawToken,
-      userId: newUser.id,
-      expiresAt,
-    },
-  });
+    // 2. Create PasswordResetToken (expires in 7 days — generous for email delivery)
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await prisma.passwordResetToken.create({
+      data: { token: rawToken, userId: newUser.id, expiresAt },
+    });
+
+    resetUrl = `${process.env.NEXT_PUBLIC_PORTAL_URL}/reset-password?token=${rawToken}`;
+  }
 
   // 3. Update application
   await prisma.trainerApplication.update({
@@ -95,6 +107,20 @@ export async function approveTrainerApplicationAction(formData: FormData) {
       createdUserId: newUser.id,
     },
   });
+
+  // 3b. Optional: assign trainer to a program topic
+  if (topicId) {
+    const topic = await prisma.programTopic.findFirst({
+      where: { id: topicId, trainerId: null, deletedAt: null },
+      select: { id: true },
+    });
+    if (topic) {
+      await prisma.programTopic.update({
+        where: { id: topicId },
+        data: { trainerId: newUser.id },
+      });
+    }
+  }
 
   // 4. Audit log
   await prisma.auditLog.create({
@@ -109,11 +135,10 @@ export async function approveTrainerApplicationAction(formData: FormData) {
     },
   });
 
-  // 5. Email (wire to Resend — same pattern as password reset)
-  const resetUrl = `${process.env.NEXT_PUBLIC_PORTAL_URL}/reset-password?token=${rawToken}`;
-  console.log(
-    `[DEV EMAIL] To: ${application.email}\nSubject: Set up your 1000MM Trainer account\n\nHello ${application.fullName},\n\nYour trainer application has been approved. Click the link below to set your password and access your account:\n\n${resetUrl}\n\nThis link expires in 7 days.\n\n— 1000MM Team`,
-  );
+  // 5. Send trainer setup email
+  if (resetUrl) {
+    await sendTrainerSetupEmail(application.email, application.fullName, resetUrl);
+  }
 
   redirect("/dashboard/system-admin/trainer-applications");
 }
@@ -164,4 +189,83 @@ export async function rejectTrainerApplicationAction(formData: FormData) {
   );
 
   redirect("/dashboard/system-admin/trainer-applications");
+}
+
+// ── Save custom letter body + required docs ────────────────────────────────────
+
+export async function saveTrainerLetterAction(
+  _prev: { ok: boolean; error?: string },
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  await requireSA();
+
+  const applicationId = formData.get("applicationId")?.toString();
+  const letterType = formData.get("letterType")?.toString(); // "invitation" | "recommendation"
+  const body = formData.get("body")?.toString() ?? null;
+  const doc1 = formData.get("doc1")?.toString() || null;
+  const doc2 = formData.get("doc2")?.toString() || null;
+  const doc3 = formData.get("doc3")?.toString() || null;
+  const doc4 = formData.get("doc4")?.toString() || null;
+
+  if (!applicationId || !letterType) {
+    return { ok: false, error: "Missing required fields." };
+  }
+
+  const updateData =
+    letterType === "invitation"
+      ? {
+          invitationLetterBody: body,
+          requiredDoc1: doc1,
+          requiredDoc2: doc2,
+          requiredDoc3: doc3,
+          requiredDoc4: doc4,
+        }
+      : {
+          recommendationLetterBody: body,
+        };
+
+  await prisma.trainerApplication.update({
+    where: { id: applicationId },
+    data: updateData,
+  });
+
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath(`/dashboard/system-admin/trainer-applications/${applicationId}`);
+  return { ok: true };
+}
+
+// ── Attach / delete admin documents ──────────────────────────────────────────
+
+export async function attachTrainerDocumentAction(_: unknown, formData: FormData) {
+  const user = await requireSA();
+  const applicationId = formData.get("applicationId")?.toString();
+  const storageKey    = formData.get("storageKey")?.toString();
+  const fileName      = formData.get("fileName")?.toString();
+  const label         = formData.get("label")?.toString() || null;
+
+  if (!applicationId || !storageKey || !fileName) {
+    return { ok: false, error: "Missing required fields." };
+  }
+
+  await prisma.trainerApplicationAttachment.create({
+    data: { applicationId, storageKey, fileName, label, uploadedById: user.id },
+  });
+
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath(`/dashboard/system-admin/trainer-applications/${applicationId}`);
+  return { ok: true };
+}
+
+export async function deleteTrainerAttachmentAction(_: unknown, formData: FormData) {
+  await requireSA();
+  const attachmentId  = formData.get("attachmentId")?.toString();
+  const applicationId = formData.get("applicationId")?.toString();
+
+  if (!attachmentId || !applicationId) return { ok: false, error: "Missing id." };
+
+  await prisma.trainerApplicationAttachment.delete({ where: { id: attachmentId } });
+
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath(`/dashboard/system-admin/trainer-applications/${applicationId}`);
+  return { ok: true };
 }

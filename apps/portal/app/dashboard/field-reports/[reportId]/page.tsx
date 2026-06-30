@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
 import { CommentForm } from "./_components/CommentForm";
+import { PrintButton } from "@/components/PrintButton";
 
 const MONTHS = [
   "January",
@@ -72,7 +73,7 @@ export default async function FieldReportDetailPage({
   // Access control
   const isTrainee = user.role === "TRAINEE";
   const isLmd = user.role === "LOCAL_DIRECTOR";
-  const isStaff = ["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
+  const isStaff = ["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
   const isOwner = report.traineeId === user.id;
 
   // LMD can only see reports from their mission
@@ -99,6 +100,8 @@ export default async function FieldReportDetailPage({
     const map: Record<string, string> = {
       LOCAL_DIRECTOR: "Local Director",
       MAIN_DIRECTOR: "Union Director",
+      SECRETARY: "Secretary",
+      ASSOCIATE_DIRECTOR: "Associate Director",
       SYSTEM_ADMIN: "System Admin",
       TRAINER: "Trainer",
       TRAINEE: "Trainee",
@@ -108,21 +111,33 @@ export default async function FieldReportDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      {/* Print header */}
+      <div className="hidden print:block mb-4 border-b pb-3">
+        <p className="text-xs font-bold text-gray-900">1000 Missionary Movement Bangladesh — Field Report</p>
+        <p className="text-xs text-gray-600">{report.trainee.fullName} · {report.trainee.homeMission?.name ?? "—"} · {report.program.code}</p>
+        <p className="text-xs text-gray-500">{MONTHS[report.reportMonth - 1]} {report.reportYear} · Printed {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</p>
+      </div>
+
       <div>
-        <Link
-          href={backHref}
-          className="text-xs text-gray-500 hover:text-gray-700"
-        >
-          ← Back to Reports
-        </Link>
-        <div className="mt-1 flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-gray-900">
-            {MONTHS[report.reportMonth - 1]} {report.reportYear} — Field Report
-          </h1>
+        <div className="print:hidden flex items-center gap-3">
+          <Link
+            href={backHref}
+            className="text-xs text-gray-500 hover:text-gray-700"
+          >
+            ← Back to Reports
+          </Link>
         </div>
-        <p className="mt-0.5 text-sm text-gray-500">
-          {report.program.code} · {report.program.title}
-        </p>
+        <div className="mt-1 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-lg font-semibold text-gray-900">
+              {MONTHS[report.reportMonth - 1]} {report.reportYear} — Field Report
+            </h1>
+            <p className="mt-0.5 text-sm text-gray-500">
+              {report.program.code} · {report.program.title}
+            </p>
+          </div>
+          <PrintButton label="Print" />
+        </div>
       </div>
 
       {/* Worker info */}

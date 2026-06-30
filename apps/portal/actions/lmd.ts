@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth/config";
+import { requireDbUser } from "@/lib/auth/helpers";
 import { prisma } from "@1000mm/db";
 import { uploadToR2, r2Prefix } from "@/lib/r2";
 import { DocumentKind } from "@1000mm/db";
@@ -29,18 +29,10 @@ async function getClientIp(): Promise<string | null> {
 // Returns the LMD user + their directed mission id, or throws redirect.
 
 async function requireLmd() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    include: { directedMission: true },
-  });
-
-  if (!user || user.role !== "LOCAL_DIRECTOR") redirect("/dashboard");
-  if (!user.directedMission) redirect("/dashboard");
-
-  return { user, missionId: user.directedMission.id };
+  const user = await requireDbUser(["LOCAL_DIRECTOR"]);
+  const mission = await prisma.localMission.findFirst({ where: { directorId: user.id } });
+  if (!mission) redirect("/dashboard");
+  return { user, missionId: mission.id };
 }
 
 // ─── Guard: verify application belongs to this LMD's mission ─────────────────

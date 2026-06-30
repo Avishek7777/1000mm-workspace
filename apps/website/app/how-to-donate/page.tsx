@@ -19,15 +19,15 @@ import Footer from "@/components/sections/Footer";
 
 const tiers = [
   {
-    amount: "৳1,000",
-    usd: "~$10",
+    amount: "৳3,500",
+    usd: "~$35",
     label: "Seed a Week",
     description: "Covers a missionary's daily meals for one week in the field.",
     accent: "#007f98",
   },
   {
-    amount: "৳3,000",
-    usd: "~$30",
+    amount: "৳5,000",
+    usd: "~$50",
     label: "Equip a Month",
     description:
       "Provides training materials and field supplies for one missionary for a month.",
@@ -39,7 +39,7 @@ const tiers = [
     usd: "~$125",
     label: "Sponsor a Missionary",
     description:
-      "Fully supports one missionary for an entire year — training, travel, and field costs.",
+      "Fully supports one missionary for an entire month or for a year; make a custom amount — training, travel, and field costs.",
     accent: "#007f98",
   },
 ];
@@ -48,7 +48,7 @@ const paymentMethods = [
   {
     icon: Smartphone,
     name: "bKash",
-    detail: "01XXX-XXXXXX",
+    detail: "01324-333377",
     note: "Send Money · Reference: DONATE",
     color: "#E2136E",
     bg: "#fdf2f7",
@@ -56,7 +56,7 @@ const paymentMethods = [
   {
     icon: Smartphone,
     name: "Nagad",
-    detail: "01XXX-XXXXXX",
+    detail: "01324-333377",
     note: "Send Money · Reference: DONATE",
     color: "#F7941D",
     bg: "#fff8f0",
@@ -72,7 +72,7 @@ const paymentMethods = [
   {
     icon: Globe,
     name: "International",
-    detail: "General Conference",
+    detail: "SDA General Conference",
     note: "Check / Wire · BAUM 1000MM Project",
     color: "#6366f1",
     bg: "#f5f5ff",
@@ -80,7 +80,7 @@ const paymentMethods = [
 ];
 
 const impactStats = [
-  { value: "4,962", label: "Baptisms" },
+  { value: "4,962", label: "Decisions" },
   { value: "1,084", label: "Missionaries Sent" },
   { value: "60", label: "Churches Established" },
   { value: "4", label: "Sections Involved" },
@@ -492,7 +492,13 @@ export default function HowToDonatePage() {
             >
               After making your transfer, please send a screenshot of your
               transaction along with your name and contact number to our{" "}
-              <span className="text-teal-600 font-semibold">Facebook page</span>{" "}
+              <a
+                target="_blank"
+                href="https://www.facebook.com/1000mm.bd/"
+                className="text-teal-600 font-semibold"
+              >
+                Facebook page
+              </a>{" "}
               or email us at{" "}
               <span className="text-orange-500 font-semibold">
                 donate@1000mm.org.bd
@@ -892,7 +898,7 @@ export default function HowToDonatePage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
-                href="#donate"
+                href="/donate-now"
                 className="px-8 py-4 rounded-full font-bold text-white text-base hover:opacity-90 hover:scale-105 transition-all duration-300 shadow-lg"
                 style={{
                   background:

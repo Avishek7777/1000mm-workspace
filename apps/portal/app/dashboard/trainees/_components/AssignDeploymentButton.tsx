@@ -7,16 +7,19 @@ import { assignDeploymentAction } from "@/actions/trainees";
 export function AssignDeploymentButton({
   enrollmentId,
   traineeName,
+  currentLocation,
 }: {
   enrollmentId: string;
   traineeName: string;
+  currentLocation?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState(currentLocation ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const isEdit = Boolean(currentLocation);
 
   async function handle() {
     if (!location.trim()) {
@@ -39,10 +42,13 @@ export function AssignDeploymentButton({
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setLocation(currentLocation ?? "");
+          setOpen(true);
+        }}
         className="rounded border border-teal-300 bg-white px-2 py-0.5 text-[10px] font-medium text-teal-700 hover:bg-teal-50 transition-colors"
       >
-        Assign
+        {isEdit ? "Edit" : "Assign"}
       </button>
     );
   }
@@ -56,7 +62,7 @@ export function AssignDeploymentButton({
     >
       <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
         <h2 className="mb-1 text-sm font-semibold text-gray-900">
-          Assign Deployment Location
+          {isEdit ? "Edit Deployment Location" : "Assign Deployment Location"}
         </h2>
         <p className="mb-4 text-xs text-gray-500">{traineeName}</p>
 
@@ -90,7 +96,7 @@ export function AssignDeploymentButton({
             disabled={loading}
             className="rounded-lg bg-teal-700 px-4 py-1.5 text-xs font-medium text-white hover:bg-teal-800 disabled:opacity-60 transition-colors"
           >
-            {loading ? "Saving…" : "Assign"}
+            {loading ? "Saving…" : isEdit ? "Update" : "Assign"}
           </button>
         </div>
       </div>

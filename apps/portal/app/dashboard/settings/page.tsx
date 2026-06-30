@@ -1,6 +1,8 @@
 import { requireRole } from "@/lib/auth/helpers";
 import { getAllSettings, SETTING_KEYS } from "@/lib/settings";
 import { SettingsClient } from "./_components/SettingsClient";
+import { AiKeyForm } from "./_components/AiKeyForm";
+import { prisma } from "@1000mm/db";
 
 const SETTING_GROUPS = [
   {
@@ -43,12 +45,28 @@ const SETTING_GROUPS = [
       },
     ],
   },
+  {
+    group: "LMD Permissions",
+    description: "Control what Local Mission Directors can access.",
+    items: [
+      {
+        key: SETTING_KEYS.LMD_ATTENDANCE_ENABLED,
+        label: "Attendance Scanning",
+        description: "Allow LMDs to access the QR attendance scanning feature.",
+      },
+    ],
+  },
 ];
 
 export default async function SettingsPage() {
   await requireRole(["SYSTEM_ADMIN"]);
 
-  const settings = await getAllSettings();
+  const [settings, aiKeySetting] = await Promise.all([
+    getAllSettings(),
+    prisma.systemSetting.findUnique({ where: { key: SETTING_KEYS.AI_API_KEY } }),
+  ]);
+
+  const aiKey = typeof aiKeySetting?.value === "string" ? aiKeySetting.value : "";
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -60,6 +78,7 @@ export default async function SettingsPage() {
       </div>
 
       <SettingsClient groups={SETTING_GROUPS} initialSettings={settings} />
+      <AiKeyForm currentKey={aiKey} />
     </div>
   );
 }

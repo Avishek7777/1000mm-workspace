@@ -428,6 +428,26 @@ export async function submitApplicationAction(
   });
   if (!app) return { ok: false, error: "Application not found." };
 
+  // Enforce Parent's Consent for under-21 applicants
+  if (app.applicantAge < 21) {
+    const consentFile = formData.get("parentsConsent") as File | null;
+    const hasNewFile = consentFile && consentFile.size > 0;
+    if (!hasNewFile) {
+      const existingConsent = await prisma.applicationDocument.findFirst({
+        where: { applicationId, kind: DocumentKind.PARENTS_CONSENT },
+      });
+      if (!existingConsent) {
+        return {
+          ok: false,
+          fieldErrors: {
+            parentsConsent:
+              "Parent's Consent Form is required for applicants under 21.",
+          },
+        };
+      }
+    }
+  }
+
   const currentFormData = (app.formData as Record<string, unknown>) ?? {};
   const mergedFormData = {
     ...currentFormData,
@@ -449,7 +469,6 @@ export async function submitApplicationAction(
     ["parentPassportPhoto", DocumentKind.PARENT_PASSPORT_PHOTO],
     ["baptismCertificate", DocumentKind.BAPTISM_CERTIFICATE],
     ["parentsConsent", DocumentKind.PARENTS_CONSENT],
-    ["letterOfIntent", DocumentKind.LETTER_OF_INTENT],
   ];
   for (const [fieldName, kind] of docKinds) {
     const file = formData.get(fieldName) as File | null;

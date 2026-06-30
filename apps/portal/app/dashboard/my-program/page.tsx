@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
+import { AvailablePrograms } from "./_components/AvailablePrograms";
+import { WithdrawApplicationButton } from "./_components/WithdrawApplicationButton";
 
 function formatDate(d: Date | null | undefined) {
   if (!d) return "—";
@@ -53,13 +55,9 @@ export default async function MyProgramPage() {
   });
   if (!user || user.role !== "TRAINEE") redirect("/dashboard");
 
-  // Get latest enrollment with ACCEPTED application
-  const enrollment = await prisma.programEnrollment.findFirst({
-    where: {
-      traineeId: user.id,
-      deletedAt: null,
-      application: { status: "ACCEPTED" },
-    },
+  // ── Enrolled (placed by SA/UD) — drives the full program card below ──
+  const enrolled = await prisma.programEnrollment.findFirst({
+    where: { traineeId: user.id, deletedAt: null, status: "ENROLLED" },
     include: {
       program: true,
       application: {
@@ -74,26 +72,123 @@ export default async function MyProgramPage() {
     orderBy: { enrolledAt: "desc" },
   });
 
-  // Field report stats
-  const reportCount = enrollment
-    ? await prisma.fieldReport.count({ where: { traineeId: user.id } })
-    : 0;
+  // ── Pending application (consent given, awaiting placement) ──
+  const applied = enrolled
+    ? null
+    : await prisma.programEnrollment.findFirst({
+        where: { traineeId: user.id, deletedAt: null, status: "APPLIED" },
+        include: { program: true },
+      });
 
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1;
-  const currentYear = now.getFullYear();
-  const hasThisMonthReport = enrollment
-    ? await prisma.fieldReport.findFirst({
+  // ── Accepted into the system? (basis for applying) ──
+  const acceptedApp =
+    enrolled || applied
+      ? null
+      : await prisma.application.findFirst({
+          where: { applicantId: user.id, status: "ACCEPTED", deletedAt: null },
+        });
+
+  // ── Active programs available to apply to ──
+  const activePrograms = acceptedApp
+    ? await prisma.trainingProgram.findMany({
         where: {
-          traineeId: user.id,
-          reportMonth: currentMonth,
-          reportYear: currentYear,
+          deletedAt: null,
+          isPublished: true,
+          endDate: { gte: new Date() },
+        },
+        orderBy: { startDate: "asc" },
+        select: {
+          id: true,
+          code: true,
+          title: true,
+          category: true,
+          location: true,
+          startDate: true,
+          endDate: true,
+          targetIntake: true,
+          _count: {
+            select: {
+              enrollments: { where: { status: "ENROLLED", deletedAt: null } },
+            },
+          },
         },
       })
-    : null;
+    : [];
 
-  // If no enrollment, show waiting state
-  if (!enrollment) {
+  // ── State: applied, awaiting placement ──
+  if (applied) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">My Program</h1>
+          <p className="mt-0.5 text-sm text-gray-500">
+            Your program application
+          </p>
+        </div>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="inline-flex h-2 w-2 rounded-full bg-amber-500" />
+            <p className="text-sm font-semibold text-amber-800">
+              Application pending review
+            </p>
+          </div>
+          <p className="text-xs leading-relaxed text-amber-700">
+            You've applied to{" "}
+            <span className="font-medium">{applied.program.title}</span>{" "}
+            <span className="font-mono">({applied.program.code})</span>.
+            Leadership will review and place you into the program soon. You'll
+            see your full program details here once you're enrolled.
+          </p>
+          <p className="mt-2 text-[11px] text-amber-600">
+            Applied on {formatDate(applied.appliedAt)}
+          </p>
+          <div className="mt-4">
+            <WithdrawApplicationButton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── State: accepted into the system, hasn't applied yet → browse + apply ──
+  if (acceptedApp) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">My Program</h1>
+          <p className="mt-0.5 text-sm text-gray-500">
+            You've been accepted — apply to an active program to get started.
+          </p>
+        </div>
+        <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
+          <p className="text-xs text-teal-800">
+            Your application was accepted. Choose a program below and apply.
+            Leadership will then place you into the program.
+          </p>
+        </div>
+        <div>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Active Programs
+          </p>
+          <AvailablePrograms
+            programs={activePrograms.map((p) => ({
+              id: p.id,
+              code: p.code,
+              title: p.title,
+              category: p.category,
+              location: p.location,
+              startDate: p.startDate,
+              endDate: p.endDate,
+              spotsLeft: p.targetIntake - p._count.enrollments,
+            }))}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ── State: not accepted yet → waiting ──
+  if (!enrolled) {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <div>
@@ -117,11 +212,11 @@ export default async function MyProgramPage() {
             />
           </svg>
           <p className="text-sm font-medium text-gray-600">
-            Not enrolled in a program yet
+            No active program yet
           </p>
           <p className="mt-1 text-xs text-gray-400">
-            Your program details will appear here once your application has been
-            accepted and you've been enrolled.
+            Once your application has been accepted, you'll be able to apply to
+            an active program from here.
           </p>
           <Link
             href="/dashboard/my-application"
@@ -133,6 +228,24 @@ export default async function MyProgramPage() {
       </div>
     );
   }
+
+  // ── State: enrolled → full program card ──
+  const enrollment = enrolled;
+
+  // Field report stats (enrolled only)
+  const reportCount = await prisma.fieldReport.count({
+    where: { traineeId: user.id },
+  });
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+  const hasThisMonthReport = await prisma.fieldReport.findFirst({
+    where: {
+      traineeId: user.id,
+      reportMonth: currentMonth,
+      reportYear: currentYear,
+    },
+  });
 
   const program = enrollment.program;
   const status = programStatus(program.startDate, program.endDate);

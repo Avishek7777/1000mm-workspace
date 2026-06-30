@@ -96,13 +96,16 @@ export default async function LmdApplicationDetailPage({
   }
 
   const fd = (app.formData as Record<string, unknown>) ?? {};
-  const educationEntries =
-    (fd.education as Array<{
-      degree: string;
-      institutionName: string;
-      gpa: string;
-      passingYear: string;
-    }> | null) ?? [];
+  let rawEducation = fd.education;
+  if (typeof rawEducation === "string") {
+    try { rawEducation = JSON.parse(rawEducation); } catch { rawEducation = []; }
+  }
+  const educationEntries = (Array.isArray(rawEducation) ? rawEducation : []) as Array<{
+    degree: string;
+    institutionName: string;
+    gpa: string;
+    passingYear: string;
+  }>;
 
   const presentAddress = [
     app.presentAddressVillage,
@@ -186,15 +189,40 @@ export default async function LmdApplicationDetailPage({
             </span>
           </div>
         </div>
-        {profilePhotoUrl && (
-          <div className="h-16 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-            <img
-              src={profilePhotoUrl}
-              alt="Applicant"
-              className="h-full w-full object-cover"
-            />
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          {/* Print actions */}
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/dashboard/lmd/applications/${applicationId}/bio-data`}
+              target="_blank"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" />
+              </svg>
+              Bio-Data
+            </Link>
+            <Link
+              href={`/dashboard/lmd/applications/${applicationId}/print`}
+              target="_blank"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" />
+              </svg>
+              Print
+            </Link>
           </div>
-        )}
+          {profilePhotoUrl && (
+            <div className="h-16 w-12 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+              <img src={profilePhotoUrl} alt="Applicant" className="h-full w-full object-cover" />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── SECTION 1: Personal Details ── */}
@@ -323,7 +351,7 @@ export default async function LmdApplicationDetailPage({
               {(fd.missionaryDesire as string) || "—"}
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-4 border-t border-gray-100 pt-3">
+          <div className="grid grid-cols-1 gap-4 border-t border-gray-100 pt-3 sm:grid-cols-3">
             <Field
               label="Criminal / Court Record"
               value={

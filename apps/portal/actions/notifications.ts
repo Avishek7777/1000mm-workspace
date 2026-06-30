@@ -39,3 +39,31 @@ export async function markAllNotificationsReadAction() {
   revalidatePath("/dashboard/notifications");
   revalidatePath("/dashboard");
 }
+
+export async function clearReadNotificationsAction() {
+  const session = await auth();
+  if (!session?.user?.id) return;
+
+  await prisma.notification.deleteMany({
+    where: {
+      userId: session.user.id,
+      channel: "IN_APP",
+      readAt: { not: null },
+    },
+  });
+
+  revalidatePath("/dashboard/notifications");
+  revalidatePath("/dashboard");
+}
+
+export async function clearAllNotificationsAction() {
+  const session = await auth();
+  if (!session?.user?.id) return;
+
+  await prisma.notification.deleteMany({
+    where: { userId: session.user.id, channel: "IN_APP" },
+  });
+
+  revalidatePath("/dashboard/notifications");
+  revalidatePath("/dashboard");
+}

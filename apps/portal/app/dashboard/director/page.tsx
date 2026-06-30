@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth/helpers";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
+import { AiInsightsCard } from "./_components/AiInsightsCard";
 
 const MISSION_COLORS: Record<
   string,
@@ -33,7 +34,7 @@ const MISSION_COLORS: Record<
 };
 
 export default async function DirectorDashboardPage() {
-  const user = await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+  const user = await requireRole(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
   // ⚠ No settings gate here — gates belong on the pages they protect,
   //   never on the page you'd redirect TO (causes infinite loop).
 
@@ -398,6 +399,9 @@ export default async function DirectorDashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* AI Executive Insights */}
+      <AiInsightsCard />
 
       {/* Announcements */}
       <div className="rounded-xl border border-gray-200 bg-white p-5">

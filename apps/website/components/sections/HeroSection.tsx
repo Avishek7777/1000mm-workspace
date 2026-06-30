@@ -51,7 +51,7 @@ export default function HeroSection() {
             className="text-orange-300 text-sm font-semibold tracking-[0.2em] uppercase"
             style={{ fontFamily: "Georgia, serif" }}
           >
-            Bangladesh · 1992 – 2026
+            Bangladesh · 1997 – 2026
           </span>
           <span className="h-px w-10 bg-orange-400" />
         </motion.div>
@@ -89,7 +89,7 @@ export default function HeroSection() {
           <span className="text-orange-300 font-semibold">
             Seventh-day Adventist Church
           </span>{" "}
-          raising up committed young believers to carry the Gospel across
+          raising up committed young believers to carry the Love of God across
           Bangladesh and beyond. We are looking for passionate, dedicated
           individuals ready to serve.
         </motion.p>

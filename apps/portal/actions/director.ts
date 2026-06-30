@@ -3,8 +3,8 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
+import { requireDbUser } from "@/lib/auth/helpers";
 import { headers } from "next/headers";
 
 export type ActionResult = {
@@ -24,18 +24,7 @@ async function getClientIp(): Promise<string | null> {
 }
 
 async function requireDirector() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-  });
-
-  if (!user || !["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role)) {
-    redirect("/dashboard");
-  }
-
-  return user;
+  return requireDbUser(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
 }
 
 async function getApplication(applicationId: string) {

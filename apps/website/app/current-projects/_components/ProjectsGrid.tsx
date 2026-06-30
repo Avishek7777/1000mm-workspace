@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, MapPin, Calendar } from "lucide-react";
-import type { Project } from "@/lib/projects";
+import type { Project } from "@/components/sections/CurrentProjectsSection";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
@@ -27,7 +27,7 @@ export default function ProjectsGrid({ projects }: { projects: Project[] }) {
   const showPlaceholder = projects.length % 2 !== 0;
 
   return (
-    <div className="grid md:grid-cols-2 gap-8">
+    <div className="grid md:grid-cols-2 gap-8 items-stretch">
       {projects.map((project, i) => (
         <motion.div
           key={project.slug}
@@ -36,19 +36,25 @@ export default function ProjectsGrid({ projects }: { projects: Project[] }) {
           whileInView="show"
           viewport={{ once: true }}
           variants={fadeUp}
+          className="h-full"
         >
           <Link
             href={`/current-projects/${project.slug}`}
-            className="group block rounded-3xl border border-amber-100 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
+            className="group flex h-full flex-col rounded-3xl border border-amber-100 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
           >
             {/* Image */}
-            <div className="relative h-56 overflow-hidden">
+            <div className="relative h-56 shrink-0 overflow-hidden">
               <Image
-                src={project.image}
+                src={project.images[0]}
                 alt={project.title}
                 fill
                 className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
               />
+              {project.images.length > 1 && (
+                <span className="absolute bottom-2 right-2 rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-semibold text-white">
+                  +{project.images.length - 1} more
+                </span>
+              )}
               <div
                 className="absolute inset-0"
                 style={{
@@ -72,7 +78,10 @@ export default function ProjectsGrid({ projects }: { projects: Project[] }) {
             </div>
 
             {/* Card body */}
-            <div className="p-7" style={{ background: "#fffdf8" }}>
+            <div
+              className="flex flex-1 flex-col p-7"
+              style={{ background: "#fffdf8" }}
+            >
               {/* Tags */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {project.tags.map((tag) => (
@@ -97,7 +106,7 @@ export default function ProjectsGrid({ projects }: { projects: Project[] }) {
                 {project.subtitle}
               </p>
               <h2
-                className="text-xl font-bold mb-3 leading-snug group-hover:text-transparent group-hover:bg-clip-text transition-all duration-300"
+                className="text-xl font-bold mb-3 leading-snug line-clamp-2 group-hover:text-transparent group-hover:bg-clip-text transition-all duration-300"
                 style={{
                   fontFamily: "Georgia, serif",
                   color: "#3b1f08",
@@ -107,14 +116,14 @@ export default function ProjectsGrid({ projects }: { projects: Project[] }) {
                 {project.title}
               </h2>
               <p
-                className="text-sm leading-relaxed mb-5"
+                className="text-sm leading-relaxed mb-5 line-clamp-3"
                 style={{ fontFamily: "Georgia, serif", color: "#78350f" }}
               >
                 {project.description}
               </p>
 
-              {/* Meta */}
-              <div className="flex flex-col gap-1.5 mb-5">
+              {/* Meta — pinned to the bottom so every card lines up */}
+              <div className="mt-auto flex flex-col gap-1.5 mb-5">
                 <div className="flex items-center gap-2 text-xs text-gray-400">
                   <MapPin className="w-3.5 h-3.5 shrink-0" />
                   <span style={{ fontFamily: "Georgia, serif" }}>
@@ -150,7 +159,7 @@ export default function ProjectsGrid({ projects }: { projects: Project[] }) {
           whileInView="show"
           viewport={{ once: true }}
           variants={fadeUp}
-          className="rounded-3xl border-2 border-dashed border-amber-200 flex flex-col items-center justify-center p-12 text-center"
+          className="h-full min-h-[20rem] rounded-3xl border-2 border-dashed border-amber-200 flex flex-col items-center justify-center p-12 text-center"
           style={{ background: "#fffdf8" }}
         >
           <div className="text-4xl mb-4">🔜</div>

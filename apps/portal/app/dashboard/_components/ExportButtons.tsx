@@ -5,9 +5,15 @@ import { useState } from "react";
 export function ExportButtons({
   programId,
   status,
+  mission,
+  search,
+  year,
 }: {
   programId?: string;
   status?: string;
+  mission?: string;
+  search?: string;
+  year?: string;
 }) {
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [loadingXlsx, setLoadingXlsx] = useState(false);
@@ -16,6 +22,9 @@ export function ExportButtons({
     const p = new URLSearchParams();
     if (programId) p.set("programId", programId);
     if (status) p.set("status", status);
+    if (mission) p.set("mission", mission);
+    if (search) p.set("search", search);
+    if (year) p.set("year", year);
     return `/api/export/applicants/${format}?${p.toString()}`;
   }
 

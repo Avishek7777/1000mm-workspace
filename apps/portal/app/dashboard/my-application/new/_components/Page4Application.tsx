@@ -30,7 +30,7 @@ type DocField = {
   required?: boolean;
 };
 
-const DOCUMENTS: DocField[] = [
+const BASE_DOCUMENTS: DocField[] = [
   {
     name: "districtPastorRecommendation",
     kind: "DISTRICT_PASTOR_RECOMMENDATION",
@@ -62,19 +62,16 @@ const DOCUMENTS: DocField[] = [
     label: "Parent's Passport-size Photo",
     hint: "Passport-sized photo of one parent. JPG or PNG, max 400 KB.",
   },
-  {
-    name: "parentsConsent",
-    kind: "PARENTS_CONSENT",
-    label: "Parent's Consent Form",
-    hint: "Required if under 21. PDF or image, max 400 KB.",
-  },
-  {
-    name: "letterOfIntent",
-    kind: "LETTER_OF_INTENT",
-    label: "Letter of Intent",
-    hint: "Your handwritten letter of intent. PDF or image, max 1 MB.",
-  },
 ];
+
+function calcAge(dobStr: string): number {
+  const dob = new Date(dobStr);
+  const today = new Date();
+  const age = today.getFullYear() - dob.getFullYear();
+  const notYetHadBirthday =
+    today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+  return notYetHadBirthday ? age - 1 : age;
+}
 
 function YesNoField({
   name,
@@ -272,6 +269,23 @@ export function Page4Application({
 }: Props) {
   const d = defaultValues;
   const docs = d?.documents ?? [];
+
+  const isUnder21 = d?.applicantDateOfBirth
+    ? calcAge(d.applicantDateOfBirth) < 21
+    : false;
+
+  const DOCUMENTS: DocField[] = [
+    ...BASE_DOCUMENTS,
+    {
+      name: "parentsConsent",
+      kind: "PARENTS_CONSENT",
+      label: "Parent's Consent Form",
+      required: isUnder21,
+      hint: isUnder21
+        ? "Required — applicant is under 21. PDF or image, max 400 KB."
+        : "Optional. PDF or image, max 400 KB.",
+    },
+  ];
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});

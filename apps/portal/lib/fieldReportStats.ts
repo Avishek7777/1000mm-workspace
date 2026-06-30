@@ -32,6 +32,8 @@ export type MissionStat = {
   missionCode: string;
   baptisms: number;
   peopleReached: number;
+  visits: number;
+  baptismCandidates: number;
   reportCount: number;
 };
 
@@ -40,6 +42,8 @@ export type TopTrainee = {
   missionCode: string;
   baptisms: number;
   peopleReached: number;
+  visits: number;
+  baptismCandidates: number;
   reportCount: number;
 };
 
@@ -83,9 +87,15 @@ function quarterLabel(month: number): string {
 
 // ─── Main query ───────────────────────────────────────────────────────────────
 
-async function fetchReports(missionId?: string) {
+async function fetchReports(missionId?: string, year?: number, missionCode?: string, programCode?: string, month?: number) {
   return prisma.fieldReport.findMany({
-    where: missionId ? { trainee: { homeMissionId: missionId } } : {},
+    where: {
+      ...(missionId ? { trainee: { homeMissionId: missionId } } : {}),
+      ...(missionCode ? { trainee: { homeMission: { code: missionCode } } } : {}),
+      ...(year ? { reportYear: year } : {}),
+      ...(month ? { reportMonth: month } : {}),
+      ...(programCode ? { program: { code: programCode } } : {}),
+    },
     include: {
       trainee: {
         select: {
@@ -98,13 +108,27 @@ async function fetchReports(missionId?: string) {
   });
 }
 
+export async function getAvailableYears(missionId?: string): Promise<number[]> {
+  const rows = await prisma.fieldReport.findMany({
+    where: missionId ? { trainee: { homeMissionId: missionId } } : {},
+    select: { reportYear: true },
+    distinct: ["reportYear"],
+    orderBy: { reportYear: "desc" },
+  });
+  return rows.map((r) => r.reportYear);
+}
+
 // ─── Aggregate by period ──────────────────────────────────────────────────────
 
 export async function getFieldReportStats(
   mode: PeriodMode,
   missionId?: string,
+  year?: number,
+  missionCode?: string,
+  programCode?: string,
+  month?: number,
 ): Promise<StatRow[]> {
-  const reports = await fetchReports(missionId);
+  const reports = await fetchReports(missionId, year, missionCode, programCode, month);
 
   type Bucket = Omit<StatRow, "periodLabel" | "periodSort"> & {
     trainees: Set<string>;
@@ -201,8 +225,14 @@ export async function getFieldReportStats(
 
 // ─── Mission breakdown (UD/SA only) ──────────────────────────────────────────
 
-export async function getMissionStats(): Promise<MissionStat[]> {
+export async function getMissionStats(year?: number, missionCode?: string, programCode?: string, month?: number): Promise<MissionStat[]> {
   const reports = await prisma.fieldReport.findMany({
+    where: {
+      ...(year ? { reportYear: year } : {}),
+      ...(month ? { reportMonth: month } : {}),
+      ...(missionCode ? { trainee: { homeMission: { code: missionCode } } } : {}),
+      ...(programCode ? { program: { code: programCode } } : {}),
+    },
     include: {
       trainee: { select: { homeMission: { select: { code: true } } } },
     },
@@ -216,11 +246,15 @@ export async function getMissionStats(): Promise<MissionStat[]> {
         missionCode: code,
         baptisms: 0,
         peopleReached: 0,
+        visits: 0,
+        baptismCandidates: 0,
         reportCount: 0,
       });
     const m = map.get(code)!;
     m.baptisms += r.numberOfBaptisms;
     m.peopleReached += r.peopleReached ?? 0;
+    m.visits += r.nonSdaHomeVisits;
+    m.baptismCandidates += r.baptismCandidatesPrepared;
     m.reportCount++;
   }
   return Array.from(map.values()).sort((a, b) =>
@@ -233,9 +267,19 @@ export async function getMissionStats(): Promise<MissionStat[]> {
 export async function getTopTrainees(
   missionId?: string,
   limit = 10,
+  year?: number,
+  missionCode?: string,
+  programCode?: string,
+  month?: number,
 ): Promise<TopTrainee[]> {
   const reports = await prisma.fieldReport.findMany({
-    where: missionId ? { trainee: { homeMissionId: missionId } } : {},
+    where: {
+      ...(missionId ? { trainee: { homeMissionId: missionId } } : {}),
+      ...(missionCode ? { trainee: { homeMission: { code: missionCode } } } : {}),
+      ...(year ? { reportYear: year } : {}),
+      ...(month ? { reportMonth: month } : {}),
+      ...(programCode ? { program: { code: programCode } } : {}),
+    },
     include: {
       trainee: {
         select: {
@@ -255,12 +299,16 @@ export async function getTopTrainees(
         missionCode: r.trainee.homeMission?.code ?? "—",
         baptisms: 0,
         peopleReached: 0,
+        visits: 0,
+        baptismCandidates: 0,
         reportCount: 0,
       });
     }
     const t = map.get(r.traineeId)!;
     t.baptisms += r.numberOfBaptisms;
     t.peopleReached += r.peopleReached ?? 0;
+    t.visits += r.nonSdaHomeVisits;
+    t.baptismCandidates += r.baptismCandidatesPrepared;
     t.reportCount++;
   }
 
@@ -276,8 +324,12 @@ export async function getTopTrainees(
 
 export async function getSummaryTotals(
   missionId?: string,
+  year?: number,
+  missionCode?: string,
+  programCode?: string,
+  month?: number,
 ): Promise<SummaryTotals> {
-  const reports = await fetchReports(missionId);
+  const reports = await fetchReports(missionId, year, missionCode, programCode, month);
   const traineeSet = new Set(reports.map((r) => r.traineeId));
 
   return {

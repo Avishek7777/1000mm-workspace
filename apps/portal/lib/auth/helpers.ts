@@ -17,8 +17,15 @@ import type { UserRole } from "@1000mm/db";
  * Use this when "logged out" is a valid state for the page.
  */
 export async function getCurrentUser() {
-  const session = await auth();
-  return session?.user ?? null;
+  try {
+    const session = await auth();
+    return session?.user ?? null;
+  } catch {
+    // JWTSessionError (or similar) — the cookie exists but can't be verified,
+    // e.g. AUTH_SECRET rotated or cookie corrupted. Treat as not authenticated
+    // so the user is redirected to /login and issued a fresh session on re-login.
+    return null;
+  }
 }
 
 /**
@@ -47,6 +54,36 @@ export async function requireRole(allowed: UserRole[]) {
       `Role ${user.role} not permitted; required one of: ${allowed.join(", ")}`,
     );
   }
+  return user;
+}
+
+/**
+ * Like requireRole, but fetches and returns the full Prisma User row.
+ * Use in Server Actions that need DB fields (isMissionary, homeMissionId, etc.)
+ * that are not available on the session user.
+ *
+ * For Server Actions, redirects to /dashboard on insufficient role (instead of
+ * throwing ForbiddenError, which is better suited to Server Components).
+ *
+ * Example:
+ *   const user = await requireDbUser(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+ */
+export async function requireDbUser(allowed: UserRole[]) {
+  const sessionUser = await requireAuth();
+  if (!allowed.includes(sessionUser.role)) redirect("/dashboard");
+  const user = await prisma.user.findUnique({ where: { id: sessionUser.id } });
+  if (!user) redirect("/login");
+  return user;
+}
+
+/**
+ * Returns the current authenticated user's full DB row (no role restriction).
+ * Use when you need to check dynamic DB fields (e.g. isMissionary) rather than role.
+ */
+export async function requireAuthenticatedDbUser() {
+  const sessionUser = await requireAuth();
+  const user = await prisma.user.findUnique({ where: { id: sessionUser.id } });
+  if (!user) redirect("/login");
   return user;
 }
 
@@ -89,8 +126,10 @@ export function canCreateRole(
   if (targetRole === "TRAINEE") return true;
   if (targetRole === "SYSTEM_ADMIN") return false;
   if (targetRole === "MAIN_DIRECTOR") return actorRole === "SYSTEM_ADMIN";
+  if (targetRole === "SECRETARY") return actorRole === "SYSTEM_ADMIN";
+  if (targetRole === "ASSOCIATE_DIRECTOR") return actorRole === "SYSTEM_ADMIN";
   if (targetRole === "TRAINER" || targetRole === "LOCAL_DIRECTOR") {
-    return actorRole === "MAIN_DIRECTOR" || actorRole === "SYSTEM_ADMIN";
+    return actorRole === "MAIN_DIRECTOR" || actorRole === "SECRETARY" || actorRole === "ASSOCIATE_DIRECTOR" || actorRole === "SYSTEM_ADMIN";
   }
   return false;
 }

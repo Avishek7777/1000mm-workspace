@@ -19,19 +19,23 @@ export default async function TrainerDashboardPage() {
 
   const trainerId = session.user.id;
 
-  // Fetch all programs this trainer is assigned to, with enrollment counts
+  // Fetch all programs this trainer is assigned to (via topics)
   const programs = await db.trainingProgram.findMany({
     where: {
       deletedAt: null,
-      trainers: { some: { id: trainerId } },
+      topics: { some: { trainerId, deletedAt: null } },
     },
     include: {
+      topics: {
+        where: { trainerId, deletedAt: null },
+        select: { id: true, title: true },
+        orderBy: { order: "asc" },
+      },
       enrollments: {
         where: { deletedAt: null },
         select: {
           id: true,
           attendanceConfirmed: true,
-          deploymentLocation: true,
           trainee: {
             select: {
               id: true,
@@ -65,10 +69,6 @@ export default async function TrainerDashboardPage() {
     (sum, p) => sum + p.enrollments.filter((e) => e.attendanceConfirmed).length,
     0,
   );
-  const deployedTrainees = programs.reduce(
-    (sum, p) => sum + p.enrollments.filter((e) => e.deploymentLocation).length,
-    0,
-  );
 
   const now = new Date();
 
@@ -93,7 +93,7 @@ export default async function TrainerDashboardPage() {
       </div>
 
       {/* Summary stat cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard
           icon={BookOpen}
           label="Programs"
@@ -114,13 +114,6 @@ export default async function TrainerDashboardPage() {
           value={confirmedTrainees}
           color="text-emerald-600"
           bg="bg-emerald-50"
-        />
-        <StatCard
-          icon={MapPin}
-          label="Deployed"
-          value={deployedTrainees}
-          color="text-amber-600"
-          bg="bg-amber-50"
         />
       </div>
 
@@ -144,9 +137,6 @@ export default async function TrainerDashboardPage() {
               const enrolled = program.enrollments.length;
               const confirmed = program.enrollments.filter(
                 (e) => e.attendanceConfirmed,
-              ).length;
-              const deployed = program.enrollments.filter(
-                (e) => e.deploymentLocation,
               ).length;
 
               // Mission breakdown
@@ -200,6 +190,20 @@ export default async function TrainerDashboardPage() {
                       </div>
 
                       {/* Trainee stats row */}
+                      {/* Topic pills */}
+                      {program.topics.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {program.topics.map((t) => (
+                            <span
+                              key={t.id}
+                              className="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-[10px] font-medium text-violet-700"
+                            >
+                              {t.title}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
                       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
                         <span className="text-gray-700">
                           <span className="font-semibold text-gray-900">
@@ -212,12 +216,6 @@ export default async function TrainerDashboardPage() {
                             {confirmed}
                           </span>
                           <span className="ml-1 text-gray-500">confirmed</span>
-                        </span>
-                        <span className="text-gray-700">
-                          <span className="font-semibold text-amber-700">
-                            {deployed}
-                          </span>
-                          <span className="ml-1 text-gray-500">deployed</span>
                         </span>
                       </div>
 

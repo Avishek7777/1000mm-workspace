@@ -364,6 +364,146 @@ export async function createLmdAction(
   return { ok: true };
 }
 
+// ─── CREATE TRAINEE ACCOUNT (SA only) ────────────────────────────────────────
+
+const createTraineeSchema = z.object({
+  fullName: z.string().trim().min(2, "Full name is required.").max(100),
+  email: z.string().trim().email("Invalid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+  missionId: z.string().min(1, "Mission is required."),
+});
+
+export async function createTraineeAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const actor = await getActor();
+  if (actor.role !== "SYSTEM_ADMIN") return { ok: false, error: "Not permitted." };
+
+  const parsed = createTraineeSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const f = issue.path[0]?.toString();
+      if (f && !fieldErrors[f]) fieldErrors[f] = issue.message;
+    }
+    return { ok: false, fieldErrors };
+  }
+
+  const { fullName, email, password, missionId } = parsed.data;
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) return { ok: false, fieldErrors: { email: "This email is already in use." } };
+
+  const mission = await prisma.localMission.findUnique({ where: { id: missionId } });
+  if (!mission) return { ok: false, error: "Mission not found." };
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  const newUser = await prisma.user.create({
+    data: {
+      fullName,
+      email,
+      passwordHash,
+      role: "TRAINEE",
+      homeMissionId: missionId,
+      emailVerified: new Date(),
+      isActive: true,
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      action: "USER_CREATED",
+      actorId: actor.id,
+      actorRole: actor.role,
+      targetType: "User",
+      targetId: newUser.id,
+      details: { role: "TRAINEE", mission: mission.code },
+    },
+  });
+
+  revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard/trainees");
+  return { ok: true };
+}
+
+// ─── CREATE GENERIC USER ACCOUNT (SA only) ────────────────────────────────────
+
+const createUserSchema = z.object({
+  fullName: z.string().trim().min(2, "Full name is required.").max(100),
+  email: z.string().trim().email("Invalid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+  role: z.enum(["SYSTEM_ADMIN", "MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "LOCAL_DIRECTOR", "TRAINER", "TRAINEE"]),
+  missionId: z.string().optional().transform((v) => v || undefined),
+});
+
+export async function createUserAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const actor = await getActor();
+  if (actor.role !== "SYSTEM_ADMIN") return { ok: false, error: "Not permitted." };
+
+  const parsed = createUserSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const f = issue.path[0]?.toString();
+      if (f && !fieldErrors[f]) fieldErrors[f] = issue.message;
+    }
+    return { ok: false, fieldErrors };
+  }
+
+  const { fullName, email, password, role, missionId } = parsed.data;
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) return { ok: false, fieldErrors: { email: "This email is already in use." } };
+
+  // Only one Secretary allowed at a time
+  if (role === "SECRETARY") {
+    const existingSecretary = await prisma.user.findFirst({
+      where: { role: "SECRETARY", deletedAt: null },
+    });
+    if (existingSecretary) {
+      return { ok: false, error: "A Secretary account already exists. Only one Secretary is allowed at a time." };
+    }
+  }
+
+  const mission = missionId
+    ? await prisma.localMission.findUnique({ where: { id: missionId } })
+    : null;
+  if (missionId && !mission) return { ok: false, error: "Mission not found." };
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  const newUser = await prisma.user.create({
+    data: {
+      fullName,
+      email,
+      passwordHash,
+      role,
+      ...(missionId ? { homeMissionId: missionId } : {}),
+      emailVerified: new Date(),
+      isActive: true,
+    } as any,
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      action: "USER_CREATED",
+      actorId: actor.id,
+      actorRole: actor.role,
+      targetType: "User",
+      targetId: newUser.id,
+      details: { role, mission: mission?.code ?? null },
+    },
+  });
+
+  revalidatePath("/dashboard/users");
+  return { ok: true };
+}
+
 // ─── REMOVE LMD (SA only) ─────────────────────────────────────────────────────
 // Deactivates and removes them as mission director.
 

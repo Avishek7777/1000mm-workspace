@@ -46,3 +46,23 @@ export async function toggleSettingAction(
   revalidatePath("/dashboard/settings");
   return { ok: true };
 }
+
+export async function saveStringSettingAction(
+  key: string,
+  value: string,
+): Promise<ActionResult> {
+  const actor = await requireSA();
+
+  if (!Object.values(SETTING_KEYS).includes(key as SettingKey)) {
+    return { ok: false, error: "Unknown setting key." };
+  }
+
+  await prisma.systemSetting.upsert({
+    where: { key },
+    update: { value: value.trim(), updatedById: actor.id },
+    create: { key, value: value.trim(), description: key },
+  });
+
+  revalidatePath("/dashboard/settings");
+  return { ok: true };
+}

@@ -4,6 +4,11 @@ import { prisma } from "@1000mm/db";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { ApplicantListPdf } from "@/lib/exports/ApplicantListPdf";
 import { isSettingEnabled, SETTINGS } from "@/lib/settings";
+import {
+  parseApplicantsExportFilters,
+  buildApplicantsExportWhere,
+  describeApplicantsFilters,
+} from "@/lib/exports/applicantsQuery";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -26,23 +31,22 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const programId = searchParams.get("programId") ?? undefined;
-  const status = searchParams.get("status") ?? undefined;
+  const filters = parseApplicantsExportFilters(searchParams);
 
   // Scope by mission for LMD
   const isLmd = user.role === "LOCAL_DIRECTOR";
   const lmdMission = isLmd
     ? await prisma.localMission.findFirst({ where: { directorId: user.id } })
     : null;
+  if (isLmd) filters.mission = undefined;
+
+  const where = buildApplicantsExportWhere(filters, {
+    lmdMissionId: isLmd ? (lmdMission?.id ?? null) : null,
+  });
 
   const applications = await prisma.application.findMany({
-    where: {
-      deletedAt: null,
-      status: { not: "DRAFT" },
-      ...(isLmd && lmdMission ? { submittedFromMissionId: lmdMission.id } : {}),
-      ...(programId ? { window: { programId } } : {}),
-      ...(status ? { status: status as any } : {}),
-    },
+    where,
+    take: 5000,
     orderBy: [
       { submittedFromMission: { code: "asc" } },
       { referenceNumber: "asc" },
@@ -85,11 +89,9 @@ export async function GET(req: NextRequest) {
         district: a.presentAddressDistrict ?? "—",
       })),
       generatedAt,
-      filterLabel: isLmd
-        ? `Mission: ${lmdMission?.code ?? ""}`
-        : programId || status
-          ? `Filtered`
-          : "All Missions",
+      filterLabel: describeApplicantsFilters(filters, {
+        lmdMissionCode: isLmd ? (lmdMission?.code ?? null) : null,
+      }),
       totalCount: applications.length,
     }),
   );

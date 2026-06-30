@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { CertificateButton } from "./_components/CertificateButton";
 
 const MONTHS = [
   "Jan",
@@ -169,9 +170,17 @@ export default async function TraineeDetailPage({
       {/* Enrollment + deployment */}
       {enrollment && (
         <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Enrollment & Deployment
-          </p>
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Enrollment & Deployment
+            </p>
+            {isStaff && (
+              <CertificateButton
+                enrollmentId={enrollment.id}
+                issued={enrollment.certificateIssued}
+              />
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
             {[
               { label: "Program", value: `${enrollment.program.code}` },

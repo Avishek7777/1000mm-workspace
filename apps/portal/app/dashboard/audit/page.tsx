@@ -17,6 +17,8 @@ const SEVERITY_CONFIG: Record<
 const ROLE_LABELS: Record<string, string> = {
   SYSTEM_ADMIN: "SA",
   MAIN_DIRECTOR: "UD",
+  SECRETARY: "Secretary",
+  ASSOCIATE_DIRECTOR: "Assoc. Director",
   LOCAL_DIRECTOR: "LMD",
   TRAINER: "Trainer",
   TRAINEE: "Trainee",
@@ -53,12 +55,14 @@ export default async function AuditLogsPage({
     action?: string;
     severity?: string;
     actor?: string;
+    year?: string;
   }>;
 }) {
   await requireRole(["SYSTEM_ADMIN"]);
-  const { page, q, action, severity, actor } = await searchParams;
+  const { page, q, action, severity, actor, year } = await searchParams;
 
   const pageNum = Math.max(1, parseInt(page ?? "1", 10));
+  const yearNum = year ? parseInt(year, 10) : undefined;
 
   const matchingActions = q
     ? Object.values(AuditAction).filter((a) =>
@@ -66,8 +70,16 @@ export default async function AuditLogsPage({
       )
     : [];
 
+  const validSeverities: AuditSeverity[] = ["INFO", "NOTICE", "WARNING", "CRITICAL"];
+  const validSeverity = severity && validSeverities.includes(severity as AuditSeverity)
+    ? (severity as AuditSeverity)
+    : undefined;
+
   const where: Prisma.AuditLogWhereInput = {
-    ...(severity ? { severity: severity as AuditSeverity } : {}),
+    ...(yearNum
+      ? { createdAt: { gte: new Date(`${yearNum}-01-01`), lt: new Date(`${yearNum + 1}-01-01`) } }
+      : {}),
+    ...(validSeverity ? { severity: validSeverity } : {}),
     ...(action
       ? {
           action: Object.values(AuditAction).includes(action as AuditAction)
@@ -100,6 +112,15 @@ export default async function AuditLogsPage({
       : {}),
   };
 
+  const [oldestLog, newestLog] = await Promise.all([
+    prisma.auditLog.findFirst({ orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
+    prisma.auditLog.findFirst({ orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
+  ]);
+  const minYear = oldestLog ? new Date(oldestLog.createdAt).getFullYear() : new Date().getFullYear();
+  const maxYear = newestLog ? new Date(newestLog.createdAt).getFullYear() : new Date().getFullYear();
+  const availableYears: number[] = [];
+  for (let y = maxYear; y >= minYear; y--) availableYears.push(y);
+
   const [logs, total] = await Promise.all([
     prisma.auditLog.findMany({
       where,
@@ -131,7 +152,7 @@ export default async function AuditLogsPage({
     for (const [k, v] of Object.entries(params)) {
       if (v) p.set(k, v);
     }
-    return `?${p.toString()}`;
+    return p.toString() ? `?${p.toString()}` : "?";
   }
 
   const severities = ["INFO", "NOTICE", "WARNING", "CRITICAL"];
@@ -147,7 +168,7 @@ export default async function AuditLogsPage({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-gray-200 bg-white p-4">
           <p className="text-xs text-gray-400">Today</p>
           <p className="mt-1 text-2xl font-semibold text-gray-900">
@@ -186,7 +207,7 @@ export default async function AuditLogsPage({
           >
             Search
           </button>
-          {(q || severity || actor) && (
+          {(q || severity || actor || year) && (
             <Link
               href="?"
               className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-400 hover:bg-gray-50 transition-colors"
@@ -196,10 +217,31 @@ export default async function AuditLogsPage({
           )}
         </form>
 
+        {/* Year filter */}
+        {availableYears.length > 1 && (
+          <div className="flex gap-1">
+            <Link
+              href={buildUrl({ q, actor, severity })}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${!year ? "border-teal-400 bg-teal-50 text-teal-800" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
+            >
+              All years
+            </Link>
+            {availableYears.map((y) => (
+              <Link
+                key={y}
+                href={buildUrl({ q, actor, severity, year: String(y) })}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${year === String(y) ? "border-amber-400 bg-amber-50 text-amber-800" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
+              >
+                {y}
+              </Link>
+            ))}
+          </div>
+        )}
+
         {/* Severity filter */}
         <div className="flex gap-1">
           <Link
-            href={buildUrl({ q, actor })}
+            href={buildUrl({ q, actor, year })}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${!severity ? "border-teal-400 bg-teal-50 text-teal-800" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
           >
             All
@@ -209,7 +251,7 @@ export default async function AuditLogsPage({
             return (
               <Link
                 key={s}
-                href={buildUrl({ q, actor, severity: s })}
+                href={buildUrl({ q, actor, year, severity: s })}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${severity === s ? `${cfg.bg} ${cfg.text} border-transparent` : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
               >
                 {s}
@@ -227,7 +269,7 @@ export default async function AuditLogsPage({
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto overflow-hidden rounded-xl border border-gray-200 bg-white">
           <table className="w-full text-xs">
             <thead className="border-b border-gray-100 bg-gray-50">
               <tr>
@@ -324,17 +366,15 @@ export default async function AuditLogsPage({
                     </td>
 
                     {/* Details toggle */}
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 max-w-xs">
                       {log.details && (
-                        <details className="group">
-                          <summary className="cursor-pointer text-teal-600 hover:text-teal-800 list-none text-[10px]">
-                            Details
+                        <details>
+                          <summary className="cursor-pointer text-teal-600 hover:text-teal-800 list-none text-[10px] select-none">
+                            Details ▸
                           </summary>
-                          <div className="absolute z-10 mt-1 max-w-xs rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
-                            <pre className="text-[10px] text-gray-600 whitespace-pre-wrap overflow-auto max-h-40">
-                              {JSON.stringify(log.details, null, 2)}
-                            </pre>
-                          </div>
+                          <pre className="mt-1 rounded border border-gray-100 bg-gray-50 p-2 text-[9px] text-gray-600 whitespace-pre-wrap overflow-auto max-h-32">
+                            {JSON.stringify(log.details, null, 2)}
+                          </pre>
                         </details>
                       )}
                     </td>

@@ -1,158 +1,86 @@
-"use client";
+import { prisma } from "@1000mm/db";
+import { RegisterForm } from "./_components/RegisterForm";
 
-import { useActionState } from "react";
-import Link from "next/link";
-import { registerAction, type FormState } from "@/lib/auth/actions";
-
-const initial: FormState = { ok: false };
-
-const MISSIONS = [
-  { code: "EBM", name: "Eastern Bangladesh Mission (EBM)" },
-  { code: "NBM", name: "Northern Bangladesh Mission (NBM)" },
-  { code: "SBM", name: "Southern Bangladesh Mission (SBM)" },
-  { code: "WBM", name: "Western Bangladesh Mission (WBM)" },
-];
-
-export default function RegisterPage() {
-  const [state, formAction, pending] = useActionState(registerAction, initial);
-  const fe = state.fieldErrors ?? {};
+export default async function RegisterPage() {
+  const missions = await prisma.localMission.findMany({
+    where: { deletedAt: null },
+    select: { code: true, name: true },
+    orderBy: { code: "asc" },
+  });
 
   return (
-    <div className="mx-auto max-w-md py-12 px-6">
-      <h1 className="text-2xl font-medium mb-2">Create your account</h1>
-      <p className="text-sm text-gray-600 mb-8">
-        For prospective trainees. Existing staff should sign in directly.
-      </p>
-
-      {state.error && (
-        <div className="mb-6 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900">
-          {state.error}
-        </div>
-      )}
-
-      <form action={formAction} className="space-y-4">
-        <Field
-          id="fullName"
-          name="fullName"
-          label="Full name"
-          required
-          autoComplete="name"
-          error={fe.fullName}
-        />
-        <Field
-          id="email"
-          name="email"
-          type="email"
-          label="Email"
-          required
-          autoComplete="email"
-          error={fe.email}
-        />
-        <Field
-          id="phone"
-          name="phone"
-          label="Phone (optional)"
-          autoComplete="tel"
-          error={fe.phone}
-        />
-
-        <div>
-          <label
-            htmlFor="homeMissionCode"
-            className="block text-sm font-medium mb-1"
-          >
-            Local Mission
-          </label>
-          <select
-            id="homeMissionCode"
-            name="homeMissionCode"
-            required
-            defaultValue=""
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white"
-          >
-            <option value="" disabled>
-              Select your Local Mission
-            </option>
-            {MISSIONS.map((m) => (
-              <option key={m.code} value={m.code}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-          {fe.homeMissionCode && (
-            <p className="mt-1 text-xs text-red-700">{fe.homeMissionCode}</p>
-          )}
-        </div>
-
-        <Field
-          id="password"
-          name="password"
-          type="password"
-          label="Password (min 8 characters)"
-          required
-          autoComplete="new-password"
-          error={fe.password}
-        />
-        <Field
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          label="Confirm password"
-          required
-          autoComplete="new-password"
-          error={fe.confirmPassword}
-        />
-
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {pending ? "Creating account…" : "Create account"}
-        </button>
-      </form>
-
-      <p className="mt-6 text-sm text-center">
-        Already have an account?{" "}
-        <Link href="./" className="text-blue-700 hover:underline">
-          Sign in
-        </Link>
-      </p>
-    </div>
-  );
-}
-
-function Field({
-  id,
-  name,
-  label,
-  type = "text",
-  required,
-  autoComplete,
-  error,
-}: {
-  id: string;
-  name: string;
-  label: string;
-  type?: string;
-  required?: boolean;
-  autoComplete?: string;
-  error?: string;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium mb-1">
-        {label}
-      </label>
-      <input
-        id={id}
-        name={name}
-        type={type}
-        required={required}
-        autoComplete={autoComplete}
-        className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
+      {/* Animated background */}
+      <div className="absolute inset-0 -z-10 bg-[#f4f9f9]" />
+      <div
+        className="blob absolute -left-24 -top-24 h-96 w-96 rounded-full blur-2xl"
+        style={{
+          background: "radial-gradient(circle at 30% 30%, rgba(0,127,152,0.82), transparent 72%)",
+          animation: "blobFloat1 24s linear infinite",
+        }}
       />
-      {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
+      <div
+        className="blob absolute -bottom-28 -right-20 h-[28rem] w-[28rem] rounded-full blur-2xl"
+        style={{
+          background: "radial-gradient(circle at 60% 40%, rgba(249,115,22,0.76), transparent 72%)",
+          animation: "blobFloat2 30s linear infinite",
+        }}
+      />
+      <div
+        className="blob absolute left-1/4 top-1/4 h-80 w-80 rounded-full blur-2xl"
+        style={{
+          background: "radial-gradient(circle at 50% 50%, rgba(74,222,128,0.64), transparent 72%)",
+          animation: "blobFloat3 26s linear infinite",
+        }}
+      />
+      <div
+        className="blob absolute -top-16 right-10 h-72 w-72 rounded-full blur-2xl"
+        style={{
+          background: "radial-gradient(circle at 40% 60%, rgba(0,127,152,0.66), transparent 72%)",
+          animation: "blobFloat4 28s linear infinite",
+        }}
+      />
+
+      <RegisterForm
+        missions={missions.map((m) => ({
+          code: m.code,
+          name: `${m.name} (${m.code})`,
+        }))}
+      />
+
+      <style>{`
+        @keyframes blobFloat1 {
+          0%   { transform: translate(0, 0); }
+          25%  { transform: translate(68vw, 12vh); }
+          50%  { transform: translate(52vw, 70vh); }
+          75%  { transform: translate(6vw, 48vh); }
+          100% { transform: translate(0, 0); }
+        }
+        @keyframes blobFloat2 {
+          0%   { transform: translate(0, 0); }
+          25%  { transform: translate(-72vw, -18vh); }
+          50%  { transform: translate(-55vw, -68vh); }
+          75%  { transform: translate(-12vw, -42vh); }
+          100% { transform: translate(0, 0); }
+        }
+        @keyframes blobFloat3 {
+          0%   { transform: translate(0, 0); }
+          25%  { transform: translate(48vw, 38vh); }
+          50%  { transform: translate(8vw, 58vh); }
+          75%  { transform: translate(40vw, 4vh); }
+          100% { transform: translate(0, 0); }
+        }
+        @keyframes blobFloat4 {
+          0%   { transform: translate(0, 0); }
+          25%  { transform: translate(-46vw, 46vh); }
+          50%  { transform: translate(-18vw, 16vh); }
+          75%  { transform: translate(-58vw, 64vh); }
+          100% { transform: translate(0, 0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .blob { animation: none !important; }
+        }
+      `}</style>
     </div>
   );
 }

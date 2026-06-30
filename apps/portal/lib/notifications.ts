@@ -78,7 +78,7 @@ export async function notifyStaffAboutComplaint(
     where: {
       isActive: true,
       deletedAt: null,
-      role: { in: ["MAIN_DIRECTOR", "SYSTEM_ADMIN"] },
+      role: { in: ["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"] },
       ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
     },
     select: { id: true },
@@ -96,6 +96,7 @@ export const NOTIFICATION_TEMPLATES = {
   APPLICATION_STATUS_CHANGED: "application.status_changed",
   COMPLAINT_SUBMITTED: "complaint.submitted",
   COMPLAINT_RESPONSE: "complaint.response",
+  CERTIFICATE_ISSUED: "certificate.issued",
 } as const;
 
 export type NotificationTemplateKey =

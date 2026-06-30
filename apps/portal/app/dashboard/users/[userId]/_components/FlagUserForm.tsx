@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { flagUserAction } from "@/actions/users";
 
@@ -17,14 +17,19 @@ export function FlagUserForm({
 
   const boundAction = flagUserAction.bind(null, userId);
   const [state, action, pending] = useActionState(boundAction, { ok: false });
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     if (state.ok) {
       setSuccess(true);
       setReason("");
       router.refresh();
     }
-  }, [state.ok]);
+  }, [state]);
 
   if (success) {
     return (

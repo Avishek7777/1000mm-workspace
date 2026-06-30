@@ -1,12 +1,25 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useActionState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { resetPasswordAction, type FormState } from "@/lib/auth/actions";
 
 const initial: FormState = { ok: false };
+
+const EyeIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+  </svg>
+);
+const EyeOffIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>
+);
 
 function ResetPasswordForm() {
   const params = useSearchParams();
@@ -17,6 +30,7 @@ function ResetPasswordForm() {
     initial,
   );
   const fe = state.fieldErrors ?? {};
+  const [showPwd, setShowPwd] = useState(false);
 
   if (!token) {
     return (
@@ -50,14 +64,24 @@ function ResetPasswordForm() {
           <label htmlFor="password" className="block text-sm font-medium mb-1">
             New password
           </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          />
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={showPwd ? "text" : "password"}
+              autoComplete="new-password"
+              required
+              className="w-full rounded border border-gray-300 px-3 py-2 pr-10 text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPwd((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label={showPwd ? "Hide password" : "Show password"}
+            >
+              {showPwd ? <EyeOffIcon /> : <EyeIcon />}
+            </button>
+          </div>
           {fe.password && (
             <p className="mt-1 text-xs text-red-700">{fe.password}</p>
           )}
@@ -67,14 +91,24 @@ function ResetPasswordForm() {
           <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
             Confirm new password
           </label>
-          <input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            autoComplete="new-password"
-            required
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          />
+          <div className="relative">
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type={showPwd ? "text" : "password"}
+              autoComplete="new-password"
+              required
+              className="w-full rounded border border-gray-300 px-3 py-2 pr-10 text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPwd((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label={showPwd ? "Hide password" : "Show password"}
+            >
+              {showPwd ? <EyeOffIcon /> : <EyeIcon />}
+            </button>
+          </div>
           {fe.confirmPassword && (
             <p className="mt-1 text-xs text-red-700">{fe.confirmPassword}</p>
           )}

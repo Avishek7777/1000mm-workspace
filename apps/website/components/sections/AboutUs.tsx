@@ -50,7 +50,7 @@ export default function AboutUs() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.1 }}
           transition={{ duration: 0.5 }}
-          className="flex items-center gap-3 mb-10"
+          className="flex items-center justify-center gap-3 mb-5"
         >
           <span
             className="h-px w-12"
@@ -64,7 +64,24 @@ export default function AboutUs() {
           >
             About Us
           </span>
+          <span
+            className="h-px w-12"
+            style={{
+              background: "linear-gradient(90deg, #007f98, #f97316)",
+            }}
+          />
         </motion.div>
+        <div className="text-center text-3xl md:text-4xl font-bold text-stone-800 leading-tight mb-5">
+          <span
+            className="text-transparent bg-clip-text"
+            style={{
+              backgroundImage:
+                "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
+            }}
+          >
+            THE GREATEST CHALLENGE OF THE CENTURY
+          </span>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
           {/* Left column — Who We Are + What We Do */}

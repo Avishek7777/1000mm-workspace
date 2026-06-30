@@ -35,7 +35,7 @@ export default function NewAnnouncementPage() {
   useEffect(() => {
     if (state.ok) {
       setShowSuccess(true);
-      setTimeout(() => router.push("/dashboard/announcements"), 1500);
+      setTimeout(() => router.push("/dashboard/news/announcements"), 1500);
     }
   }, [state.ok]);
 

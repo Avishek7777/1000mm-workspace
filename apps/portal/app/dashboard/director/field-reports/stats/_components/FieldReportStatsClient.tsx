@@ -482,49 +482,47 @@ export function FieldReportStatsClient({
         </>
       )}
 
-      {/* Top trainees */}
+      {/* Top trainees — multi-dimension ranking */}
       {topTrainees.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Top Missionaries by Baptisms
-          </p>
-          <div className="space-y-2">
-            {topTrainees.map((t, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-500">
-                  {i + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {t.fullName}
-                    </p>
-                    {isStaff && (
-                      <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-700 flex-shrink-0">
-                        {t.missionCode}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
-                    <div
-                      className="h-full rounded-full bg-teal-500"
-                      style={{
-                        width: `${Math.min(100, (t.baptisms / (topTrainees[0]?.baptisms || 1)) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="flex-shrink-0 text-right">
-                  <p className="text-sm font-semibold text-teal-700">
-                    {t.baptisms} bap.
-                  </p>
-                  <p className="text-[10px] text-gray-400">
-                    {t.peopleReached} reached
-                  </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {(
+            [
+              { key: "baptisms" as const, label: "Top by Baptisms", color: "teal", unit: "bap." },
+              { key: "peopleReached" as const, label: "Top by People Reached", color: "blue", unit: "reached" },
+              { key: "visits" as const, label: "Top by Visits", color: "purple", unit: "visits" },
+              { key: "baptismCandidates" as const, label: "Top by Baptism Candidates", color: "amber", unit: "cand." },
+            ] as const
+          ).map(({ key, label, color, unit }) => {
+            const sorted = [...topTrainees].sort((a, b) => b[key] - a[key]).filter((t) => t[key] > 0).slice(0, 5);
+            if (sorted.length === 0) return null;
+            const maxVal = sorted[0][key] || 1;
+            const barClass = { teal: "bg-teal-500", blue: "bg-blue-500", purple: "bg-purple-500", amber: "bg-amber-500" }[color];
+            const textClass = { teal: "text-teal-700", blue: "text-blue-700", purple: "text-purple-700", amber: "text-amber-700" }[color];
+            return (
+              <div key={key} className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</p>
+                <div className="space-y-2">
+                  {sorted.map((t, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-500">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-medium text-gray-900 truncate">{t.fullName}</p>
+                          {isStaff && (
+                            <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-700 flex-shrink-0">{t.missionCode}</span>
+                          )}
+                        </div>
+                        <div className="mt-0.5 h-1 w-full overflow-hidden rounded-full bg-gray-100">
+                          <div className={`h-full rounded-full ${barClass}`} style={{ width: `${Math.min(100, (t[key] / maxVal) * 100)}%` }} />
+                        </div>
+                      </div>
+                      <span className={`flex-shrink-0 text-xs font-semibold ${textClass}`}>{t[key]} {unit}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
     </div>

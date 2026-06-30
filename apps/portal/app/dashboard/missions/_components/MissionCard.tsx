@@ -4,6 +4,8 @@ import { useState, useTransition, useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { updateMissionAction } from "@/actions/missions";
 
+type LmdUser = { id: string; fullName: string; email: string };
+
 type Mission = {
   id: string;
   code: string;
@@ -35,7 +37,7 @@ const MISSION_COLORS: Record<
   WBM: { bg: "bg-teal-50", text: "text-teal-800", border: "border-teal-200" },
 };
 
-export function MissionCard({ mission }: { mission: Mission }) {
+export function MissionCard({ mission, lmdUsers }: { mission: Mission; lmdUsers: LmdUser[] }) {
   const [editing, setEditing] = useState(false);
   const colors = MISSION_COLORS[mission.code] ?? MISSION_COLORS.EBM;
 
@@ -119,7 +121,7 @@ export function MissionCard({ mission }: { mission: Mission }) {
       </div>
 
       {editing && (
-        <EditMissionModal mission={mission} onClose={() => setEditing(false)} />
+        <EditMissionModal mission={mission} lmdUsers={lmdUsers} onClose={() => setEditing(false)} />
       )}
     </>
   );
@@ -129,9 +131,11 @@ export function MissionCard({ mission }: { mission: Mission }) {
 
 function EditMissionModal({
   mission,
+  lmdUsers,
   onClose,
 }: {
   mission: Mission;
+  lmdUsers: LmdUser[];
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -284,6 +288,29 @@ function EditMissionModal({
               rows={3}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500"
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-700">
+              Local Mission Director (LMD)
+            </label>
+            <select
+              name="directorId"
+              defaultValue={mission.director?.id ?? ""}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500 bg-white"
+            >
+              <option value="">— Not assigned —</option>
+              {lmdUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.fullName} ({u.email})
+                </option>
+              ))}
+            </select>
+            {lmdUsers.length === 0 && (
+              <p className="mt-1 text-[11px] text-amber-600">
+                No active LOCAL_DIRECTOR users found. Assign the role first from the Users page.
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">

@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/auth/helpers";
 import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
+import { LmdReportsExportButton } from "./_components/LmdReportsExportButton";
 
 const MONTHS = [
   "January",
@@ -18,9 +19,16 @@ const MONTHS = [
   "December",
 ];
 
-export default async function LmdReportsPage() {
+export default async function LmdReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string; month?: string }>;
+}) {
   await requireRole(["LOCAL_DIRECTOR"]);
   const session = await auth();
+  const { year, month } = await searchParams;
+  const yearNum = year ? parseInt(year, 10) : undefined;
+  const monthNum = month ? parseInt(month, 10) : undefined;
 
   const user = await prisma.user.findUnique({
     where: { id: session!.user!.id },
@@ -36,9 +44,18 @@ export default async function LmdReportsPage() {
     orderBy: [{ reportYear: "desc" }, { reportMonth: "desc" }],
   });
 
+  // Available years for filter
+  const yearRows = await prisma.lmdReport.findMany({
+    where: { lmdId: user!.id },
+    select: { reportYear: true },
+    distinct: ["reportYear"],
+    orderBy: { reportYear: "desc" },
+  });
+  const availableYears = yearRows.map((r) => r.reportYear);
+
   // Submitted reports
   const submittedReports = await prisma.lmdReport.findMany({
-    where: { lmdId: user!.id },
+    where: { lmdId: user!.id, ...(yearNum ? { reportYear: yearNum } : {}), ...(monthNum ? { reportMonth: monthNum } : {}) },
     orderBy: [{ reportYear: "desc" }, { reportMonth: "desc" }],
     include: {
       window: { select: { state: true } },
@@ -52,11 +69,14 @@ export default async function LmdReportsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold text-gray-900">My Reports</h1>
-        <p className="mt-0.5 text-sm text-gray-500">
-          {mission?.name} · Monthly mission reports for the Union Director
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900">My Reports</h1>
+          <p className="mt-0.5 text-sm text-gray-500">
+            {mission?.name} · Monthly mission reports for the Union Director
+          </p>
+        </div>
+        <LmdReportsExportButton year={year} month={month} />
       </div>
 
       {/* Pending windows — action required */}
@@ -96,6 +116,40 @@ export default async function LmdReportsPage() {
           ))}
         </div>
       )}
+
+      {/* Year/Month filters */}
+      <form method="GET" className="flex flex-wrap items-center gap-2">
+        <select
+          name="year"
+          defaultValue={year ?? ""}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+        >
+          <option value="">All years</option>
+          {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <select
+          name="month"
+          defaultValue={month ?? ""}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+        >
+          <option value="">All months</option>
+          {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+        </select>
+        <button
+          type="submit"
+          className="rounded-lg bg-teal-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
+        >
+          Filter
+        </button>
+        {(year || month) && (
+          <Link
+            href="/dashboard/lmd/reports"
+            className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Clear
+          </Link>
+        )}
+      </form>
 
       {/* Submitted reports */}
       <div className="space-y-3">

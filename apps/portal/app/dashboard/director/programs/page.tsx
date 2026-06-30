@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PublishToggle } from "./_components/PublishToggle";
 import { redirect } from "next/navigation";
 import { isSettingEnabled, SETTINGS } from "@/lib/settings";
+import { PrintButton } from "@/components/PrintButton";
 
 const CATEGORY_LABELS: Record<string, string> = {
   SPIRITUAL: "Spiritual",
@@ -22,16 +23,44 @@ const WINDOW_STATE_COLORS: Record<string, string> = {
 
 const MAX_ACTIVE = 5;
 
-export default async function ProgramsPage() {
-  const user = await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+export default async function ProgramsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string; category?: string; q?: string }>;
+}) {
+  const user = await requireRole(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
 
-  if (user.role === "MAIN_DIRECTOR") {
+  if (user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR") {
     const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_PROGRAMS);
     if (!allowed) redirect("/dashboard/director");
   }
 
+  const { year, category, q } = await searchParams;
+  const yearNum = year ? parseInt(year, 10) : undefined;
+  const search = q?.trim() ?? "";
+
   const programs = await prisma.trainingProgram.findMany({
-    where: { deletedAt: null },
+    where: {
+      deletedAt: null,
+      ...(category ? { category: category as any } : {}),
+      ...(yearNum
+        ? {
+            startDate: {
+              gte: new Date(`${yearNum}-01-01`),
+              lt: new Date(`${yearNum + 1}-01-01`),
+            },
+          }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              { title: { contains: search, mode: "insensitive" } },
+              { code: { contains: search, mode: "insensitive" } },
+              { titleBangla: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
     orderBy: { startDate: "desc" },
     include: {
       applicationWindows: {
@@ -47,6 +76,14 @@ export default async function ProgramsPage() {
       },
     },
   });
+
+  // All program years for the year filter
+  const allYears = [
+    ...new Set(
+      (await prisma.trainingProgram.findMany({ where: { deletedAt: null }, select: { startDate: true } }))
+        .map((p) => new Date(p.startDate).getFullYear()),
+    ),
+  ].sort((a, b) => b - a);
 
   const activeCount = programs.filter((p) => p.isPublished).length;
 
@@ -78,14 +115,60 @@ export default async function ProgramsPage() {
               {MAX_ACTIVE - activeCount !== 1 ? "s" : ""} available
             </span>
           </div>
+          <PrintButton label="Print" />
           <Link
             href="/dashboard/director/programs/new"
-            className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
+            className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 transition-colors print:hidden"
           >
             + New Program
           </Link>
         </div>
       </div>
+
+      {/* Filters */}
+      <form method="GET" className="print:hidden flex flex-wrap items-center gap-2">
+        <input
+          type="text"
+          name="q"
+          defaultValue={search}
+          placeholder="Search program name or code…"
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 min-w-[200px]"
+        />
+        <select
+          name="category"
+          defaultValue={category ?? ""}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+        >
+          <option value="">All categories</option>
+          {["SPIRITUAL", "PHYSICAL", "MENTAL", "SOCIAL"].map((cat) => (
+            <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+          ))}
+        </select>
+        <select
+          name="year"
+          defaultValue={year ?? ""}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+        >
+          <option value="">All years</option>
+          {allYears.map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="rounded-lg bg-teal-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
+        >
+          Filter
+        </button>
+        {(category || year || search) && (
+          <Link
+            href="/dashboard/director/programs"
+            className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Clear
+          </Link>
+        )}
+      </form>
 
       {/* Active limit warning */}
       {activeCount >= MAX_ACTIVE && (
@@ -108,7 +191,7 @@ export default async function ProgramsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {programs.map((program) => {
+          {programs.map((program, idx) => {
             const latestWindow = program.applicationWindows[0];
             const windowState = latestWindow?.state ?? null;
 
@@ -120,6 +203,7 @@ export default async function ProgramsPage() {
                 }`}
               >
                 <div className="flex items-start justify-between gap-4">
+                  <span className="hidden print:inline-block flex-shrink-0 w-6 text-xs font-semibold text-gray-500">{idx + 1}.</span>
                   <div className="flex-1 min-w-0">
                     {/* Title + badges */}
                     <div className="flex flex-wrap items-center gap-2 mb-1">

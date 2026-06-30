@@ -1,19 +1,16 @@
 import React from "react";
+import { ordinal } from "@/lib/utils";
 import {
   Document,
   Page,
   Text,
   View,
   StyleSheet,
+  Image,
   Svg,
   Rect,
   Circle,
 } from "@react-pdf/renderer";
-
-// ─── Card dimensions (mm converted to pt at 72dpi) ───────────────────────────
-// A4: 595 x 842 pt, margins 20pt each side
-// 2 columns × 3 rows = 6 cards per page
-// Card: ~269 x 160 pt each
 
 const TEAL = "#0F6E56";
 const TEAL_LIGHT = "#E8F5F1";
@@ -60,15 +57,16 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   logoBox: {
-    width: 22,
-    height: 22,
+    width: 28,
+    height: 28,
     backgroundColor: "#FFFFFF",
-    borderRadius: 3,
+    borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
+    padding: 2,
   },
-  logoText: {
-    fontSize: 8,
+  logoFallbackText: {
+    fontSize: 9,
     fontFamily: "Helvetica-Bold",
     color: TEAL,
   },
@@ -120,10 +118,10 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   refValue: {
-    fontSize: 7,
+    fontSize: 6.5,
     fontFamily: "Helvetica-Bold",
     color: TEAL,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   fieldRow: {
     flexDirection: "row",
@@ -162,52 +160,22 @@ const styles = StyleSheet.create({
     color: GRAY,
     fontFamily: "Helvetica-Bold",
   },
-  barcodeArea: {
-    width: 40,
-    height: 24,
+  qrArea: {
+    width: 44,
     alignItems: "center",
     justifyContent: "center",
   },
-  // Placeholder barcode lines
-  barcodeLine: {
-    height: "100%",
-    backgroundColor: DARK,
-  },
 });
 
-// Simple barcode placeholder (vertical lines)
-function BarcodePlaceholder({ value }: { value: string }) {
-  const lines = value.split("").map((c) => c.charCodeAt(0) % 3);
-  return (
-    <Svg width="40" height="20" viewBox="0 0 40 20">
-      {lines.slice(0, 20).map((w, i) => (
-        <Rect
-          key={i}
-          x={i * 2}
-          y={0}
-          width={w === 0 ? 1 : w === 1 ? 1.5 : 2}
-          height={20}
-          fill="#111827"
-        />
-      ))}
-    </Svg>
-  );
+function QrImage({ dataUrl }: { dataUrl: string }) {
+  return <Image src={dataUrl} style={{ width: 42, height: 42 }} />;
 }
 
-// Person silhouette SVG
 function PersonIcon() {
   return (
     <Svg width="24" height="28" viewBox="0 0 24 28">
       <Circle cx="12" cy="8" r="6" fill="#0F6E56" opacity="0.3" />
-      <Rect
-        x="3"
-        y="16"
-        width="18"
-        height="12"
-        rx="4"
-        fill="#0F6E56"
-        opacity="0.3"
-      />
+      <Rect x="3" y="16" width="18" height="12" rx="4" fill="#0F6E56" opacity="0.3" />
     </Svg>
   );
 }
@@ -219,19 +187,21 @@ export type IdCardData = {
   missionCode: string;
   programCode: string;
   programTitle: string;
-  deploymentLocation: string | null;
+  batch: number | null;
   enrolledAt: string;
   validUntil: string;
+  qrDataUrl: string;
 };
 
 export function IdCardPdf({
   cards,
   generatedAt,
+  logoUrl,
 }: {
   cards: IdCardData[];
   generatedAt: string;
+  logoUrl?: string;
 }) {
-  // Split into pages of 6
   const pages: IdCardData[][] = [];
   for (let i = 0; i < cards.length; i += 6) {
     pages.push(cards.slice(i, i + 6));
@@ -248,12 +218,18 @@ export function IdCardPdf({
                 <View style={styles.cardHeader}>
                   <View>
                     <Text style={styles.orgName}>1000MM Bangladesh</Text>
-                    <Text style={styles.orgSub}>
-                      Missionary Training Programme
-                    </Text>
+                    <Text style={styles.orgSub}>Missionary Training Program</Text>
                   </View>
+                  {/* Logo */}
                   <View style={styles.logoBox}>
-                    <Text style={styles.logoText}>M</Text>
+                    {logoUrl ? (
+                      <Image
+                        src={logoUrl}
+                        style={{ width: 24, height: 24, objectFit: "contain" }}
+                      />
+                    ) : (
+                      <Text style={styles.logoFallbackText}>M</Text>
+                    )}
                   </View>
                 </View>
 
@@ -269,11 +245,10 @@ export function IdCardPdf({
                   <View style={styles.info}>
                     <Text style={styles.name}>{card.fullName}</Text>
 
+                    {/* Application reference number */}
                     <View style={styles.refRow}>
                       <Text style={styles.refLabel}>ID:</Text>
-                      <Text style={styles.refValue}>
-                        {card.referenceNumber}
-                      </Text>
+                      <Text style={styles.refValue}>{card.referenceNumber}</Text>
                     </View>
 
                     <View style={styles.fieldRow}>
@@ -293,11 +268,11 @@ export function IdCardPdf({
                       <Text style={styles.fieldValue}>{card.programCode}</Text>
                     </View>
 
-                    {card.deploymentLocation && (
+                    {card.batch != null && (
                       <View style={styles.fieldRow}>
-                        <Text style={styles.fieldLabel}>Deployed</Text>
-                        <Text style={styles.fieldValue}>
-                          {card.deploymentLocation}
+                        <Text style={styles.fieldLabel}>Batch</Text>
+                        <Text style={[styles.fieldValue, { fontFamily: "Helvetica-Bold" }]}>
+                          {ordinal(card.batch)}
                         </Text>
                       </View>
                     )}
@@ -308,41 +283,31 @@ export function IdCardPdf({
                     </View>
                   </View>
 
-                  {/* Barcode */}
-                  <View style={styles.barcodeArea}>
-                    <BarcodePlaceholder value={card.referenceNumber} />
-                    <Text style={{ fontSize: 4.5, color: GRAY, marginTop: 2 }}>
-                      {card.referenceNumber}
-                    </Text>
+                  {/* QR Code — no label underneath */}
+                  <View style={styles.qrArea}>
+                    <QrImage dataUrl={card.qrDataUrl} />
                   </View>
                 </View>
 
                 {/* Footer */}
                 <View style={styles.cardFooter}>
-                  <Text style={styles.footerLeft}>
-                    Enrolled: {card.enrolledAt}
-                  </Text>
+                  <Text style={styles.footerLeft}>Enrolled: {card.enrolledAt}</Text>
                   <Text style={styles.footerRight}>BAUM · Bangladesh</Text>
                 </View>
               </View>
             ))}
 
-            {/* Fill empty slots on last page to keep grid even */}
+            {/* Fill empty slot on last page */}
             {pageCards.length % 2 !== 0 && (
               <View
-                style={[
-                  styles.card,
-                  { backgroundColor: "transparent", borderWidth: 0 },
-                ]}
+                style={[styles.card, { backgroundColor: "transparent", borderWidth: 0 }]}
               />
             )}
           </View>
 
-          {/* Page footer */}
           <View style={{ marginTop: 8, alignItems: "center" }}>
             <Text style={{ fontSize: 5.5, color: "#9CA3AF" }}>
-              Generated: {generatedAt} · Page {pageIndex + 1} of {pages.length}{" "}
-              · CONFIDENTIAL
+              Generated: {generatedAt} · Page {pageIndex + 1} of {pages.length} · CONFIDENTIAL
             </Text>
           </View>
         </Page>

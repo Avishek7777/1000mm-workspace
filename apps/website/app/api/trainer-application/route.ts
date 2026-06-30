@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
       .trim()
       .toLowerCase();
     const phone = String(formData.get("phone") ?? "").trim() || null;
+    const country = String(formData.get("country") ?? "").trim() || null;
     const fullAddress = String(formData.get("fullAddress") ?? "").trim();
     const specialization = String(formData.get("specialization") ?? "").trim();
     const acceptsSelfFunding = formData.get("acceptsSelfFunding") === "true";
@@ -177,6 +178,7 @@ export async function POST(req: NextRequest) {
         fullName,
         email,
         phone,
+        country,
         fullAddress,
         specialization,
         acceptsSelfFunding,

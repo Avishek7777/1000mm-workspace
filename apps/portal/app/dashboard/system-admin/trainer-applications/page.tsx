@@ -12,6 +12,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { ExportButtons } from "./_components/ExportButtons";
+import { FilterBar } from "../../_components/FilterBar";
+import { PrintButton } from "@/components/PrintButton";
 
 export const metadata = { title: "Trainer Applications" };
 
@@ -36,19 +38,45 @@ const STATUS_CONFIG = {
 export default async function TrainerApplicationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; year?: string; country?: string; mission?: string; search?: string }>;
 }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "SYSTEM_ADMIN")
     redirect("/dashboard");
 
-  const { status } = await searchParams;
+  const { status, year, country, mission, search } = await searchParams;
   const filterStatus =
     (status as "PENDING" | "APPROVED" | "REJECTED" | undefined) ?? undefined;
+  const yearNum = year ? parseInt(year, 10) : undefined;
+
+  const [allCountries, allYears, allMissions] = await Promise.all([
+    prisma.trainerApplication.findMany({
+      where: { country: { not: null } },
+      select: { country: true },
+      distinct: ["country"],
+      orderBy: { country: "asc" },
+    }),
+    prisma.trainerApplication.findMany({ select: { createdAt: true } }).then((rows) =>
+      [...new Set(rows.map((a) => new Date(a.createdAt).getFullYear()))].sort((a, b) => b - a),
+    ),
+    prisma.localMission.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  const where = {
+    ...(filterStatus ? { status: filterStatus } : {}),
+    ...(yearNum ? { createdAt: { gte: new Date(`${yearNum}-01-01`), lt: new Date(`${yearNum + 1}-01-01`) } } : {}),
+    ...(country ? { country } : {}),
+    ...(mission ? { createdUser: { homeMissionId: mission } } : {}),
+    ...(search ? { OR: [{ fullName: { contains: search, mode: "insensitive" as const } }, { email: { contains: search, mode: "insensitive" as const } }] } : {}),
+  } as any;
 
   const [applications, counts] = await Promise.all([
     prisma.trainerApplication.findMany({
-      where: filterStatus ? { status: filterStatus } : undefined,
+      where,
       orderBy: { createdAt: "desc" },
       include: { reviewedBy: { select: { fullName: true } } },
     }),
@@ -81,39 +109,46 @@ export default async function TrainerApplicationsPage({
             {totalPending} pending
           </span>
         )}
-        <ExportButtons />
+        <div className="flex items-center gap-2 print:hidden">
+          <PrintButton label="Print" />
+          <ExportButtons />
+        </div>
       </div>
 
-      {/* Status filter tabs */}
-      <div className="flex gap-2 border-b border-gray-100 pb-0">
-        {([undefined, "PENDING", "APPROVED", "REJECTED"] as const).map((s) => {
-          const label = s ?? "All";
-          const count = s
-            ? (countMap[s] ?? 0)
-            : applications.length + (filterStatus ? 0 : 0);
-          const isActive = filterStatus === s;
-          return (
-            <Link
-              key={label}
-              href={s ? `?status=${s}` : "?"}
-              className={`flex items-center gap-1.5 border-b-2 px-3 pb-3 pt-1 text-sm font-medium transition-colors ${
-                isActive
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {label}
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-xs ${isActive ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}
-              >
-                {s
-                  ? (countMap[s] ?? 0)
-                  : Object.values(countMap).reduce((a, b) => a + b, 0)}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
+      {/* Filters */}
+      <FilterBar
+        basePath="/dashboard/system-admin/trainer-applications"
+        current={{ status: status ?? "", year: year ?? "", country: country ?? "", mission: mission ?? "", search: search ?? "" }}
+        filters={[
+          {
+            name: "status",
+            label: "Status",
+            allLabel: `All (${Object.values(countMap).reduce((a, b) => a + b, 0)})`,
+            options: (["PENDING", "APPROVED", "REJECTED"] as const).map((s) => ({
+              value: s,
+              label: `${s.charAt(0) + s.slice(1).toLowerCase()} (${countMap[s] ?? 0})`,
+            })),
+          },
+          {
+            name: "year",
+            label: "Year",
+            allLabel: "All years",
+            options: allYears.map((y) => ({ value: String(y), label: String(y) })),
+          },
+          {
+            name: "country",
+            label: "Country",
+            allLabel: "All countries",
+            options: allCountries.map((c) => ({ value: c.country!, label: c.country! })),
+          },
+          {
+            name: "mission",
+            label: "Mission",
+            allLabel: "All Mission",
+            options: allMissions.map((m) => ({ value: m.id, label: m.name })),
+          },
+        ]}
+      />
 
       {/* List */}
       {applications.length === 0 ? (
@@ -149,6 +184,9 @@ export default async function TrainerApplicationsPage({
                       month: "short",
                       year: "numeric",
                     })}
+                    {app.country && (
+                      <span className="ml-2 text-gray-500">· {app.country}</span>
+                    )}
                     {app.requestsInvitationLetter && (
                       <span className="ml-2 text-blue-500">
                         · Invitation letter requested
@@ -169,6 +207,51 @@ export default async function TrainerApplicationsPage({
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {/* Print-only list */}
+      {applications.length > 0 && (
+        <div className="hidden print:block">
+          <div className="flex items-center justify-between mb-4 border-b pb-3">
+            <img src="/logos/1000mm-logo.png" alt="1000MM" className="h-12 w-auto" />
+            <div className="text-center">
+              <p className="text-sm font-bold text-gray-900">1000 Missionary Movement Bangladesh</p>
+              <p className="text-xs text-gray-600 mt-0.5">Trainer Applications</p>
+              {(status || year || country || mission) && (
+                <p className="text-[10px] text-gray-500 mt-0.5">{[status, year, country, mission ? allMissions.find((m) => m.id === mission)?.name : undefined].filter(Boolean).join(" · ")}</p>
+              )}
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                Generated {new Date().toLocaleString("en-GB", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </p>
+            </div>
+            <img src="/logos/sda-logo.png" alt="SDA" className="h-12 w-auto" />
+          </div>
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="border-b-2 border-gray-400">
+                <th className="py-1.5 pr-2 text-left font-semibold text-gray-700">#</th>
+                <th className="py-1.5 pr-2 text-left font-semibold text-gray-700">Name</th>
+                <th className="py-1.5 pr-2 text-left font-semibold text-gray-700">Email</th>
+                <th className="py-1.5 pr-2 text-left font-semibold text-gray-700">Country</th>
+                <th className="py-1.5 pr-2 text-left font-semibold text-gray-700">Date</th>
+                <th className="py-1.5 text-left font-semibold text-gray-700">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {applications.map((app, i) => (
+                <tr key={app.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                  <td className="py-1 pr-2 text-gray-400">{i + 1}</td>
+                  <td className="py-1 pr-2 font-medium text-gray-900">{app.fullName}</td>
+                  <td className="py-1 pr-2 text-gray-600">{app.email}</td>
+                  <td className="py-1 pr-2 text-gray-600">{app.country ?? "—"}</td>
+                  <td className="py-1 pr-2 text-gray-600">{new Date(app.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</td>
+                  <td className="py-1 text-gray-600">{app.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-3 text-right text-[10px] text-gray-400">Total: {applications.length}</p>
         </div>
       )}
     </div>

@@ -8,14 +8,19 @@ type Props = {
   search?: string;
 };
 
-export function ExportButton({ missionId, status, search }: Props) {
+export function ExportButton({ missionId: _missionId, status, search }: Props) {
   const [open, setOpen] = useState(false);
 
-  function buildUrl(format: "pdf" | "excel") {
-    const params = new URLSearchParams({ missionId, format });
+  function buildUrl(format: "pdf" | "xlsx") {
+    const params = new URLSearchParams();
     if (status) params.set("status", status);
     if (search) params.set("search", search);
-    return `/api/lmd/export-applicants?${params}`;
+    const base =
+      format === "pdf"
+        ? "/api/export/applicants/pdf"
+        : "/api/export/applicants/xlsx";
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
   }
 
   return (
@@ -79,7 +84,7 @@ export function ExportButton({ missionId, status, search }: Props) {
               Export as PDF
             </a>
             <a
-              href={buildUrl("excel")}
+              href={buildUrl("xlsx")}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"

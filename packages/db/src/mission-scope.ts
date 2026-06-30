@@ -56,8 +56,10 @@ export type AuthContext = {
     | "TRAINER"
     | "LOCAL_DIRECTOR"
     | "MAIN_DIRECTOR"
+    | "SECRETARY"
+    | "ASSOCIATE_DIRECTOR"
     | "SYSTEM_ADMIN";
-  homeMissionId: string;
+  homeMissionId: string | null;
 };
 
 /**
@@ -95,8 +97,9 @@ const SCOPED_RELATIONS: Record<string, { relation: string; column: string }> = {
 
 /**
  * Roles that bypass mission scoping (can see across all missions).
+ * TRAINER is national-level — not tied to a specific mission.
  */
-const CROSS_MISSION_ROLES = new Set(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+const CROSS_MISSION_ROLES = new Set(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN", "TRAINER"]);
 
 /**
  * Wraps a PrismaClient with a mission-scope extension.

@@ -53,7 +53,7 @@ export default async function ComplaintDetailPage({
   if (!complaint) redirect("/dashboard/complaints");
 
   // Access control
-  const isStaff = ["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
+  const isStaff = ["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
   const isLmd = user.role === "LOCAL_DIRECTOR";
   const isOwner = complaint.submittedById === user.id;
 
@@ -77,7 +77,7 @@ export default async function ComplaintDetailPage({
   let canRespond = false;
   if (user.role === "SYSTEM_ADMIN") {
     canRespond = !complaint.isResolved;
-  } else if (user.role === "MAIN_DIRECTOR") {
+  } else if (user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR") {
     const allowed = await isSettingEnabled(SETTINGS.UD_CAN_RESPOND_COMPLAINTS);
     canRespond = allowed && !complaint.isResolved;
   }

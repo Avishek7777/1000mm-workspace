@@ -19,6 +19,7 @@ interface FormState {
   fullName: string;
   email: string;
   phone: string;
+  country: string;
   fullAddress: string;
   specialization: string;
   acceptsSelfFunding: boolean;
@@ -29,6 +30,7 @@ const INITIAL: FormState = {
   fullName: "",
   email: "",
   phone: "",
+  country: "",
   fullAddress: "",
   specialization: "",
   acceptsSelfFunding: false,
@@ -87,6 +89,7 @@ export default function BecomeATrainerPage() {
     if (!form.fullName.trim()) e.fullName = "Full name is required.";
     if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       e.email = "A valid email address is required.";
+    if (!form.country.trim()) e.country = "Country is required.";
     if (!form.fullAddress.trim()) e.fullAddress = "Full address is required.";
     if (!form.specialization.trim())
       e.specialization = "Please describe your area of specialization.";
@@ -323,7 +326,7 @@ export default function BecomeATrainerPage() {
                       className={inputCls(errors.email)}
                     />
                   </Field>
-                  <Field label="Phone Number" error={errors.phone}>
+                  <Field label="Phone Number" error={errors.phone} required>
                     <input
                       type="tel"
                       value={form.phone}
@@ -333,12 +336,21 @@ export default function BecomeATrainerPage() {
                     />
                   </Field>
                 </div>
+                <Field label="Country" error={errors.country} required>
+                  <input
+                    type="text"
+                    value={form.country}
+                    onChange={(e) => set("country", e.target.value)}
+                    placeholder="Country of origin / residence"
+                    className={inputCls(errors.country)}
+                  />
+                </Field>
                 <Field label="Full Address" error={errors.fullAddress} required>
                   <textarea
                     value={form.fullAddress}
                     onChange={(e) => set("fullAddress", e.target.value)}
                     rows={3}
-                    placeholder="Street, City, State/Province, Country, Postal Code"
+                    placeholder="Street, City, State/Province, Postal Code"
                     className={inputCls(errors.fullAddress)}
                   />
                 </Field>
@@ -369,7 +381,7 @@ export default function BecomeATrainerPage() {
                   style={{ fontFamily: "Georgia, serif" }}
                 >
                   All three documents are required. Accepted formats: PDF, JPG,
-                  PNG (max 10 MB each).
+                  PNG (max 2 MB each).
                 </p>
                 <div className="space-y-3">
                   <FileUpload

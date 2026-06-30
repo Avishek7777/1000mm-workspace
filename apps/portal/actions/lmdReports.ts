@@ -3,8 +3,8 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
+import { requireDbUser } from "@/lib/auth/helpers";
 import { isSettingEnabled, SETTINGS } from "@/lib/settings";
 
 export type ActionResult = {
@@ -18,23 +18,11 @@ export type ActionResult = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function requireLmd() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    include: { homeMission: true },
-  });
-  if (!user || user.role !== "LOCAL_DIRECTOR") redirect("/dashboard");
-  return user;
+  return requireDbUser(["LOCAL_DIRECTOR"]);
 }
 
 async function requireDirector() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user || !["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role))
-    redirect("/dashboard");
-  return user;
+  return requireDbUser(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
 }
 
 // ─── OPEN REPORT WINDOW (UD / SA) ─────────────────────────────────────────────
@@ -55,7 +43,7 @@ export async function openLmdReportWindowAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireDirector();
-  if (user.role === "MAIN_DIRECTOR") {
+  if (user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR") {
     const allowed = await isSettingEnabled(
       SETTINGS.UD_CAN_OPEN_LMD_REPORT_WINDOWS,
     );
@@ -85,11 +73,31 @@ export async function openLmdReportWindowAction(
         error: `A window for ${reportMonth}/${reportYear} is already open.`,
       };
     }
-    // Re-open closed window
+    // Re-open closed window — also re-notify LMDs
     await prisma.lmdReportWindow.update({
       where: { id: existing.id },
       data: { state: "OPEN" },
     });
+    const lmdsForReopen = await prisma.user.findMany({
+      where: { role: "LOCAL_DIRECTOR", isActive: true, deletedAt: null },
+      select: { id: true },
+    });
+    const monthNamesReopen = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    ];
+    const periodReopen = `${monthNamesReopen[reportMonth - 1]} ${reportYear}`;
+    if (lmdsForReopen.length > 0) {
+      await prisma.notification.createMany({
+        data: lmdsForReopen.map((lmd) => ({
+          userId: lmd.id,
+          channel: "IN_APP" as const,
+          templateKey: "lmd_report.window_opened",
+          templateData: { period: periodReopen, windowId: existing.id },
+          actionUrl: `/dashboard/lmd/reports`,
+        })),
+      });
+    }
     revalidatePath("/dashboard/director/lmd-reports");
     revalidatePath("/dashboard/lmd/reports");
     return { ok: true, windowId: existing.id };
@@ -105,6 +113,28 @@ export async function openLmdReportWindowAction(
     },
   });
 
+  // Notify all active LMDs
+  const lmds = await prisma.user.findMany({
+    where: { role: "LOCAL_DIRECTOR", isActive: true, deletedAt: null },
+    select: { id: true },
+  });
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  const period = `${monthNames[reportMonth - 1]} ${reportYear}`;
+  if (lmds.length > 0) {
+    await prisma.notification.createMany({
+      data: lmds.map((lmd) => ({
+        userId: lmd.id,
+        channel: "IN_APP" as const,
+        templateKey: "lmd_report.window_opened",
+        templateData: { period, windowId: window.id },
+        actionUrl: `/dashboard/lmd/reports`,
+      })),
+    });
+  }
+
   revalidatePath("/dashboard/director/lmd-reports");
   revalidatePath("/dashboard/lmd/reports");
   return { ok: true, windowId: window.id };
@@ -117,7 +147,7 @@ export async function closeLmdReportWindowAction(
 ): Promise<ActionResult> {
   const user = await requireDirector();
 
-  if (user.role === "MAIN_DIRECTOR") {
+  if (user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR") {
     const allowed = await isSettingEnabled(
       SETTINGS.UD_CAN_OPEN_LMD_REPORT_WINDOWS,
     );

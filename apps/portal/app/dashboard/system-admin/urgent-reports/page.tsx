@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, Plus, Users, CheckCircle, Clock } from "lucide-react";
-import { deleteUrgentReportAction } from "@/actions/urgentReports";
+import { DeleteReportButton } from "./_components/DeleteReportButton";
 
 export const metadata = { title: "Urgent Reports" };
 
@@ -131,19 +131,7 @@ export default async function UrgentReportsPage() {
                     >
                       View
                     </Link>
-                    <form action={deleteUrgentReportAction}>
-                      <input type="hidden" name="reportId" value={report.id} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
-                        onClick={(e) => {
-                          if (!confirm("Delete this report?"))
-                            e.preventDefault();
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </form>
+                    <DeleteReportButton reportId={report.id} />
                   </div>
                 </div>
               </div>

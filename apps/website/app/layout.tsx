@@ -7,6 +7,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import BackToTop from "@/components/BackToTop";
 
 const playfairDisplayHeading = Playfair_Display({
   subsets: ["latin"],
@@ -61,6 +62,7 @@ export default function RootLayout({
           }}
         />
         {children}
+        <BackToTop />
       </body>
     </html>
   );

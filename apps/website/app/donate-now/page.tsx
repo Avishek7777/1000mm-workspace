@@ -12,36 +12,163 @@ import {
   Loader2,
   Heart,
   ShieldCheck,
+  ChevronDown,
 } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/sections/Footer";
+
+// ─── Country / currency config ────────────────────────────────────────────────
+
+type CountryConfig = {
+  code: string;
+  name: string;
+  flag: string;
+  currency: string;
+  symbol: string;
+  presets: number[];
+  locale: string;
+};
+
+const countries: CountryConfig[] = [
+  {
+    code: "US",
+    name: "United States",
+    flag: "🇺🇸",
+    currency: "USD",
+    symbol: "$",
+    presets: [25, 50, 100, 500, 1000],
+    locale: "en-US",
+  },
+  {
+    code: "BD",
+    name: "Bangladesh",
+    flag: "🇧🇩",
+    currency: "BDT",
+    symbol: "৳",
+    presets: [3000, 5000, 10000, 50000, 100000],
+    locale: "bn-BD",
+  },
+  {
+    code: "EU",
+    name: "Europe (EU)",
+    flag: "🇪🇺",
+    currency: "EUR",
+    symbol: "€",
+    presets: [25, 50, 100, 500, 1000],
+    locale: "de-DE",
+  },
+  {
+    code: "GB",
+    name: "United Kingdom",
+    flag: "🇬🇧",
+    currency: "GBP",
+    symbol: "£",
+    presets: [20, 50, 100, 400, 800],
+    locale: "en-GB",
+  },
+  {
+    code: "CA",
+    name: "Canada",
+    flag: "🇨🇦",
+    currency: "CAD",
+    symbol: "C$",
+    presets: [35, 70, 150, 700, 1400],
+    locale: "en-CA",
+  },
+  {
+    code: "AU",
+    name: "Australia",
+    flag: "🇦🇺",
+    currency: "AUD",
+    symbol: "A$",
+    presets: [40, 80, 150, 800, 1500],
+    locale: "en-AU",
+  },
+  {
+    code: "BR",
+    name: "Brazil",
+    flag: "🇧🇷",
+    currency: "BRL",
+    symbol: "R$",
+    presets: [150, 300, 600, 3000, 6000],
+    locale: "pt-BR",
+  },
+  {
+    code: "SG",
+    name: "Singapore",
+    flag: "🇸🇬",
+    currency: "SGD",
+    symbol: "S$",
+    presets: [35, 70, 150, 700, 1400],
+    locale: "en-SG",
+  },
+  {
+    code: "ZA",
+    name: "South Africa",
+    flag: "🇿🇦",
+    currency: "ZAR",
+    symbol: "R",
+    presets: [500, 1000, 2000, 10000, 20000],
+    locale: "en-ZA",
+  },
+  {
+    code: "NZ",
+    name: "New Zealand",
+    flag: "🇳🇿",
+    currency: "NZD",
+    symbol: "NZ$",
+    presets: [40, 80, 160, 800, 1600],
+    locale: "en-NZ",
+  },
+  {
+    code: "CH",
+    name: "Switzerland",
+    flag: "🇨🇭",
+    currency: "CHF",
+    symbol: "CHF",
+    presets: [25, 50, 100, 500, 1000],
+    locale: "de-CH",
+  },
+  {
+    code: "NO",
+    name: "Norway",
+    flag: "🇳🇴",
+    currency: "NOK",
+    symbol: "kr",
+    presets: [250, 500, 1000, 5000, 10000],
+    locale: "nb-NO",
+  },
+  {
+    code: "KR",
+    name: "South Korea",
+    flag: "🇰🇷",
+    currency: "KRW",
+    symbol: "₩",
+    presets: [35000, 70000, 140000, 700000, 1400000],
+    locale: "ko-KR",
+  },
+];
+
+function formatAmount(amount: number, country: CountryConfig): string {
+  return `${country.symbol}${amount.toLocaleString(country.locale)}`;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Method = "bkash" | "nagad" | "card" | "paypal";
 
-// ─── Preset amounts ───────────────────────────────────────────────────────────
-
-const presets = [
-  { bdt: 500, label: "৳500" },
-  { bdt: 1000, label: "৳1,000" },
-  { bdt: 3000, label: "৳3,000" },
-  { bdt: 5000, label: "৳5,000" },
-  { bdt: 15000, label: "৳15,000" },
-];
-
-// ─── Payment method config ────────────────────────────────────────────────────
-
 const methods: {
   id: Method;
   name: string;
   subtitle: string;
+  availableFor?: string[]; // country codes — undefined = all
   logo: React.ReactNode;
 }[] = [
   {
     id: "bkash",
     name: "bKash",
     subtitle: "Mobile banking",
+    availableFor: ["BD"],
     logo: (
       <svg viewBox="0 0 48 48" className="w-8 h-8" fill="none">
         <rect width="48" height="48" rx="12" fill="#E2136E" />
@@ -64,6 +191,7 @@ const methods: {
     id: "nagad",
     name: "Nagad",
     subtitle: "Mobile banking",
+    availableFor: ["BD"],
     logo: (
       <svg viewBox="0 0 48 48" className="w-8 h-8" fill="none">
         <rect width="48" height="48" rx="12" fill="#F7941D" />
@@ -152,16 +280,80 @@ const fadeUp = {
   },
 };
 
+// ─── Country Selector ─────────────────────────────────────────────────────────
+
+function CountrySelector({
+  selected,
+  onChange,
+}: {
+  selected: CountryConfig;
+  onChange: (c: CountryConfig) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl border border-amber-200 bg-white text-left transition-colors hover:border-amber-400 focus:outline-none"
+        style={{ fontFamily: "Georgia, serif" }}
+      >
+        <span className="text-xl">{selected.flag}</span>
+        <div className="flex-1">
+          <span className="text-sm font-bold text-stone-800">
+            {selected.name}
+          </span>
+          <span className="text-xs text-stone-400 ml-2">
+            ({selected.currency})
+          </span>
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 text-stone-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-2 rounded-2xl border border-amber-200 bg-white shadow-xl z-20 overflow-hidden max-h-56 overflow-y-auto">
+          {countries.map((c) => (
+            <button
+              key={c.code}
+              type="button"
+              onClick={() => {
+                onChange(c);
+                setOpen(false);
+              }}
+              className={`flex items-center gap-3 w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-amber-50 ${
+                c.code === selected.code ? "bg-orange-50/60" : ""
+              }`}
+              style={{ fontFamily: "Georgia, serif" }}
+            >
+              <span className="text-lg">{c.flag}</span>
+              <span className="font-medium text-stone-800 flex-1">{c.name}</span>
+              <span className="text-xs text-stone-400">{c.currency}</span>
+              {c.code === selected.code && (
+                <Check className="w-3.5 h-3.5 text-orange-500" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Sub-forms ────────────────────────────────────────────────────────────────
 
 function MobileMoneyForm({
-  method,
+  methodId,
   amount,
+  country,
   onSubmit,
   loading,
 }: {
-  method: "bkash" | "nagad";
+  methodId: "bkash" | "nagad";
   amount: number;
+  country: CountryConfig;
   onSubmit: () => void;
   loading: boolean;
 }) {
@@ -169,11 +361,11 @@ function MobileMoneyForm({
   const cfg = {
     bkash: { color: "#E2136E", bg: "#fdf2f7", border: "#fbc8df" },
     nagad: { color: "#F7941D", bg: "#fff8f0", border: "#fcd9a8" },
-  }[method];
+  }[methodId];
 
   return (
     <motion.div
-      key={method}
+      key={methodId}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
@@ -188,14 +380,10 @@ function MobileMoneyForm({
           className="font-bold text-sm mb-0.5"
           style={{ color: cfg.color, fontFamily: "Georgia, serif" }}
         >
-          {method === "bkash" ? "bKash" : "Nagad"} Payment
+          {methodId === "bkash" ? "bKash" : "Nagad"} Payment
         </p>
-        <p
-          className="text-xs text-gray-500"
-          style={{ fontFamily: "Georgia, serif" }}
-        >
-          You will receive a prompt on your{" "}
-          {method === "bkash" ? "bKash" : "Nagad"} number
+        <p className="text-xs text-gray-500" style={{ fontFamily: "Georgia, serif" }}>
+          You will receive a prompt on your {methodId === "bkash" ? "bKash" : "Nagad"} number
         </p>
       </div>
       <div>
@@ -203,7 +391,7 @@ function MobileMoneyForm({
           className="block text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1.5"
           style={{ fontFamily: "Georgia, serif" }}
         >
-          {method === "bkash" ? "bKash" : "Nagad"} Number
+          {methodId === "bkash" ? "bKash" : "Nagad"} Number
         </label>
         <div className="relative">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-mono">
@@ -220,17 +408,11 @@ function MobileMoneyForm({
         </div>
       </div>
       <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-5 py-3 flex items-center justify-between">
-        <span
-          className="text-sm text-amber-800"
-          style={{ fontFamily: "Georgia, serif" }}
-        >
+        <span className="text-sm text-amber-800" style={{ fontFamily: "Georgia, serif" }}>
           Donation amount
         </span>
-        <span
-          className="font-bold text-lg"
-          style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}
-        >
-          ৳{amount.toLocaleString()}
+        <span className="font-bold text-lg" style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}>
+          {formatAmount(amount, country)}
         </span>
       </div>
       <button
@@ -247,7 +429,7 @@ function MobileMoneyForm({
         ) : (
           <>
             <Smartphone className="w-5 h-5" />
-            Send {method === "bkash" ? "bKash" : "Nagad"} Request
+            Send {methodId === "bkash" ? "bKash" : "Nagad"} Request
           </>
         )}
       </button>
@@ -257,35 +439,22 @@ function MobileMoneyForm({
 
 function CardForm({
   amount,
+  country,
   onSubmit,
   loading,
 }: {
   amount: number;
+  country: CountryConfig;
   onSubmit: () => void;
   loading: boolean;
 }) {
-  const [card, setCard] = useState({
-    number: "",
-    name: "",
-    expiry: "",
-    cvc: "",
-  });
+  const [card, setCard] = useState({ number: "", name: "", expiry: "", cvc: "" });
   const fmt = (v: string) =>
-    v
-      .replace(/\D/g, "")
-      .replace(/(.{4})/g, "$1 ")
-      .trim()
-      .slice(0, 19);
+    v.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim().slice(0, 19);
   const fmtExp = (v: string) =>
-    v
-      .replace(/\D/g, "")
-      .replace(/^(\d{2})(\d)/, "$1/$2")
-      .slice(0, 5);
+    v.replace(/\D/g, "").replace(/^(\d{2})(\d)/, "$1/$2").slice(0, 5);
   const ready =
-    card.number.length >= 19 &&
-    card.name &&
-    card.expiry.length === 5 &&
-    card.cvc.length >= 3;
+    card.number.length >= 19 && card.name && card.expiry.length === 5 && card.cvc.length >= 3;
 
   return (
     <motion.div
@@ -296,49 +465,8 @@ function CardForm({
       transition={{ duration: 0.3 }}
       className="space-y-4"
     >
-      <div className="flex items-center gap-2">
-        <svg
-          viewBox="0 0 38 24"
-          className="w-10 h-7 rounded shadow-sm"
-          fill="none"
-        >
-          <rect width="38" height="24" rx="4" fill="#1A1F71" />
-          <text
-            x="50%"
-            y="62%"
-            dominantBaseline="middle"
-            textAnchor="middle"
-            fill="white"
-            fontSize="9"
-            fontWeight="bold"
-            fontFamily="Arial"
-            letterSpacing="1"
-          >
-            VISA
-          </text>
-        </svg>
-        <svg
-          viewBox="0 0 38 24"
-          className="w-10 h-7 rounded shadow-sm"
-          fill="none"
-        >
-          <rect width="38" height="24" rx="4" fill="#252525" />
-          <circle cx="14" cy="12" r="7" fill="#EB001B" />
-          <circle cx="24" cy="12" r="7" fill="#F79E1B" />
-          <path d="M19 7.3a7 7 0 0 1 0 9.4A7 7 0 0 1 19 7.3z" fill="#FF5F00" />
-        </svg>
-        <span
-          className="text-xs text-gray-400 ml-1"
-          style={{ fontFamily: "Georgia, serif" }}
-        >
-          Powered by Stripe
-        </span>
-      </div>
       <div>
-        <label
-          className="block text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1.5"
-          style={{ fontFamily: "Georgia, serif" }}
-        >
+        <label className="block text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1.5" style={{ fontFamily: "Georgia, serif" }}>
           Card Number
         </label>
         <input
@@ -352,10 +480,7 @@ function CardForm({
         />
       </div>
       <div>
-        <label
-          className="block text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1.5"
-          style={{ fontFamily: "Georgia, serif" }}
-        >
+        <label className="block text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1.5" style={{ fontFamily: "Georgia, serif" }}>
           Cardholder Name
         </label>
         <input
@@ -369,18 +494,11 @@ function CardForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label
-            className="block text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1.5"
-            style={{ fontFamily: "Georgia, serif" }}
-          >
-            Expiry
-          </label>
+          <label className="block text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1.5" style={{ fontFamily: "Georgia, serif" }}>Expiry</label>
           <input
             type="text"
             value={card.expiry}
-            onChange={(e) =>
-              setCard({ ...card, expiry: fmtExp(e.target.value) })
-            }
+            onChange={(e) => setCard({ ...card, expiry: fmtExp(e.target.value) })}
             placeholder="MM/YY"
             maxLength={5}
             className="w-full px-4 py-3 rounded-2xl border border-amber-200 bg-white text-sm font-mono focus:outline-none focus:border-blue-400 transition-colors"
@@ -388,21 +506,11 @@ function CardForm({
           />
         </div>
         <div>
-          <label
-            className="block text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1.5"
-            style={{ fontFamily: "Georgia, serif" }}
-          >
-            CVC
-          </label>
+          <label className="block text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1.5" style={{ fontFamily: "Georgia, serif" }}>CVC</label>
           <input
             type="text"
             value={card.cvc}
-            onChange={(e) =>
-              setCard({
-                ...card,
-                cvc: e.target.value.replace(/\D/g, "").slice(0, 4),
-              })
-            }
+            onChange={(e) => setCard({ ...card, cvc: e.target.value.replace(/\D/g, "").slice(0, 4) })}
             placeholder="•••"
             maxLength={4}
             className="w-full px-4 py-3 rounded-2xl border border-amber-200 bg-white text-sm font-mono focus:outline-none focus:border-blue-400 transition-colors"
@@ -411,41 +519,22 @@ function CardForm({
         </div>
       </div>
       <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-5 py-3 flex items-center justify-between">
-        <span
-          className="text-sm text-amber-800"
-          style={{ fontFamily: "Georgia, serif" }}
-        >
-          Donation amount
-        </span>
-        <span
-          className="font-bold text-lg"
-          style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}
-        >
-          ৳{amount.toLocaleString()}
+        <span className="text-sm text-amber-800" style={{ fontFamily: "Georgia, serif" }}>Donation amount</span>
+        <span className="font-bold text-lg" style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}>
+          {formatAmount(amount, country)}
         </span>
       </div>
       <button
         onClick={onSubmit}
         disabled={loading || !ready}
         className="w-full py-4 rounded-2xl font-bold text-white text-base flex items-center justify-center gap-2 hover:opacity-90 hover:scale-[1.01] transition-all duration-300 shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-        style={{
-          background: "linear-gradient(90deg, #1a56db 0%, #007f98 100%)",
-          fontFamily: "Georgia, serif",
-        }}
+        style={{ background: "linear-gradient(90deg, #1a56db 0%, #007f98 100%)", fontFamily: "Georgia, serif" }}
       >
-        {loading ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <>
-            <Lock className="w-4 h-4" />
-            Pay ৳{amount.toLocaleString()} Securely
-          </>
+        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+          <><Lock className="w-4 h-4" /> Pay {formatAmount(amount, country)} Securely</>
         )}
       </button>
-      <p
-        className="text-center text-xs text-gray-400 flex items-center justify-center gap-1"
-        style={{ fontFamily: "Georgia, serif" }}
-      >
+      <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1" style={{ fontFamily: "Georgia, serif" }}>
         <Lock className="w-3 h-3" /> Secured by Stripe · 256-bit SSL
       </p>
     </motion.div>
@@ -454,10 +543,12 @@ function CardForm({
 
 function PayPalForm({
   amount,
+  country,
   onSubmit,
   loading,
 }: {
   amount: number;
+  country: CountryConfig;
   onSubmit: () => void;
   loading: boolean;
 }) {
@@ -473,66 +564,28 @@ function PayPalForm({
       <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-5 text-center">
         <svg viewBox="0 0 48 48" className="w-12 h-12 mx-auto mb-3" fill="none">
           <rect width="48" height="48" rx="12" fill="#003087" />
-          <text
-            x="50%"
-            y="58%"
-            dominantBaseline="middle"
-            textAnchor="middle"
-            fill="white"
-            fontSize="10"
-            fontWeight="bold"
-            fontFamily="Arial"
-          >
-            PayPal
-          </text>
+          <text x="50%" y="58%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="Arial">PayPal</text>
         </svg>
-        <p
-          className="text-sm text-gray-600 leading-relaxed"
-          style={{ fontFamily: "Georgia, serif" }}
-        >
+        <p className="text-sm text-gray-600 leading-relaxed" style={{ fontFamily: "Georgia, serif" }}>
           You will be redirected to PayPal to complete your donation of{" "}
-          <span className="font-bold text-gray-900">
-            ৳{amount.toLocaleString()}
-          </span>{" "}
-          securely.
+          <span className="font-bold text-gray-900">{formatAmount(amount, country)}</span> securely.
         </p>
       </div>
       <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-5 py-3 flex items-center justify-between">
-        <span
-          className="text-sm text-amber-800"
-          style={{ fontFamily: "Georgia, serif" }}
-        >
-          Donation amount
-        </span>
-        <span
-          className="font-bold text-lg"
-          style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}
-        >
-          ৳{amount.toLocaleString()}
-        </span>
+        <span className="text-sm text-amber-800" style={{ fontFamily: "Georgia, serif" }}>Donation amount</span>
+        <span className="font-bold text-lg" style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}>{formatAmount(amount, country)}</span>
       </div>
       <button
         onClick={onSubmit}
         disabled={loading}
         className="w-full py-4 rounded-2xl font-bold text-white text-base flex items-center justify-center gap-2 hover:opacity-90 hover:scale-[1.01] transition-all duration-300 shadow-md disabled:opacity-50"
-        style={{
-          background: "linear-gradient(90deg, #003087 0%, #009cde 100%)",
-          fontFamily: "Georgia, serif",
-        }}
+        style={{ background: "linear-gradient(90deg, #003087 0%, #009cde 100%)", fontFamily: "Georgia, serif" }}
       >
-        {loading ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <>
-            <Globe className="w-5 h-5" />
-            Continue to PayPal
-          </>
+        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+          <><Globe className="w-5 h-5" /> Continue to PayPal</>
         )}
       </button>
-      <p
-        className="text-center text-xs text-gray-400 flex items-center justify-center gap-1"
-        style={{ fontFamily: "Georgia, serif" }}
-      >
+      <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1" style={{ fontFamily: "Georgia, serif" }}>
         <Lock className="w-3 h-3" /> Redirects to PayPal's secure checkout
       </p>
     </motion.div>
@@ -543,7 +596,8 @@ function PayPalForm({
 
 export default function DonateNowPage() {
   const router = useRouter();
-  const [amount, setAmount] = useState(3000);
+  const [country, setCountry] = useState<CountryConfig>(countries[0]);
+  const [amount, setAmount] = useState(country.presets[2]);
   const [customAmount, setCustomAmount] = useState("");
   const [useCustom, setUseCustom] = useState(false);
   const [method, setMethod] = useState<Method>("bkash");
@@ -551,32 +605,25 @@ export default function DonateNowPage() {
 
   const finalAmount = useCustom ? parseInt(customAmount || "0") : amount;
 
-  async function handleSubmit() {
-    if (!finalAmount || finalAmount < 10) return;
-    setLoading(true);
-    // ── TODO: replace each case with real API call ─────────────────────────
-    switch (method) {
-      case "bkash":
-        // const res = await fetch("/api/payments/bkash/create", { method: "POST", body: JSON.stringify({ amount: finalAmount }) })
-        // const { bkashURL } = await res.json(); window.location.href = bkashURL;
-        await new Promise((r) => setTimeout(r, 1800));
-        break;
-      case "nagad":
-        // const res = await fetch("/api/payments/nagad/init", { method: "POST", body: JSON.stringify({ amount: finalAmount }) })
-        // window.location.href = nagadRedirectURL;
-        await new Promise((r) => setTimeout(r, 1800));
-        break;
-      case "card":
-        // const { clientSecret } = await fetch("/api/payments/stripe/create-intent", ...).then(r => r.json())
-        // await stripe.confirmCardPayment(clientSecret, { payment_method: { card: elements.getElement(CardElement) } })
-        await new Promise((r) => setTimeout(r, 1800));
-        break;
-      case "paypal":
-        // const { approvalUrl } = await fetch("/api/payments/paypal/create-order", ...).then(r => r.json())
-        // window.location.href = approvalUrl;
-        await new Promise((r) => setTimeout(r, 1800));
-        break;
+  function handleCountryChange(c: CountryConfig) {
+    setCountry(c);
+    setAmount(c.presets[2]);
+    setUseCustom(false);
+    setCustomAmount("");
+    // Reset method if current method isn't available for this country
+    if (c.code !== "BD" && (method === "bkash" || method === "nagad")) {
+      setMethod("card");
     }
+  }
+
+  const availableMethods = methods.filter(
+    (m) => !m.availableFor || m.availableFor.includes(country.code),
+  );
+
+  async function handleSubmit() {
+    if (!finalAmount || finalAmount < 1) return;
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 1800));
     setLoading(false);
     router.push("/thank-you");
   }
@@ -592,12 +639,6 @@ export default function DonateNowPage() {
           style={{
             background:
               "radial-gradient(ellipse 65% 55% at 50% 0%, rgba(251,191,36,0.18) 0%, transparent 70%)",
-          }}
-        />
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0v60M0 30h60' stroke='%23a16207' stroke-width='0.5'/%3E%3C/svg%3E")`,
           }}
         />
         <div className="relative z-10 max-w-2xl mx-auto px-6 text-center">
@@ -642,8 +683,9 @@ export default function DonateNowPage() {
             className="text-base md:text-lg leading-relaxed"
             style={{ fontFamily: "Georgia, serif", color: "#92400e" }}
           >
-            Choose your amount and payment method. Every taka goes directly to
-            training and sustaining a young missionary in the field.
+            Choose your country, pick an amount, and select your payment method.
+            Every gift goes directly to training and sustaining a young
+            missionary in the field.
           </motion.p>
         </div>
       </section>
@@ -652,18 +694,35 @@ export default function DonateNowPage() {
       <section className="bg-white py-16 border-y border-amber-100">
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid lg:grid-cols-[1fr_420px] gap-10 items-start">
-            {/* LEFT — steps 1 & 2 */}
+            {/* LEFT — steps */}
             <div className="space-y-10">
-              {/* Step 1 — Amount */}
+              {/* Step 1 — Country */}
               <motion.div variants={fadeUp} initial="hidden" animate="show">
                 <div className="flex items-center gap-3 mb-5">
                   <span
                     className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                    style={{
-                      background: "linear-gradient(90deg, #007f98, #f97316)",
-                    }}
+                    style={{ background: "linear-gradient(90deg, #007f98, #f97316)" }}
                   >
                     1
+                  </span>
+                  <h2
+                    className="text-xl font-bold"
+                    style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}
+                  >
+                    Select Your Country
+                  </h2>
+                </div>
+                <CountrySelector selected={country} onChange={handleCountryChange} />
+              </motion.div>
+
+              {/* Step 2 — Amount */}
+              <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.1 }}>
+                <div className="flex items-center gap-3 mb-5">
+                  <span
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                    style={{ background: "linear-gradient(90deg, #007f98, #f97316)" }}
+                  >
+                    2
                   </span>
                   <h2
                     className="text-xl font-bold"
@@ -673,55 +732,36 @@ export default function DonateNowPage() {
                   </h2>
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-4">
-                  {presets.map((p) => {
-                    const active = !useCustom && amount === p.bdt;
+                  {country.presets.map((p) => {
+                    const active = !useCustom && amount === p;
                     return (
                       <button
-                        key={p.bdt}
-                        onClick={() => {
-                          setAmount(p.bdt);
-                          setUseCustom(false);
-                        }}
+                        key={p}
+                        onClick={() => { setAmount(p); setUseCustom(false); }}
                         className={`py-3 rounded-2xl text-sm font-bold border transition-all duration-200 ${active ? "text-white shadow-md scale-[1.04]" : "bg-amber-50 border-amber-200 text-amber-800 hover:border-amber-400"}`}
                         style={
                           active
-                            ? {
-                                background:
-                                  "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
-                                borderColor: "transparent",
-                                fontFamily: "Georgia, serif",
-                              }
+                            ? { background: "linear-gradient(90deg, #007f98 0%, #f97316 100%)", borderColor: "transparent", fontFamily: "Georgia, serif" }
                             : { fontFamily: "Georgia, serif" }
                         }
                       >
-                        {p.label}
+                        {formatAmount(p, country)}
                       </button>
                     );
                   })}
                 </div>
-                <div
-                  className={`rounded-2xl border p-4 transition-all duration-200 ${useCustom ? "border-orange-400 bg-orange-50/40" : "border-amber-200 bg-amber-50/40"}`}
-                >
-                  <p
-                    className="text-xs font-semibold uppercase tracking-widest text-amber-700 mb-2"
-                    style={{ fontFamily: "Georgia, serif" }}
-                  >
+                <div className={`rounded-2xl border p-4 transition-all duration-200 ${useCustom ? "border-orange-400 bg-orange-50/40" : "border-amber-200 bg-amber-50/40"}`}>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 mb-2" style={{ fontFamily: "Georgia, serif" }}>
                     Or enter a custom amount
                   </p>
                   <div className="relative">
-                    <span
-                      className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-base"
-                      style={{ color: "#b45309", fontFamily: "Georgia, serif" }}
-                    >
-                      ৳
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-base" style={{ color: "#b45309", fontFamily: "Georgia, serif" }}>
+                      {country.symbol}
                     </span>
                     <input
                       type="number"
                       value={customAmount}
-                      onChange={(e) => {
-                        setCustomAmount(e.target.value);
-                        setUseCustom(true);
-                      }}
+                      onChange={(e) => { setCustomAmount(e.target.value); setUseCustom(true); }}
                       onFocus={() => setUseCustom(true)}
                       placeholder="Enter amount"
                       className="w-full pl-9 pr-4 py-3 rounded-xl border border-amber-200 bg-white text-sm focus:outline-none focus:border-orange-400 transition-colors"
@@ -731,64 +771,35 @@ export default function DonateNowPage() {
                 </div>
               </motion.div>
 
-              {/* Step 2 — Method */}
-              <motion.div
-                variants={fadeUp}
-                initial="hidden"
-                animate="show"
-                transition={{ delay: 0.15 }}
-              >
+              {/* Step 3 — Method */}
+              <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.2 }}>
                 <div className="flex items-center gap-3 mb-5">
                   <span
                     className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                    style={{
-                      background: "linear-gradient(90deg, #007f98, #f97316)",
-                    }}
+                    style={{ background: "linear-gradient(90deg, #007f98, #f97316)" }}
                   >
-                    2
+                    3
                   </span>
-                  <h2
-                    className="text-xl font-bold"
-                    style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}
-                  >
+                  <h2 className="text-xl font-bold" style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}>
                     Choose Payment Method
                   </h2>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  {methods.map((m) => (
+                  {availableMethods.map((m) => (
                     <button
                       key={m.id}
                       onClick={() => setMethod(m.id)}
                       className={`relative flex items-center gap-3 p-4 rounded-2xl border text-left transition-all duration-200 hover:shadow-sm ${method === m.id ? "border-orange-400 ring-2 ring-orange-200 bg-orange-50/40" : "border-amber-200 bg-amber-50/30 hover:border-amber-300"}`}
                     >
                       {method === m.id && (
-                        <span
-                          className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full flex items-center justify-center"
-                          style={{
-                            background:
-                              "linear-gradient(90deg, #007f98, #f97316)",
-                          }}
-                        >
+                        <span className="absolute top-2.5 right-2.5 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(90deg, #007f98, #f97316)" }}>
                           <Check className="w-2.5 h-2.5 text-white" />
                         </span>
                       )}
                       <div className="shrink-0">{m.logo}</div>
                       <div>
-                        <p
-                          className="font-bold text-sm"
-                          style={{
-                            fontFamily: "Georgia, serif",
-                            color: "#3b1f08",
-                          }}
-                        >
-                          {m.name}
-                        </p>
-                        <p
-                          className="text-xs text-gray-400"
-                          style={{ fontFamily: "Georgia, serif" }}
-                        >
-                          {m.subtitle}
-                        </p>
+                        <p className="font-bold text-sm" style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}>{m.name}</p>
+                        <p className="text-xs text-gray-400" style={{ fontFamily: "Georgia, serif" }}>{m.subtitle}</p>
                       </div>
                     </button>
                   ))}
@@ -796,88 +807,42 @@ export default function DonateNowPage() {
               </motion.div>
             </div>
 
-            {/* RIGHT — payment panel (sticky) */}
-            <motion.div
-              variants={fadeUp}
-              initial="hidden"
-              animate="show"
-              transition={{ delay: 0.25 }}
-              className="sticky top-28"
-            >
+            {/* RIGHT — payment panel */}
+            <motion.div variants={fadeUp} initial="hidden" animate="show" transition={{ delay: 0.3 }} className="sticky top-28">
               <div className="rounded-3xl border border-amber-200 bg-white shadow-lg overflow-hidden">
-                {/* Panel header */}
-                <div
-                  className="px-7 py-5 border-b border-amber-100"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #fdf6ec 0%, #fef3e2 100%)",
-                  }}
-                >
+                <div className="px-7 py-5 border-b border-amber-100" style={{ background: "linear-gradient(135deg, #fdf6ec 0%, #fef3e2 100%)" }}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p
-                        className="text-xs font-semibold uppercase tracking-widest text-amber-600 mb-0.5"
-                        style={{ fontFamily: "Georgia, serif" }}
-                      >
-                        Step 3 — Complete
+                      <p className="text-xs font-semibold uppercase tracking-widest text-amber-600 mb-0.5" style={{ fontFamily: "Georgia, serif" }}>
+                        Step 4 — Complete
                       </p>
-                      <p
-                        className="font-bold text-lg"
-                        style={{
-                          fontFamily: "Georgia, serif",
-                          color: "#3b1f08",
-                        }}
-                      >
-                        {methods.find((m) => m.id === method)?.name} Payment
+                      <p className="font-bold text-lg" style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}>
+                        {availableMethods.find((m) => m.id === method)?.name} Payment
                       </p>
                     </div>
                     <div className="text-right">
-                      <p
-                        className="text-xs text-amber-600"
-                        style={{ fontFamily: "Georgia, serif" }}
-                      >
-                        Giving
+                      <p className="text-xs text-amber-600 mb-0.5" style={{ fontFamily: "Georgia, serif" }}>
+                        {country.flag} {country.currency}
                       </p>
                       <p
                         className="text-2xl font-bold text-transparent bg-clip-text"
-                        style={{
-                          backgroundImage:
-                            "linear-gradient(90deg, #007f98, #f97316)",
-                          fontFamily: "Georgia, serif",
-                        }}
+                        style={{ backgroundImage: "linear-gradient(90deg, #007f98, #f97316)", fontFamily: "Georgia, serif" }}
                       >
-                        ৳{(finalAmount || 0).toLocaleString()}
+                        {formatAmount(finalAmount || 0, country)}
                       </p>
                     </div>
                   </div>
                 </div>
-                {/* Sub-form */}
                 <div className="px-7 py-6">
                   <AnimatePresence mode="wait">
                     {(method === "bkash" || method === "nagad") && (
-                      <MobileMoneyForm
-                        key={method}
-                        method={method}
-                        amount={finalAmount || 0}
-                        onSubmit={handleSubmit}
-                        loading={loading}
-                      />
+                      <MobileMoneyForm key={method} methodId={method} amount={finalAmount || 0} country={country} onSubmit={handleSubmit} loading={loading} />
                     )}
                     {method === "card" && (
-                      <CardForm
-                        key="card"
-                        amount={finalAmount || 0}
-                        onSubmit={handleSubmit}
-                        loading={loading}
-                      />
+                      <CardForm key="card" amount={finalAmount || 0} country={country} onSubmit={handleSubmit} loading={loading} />
                     )}
                     {method === "paypal" && (
-                      <PayPalForm
-                        key="paypal"
-                        amount={finalAmount || 0}
-                        onSubmit={handleSubmit}
-                        loading={loading}
-                      />
+                      <PayPalForm key="paypal" amount={finalAmount || 0} country={country} onSubmit={handleSubmit} loading={loading} />
                     )}
                   </AnimatePresence>
                 </div>
@@ -890,17 +855,9 @@ export default function DonateNowPage() {
                   { icon: ShieldCheck, text: "Verified Charity" },
                   { icon: Heart, text: "100% to Mission" },
                 ].map(({ icon: Icon, text }) => (
-                  <div
-                    key={text}
-                    className="flex items-center gap-1.5 text-gray-400"
-                  >
+                  <div key={text} className="flex items-center gap-1.5 text-gray-400">
                     <Icon className="w-3.5 h-3.5" />
-                    <span
-                      className="text-xs"
-                      style={{ fontFamily: "Georgia, serif" }}
-                    >
-                      {text}
-                    </span>
+                    <span className="text-xs" style={{ fontFamily: "Georgia, serif" }}>{text}</span>
                   </div>
                 ))}
               </div>
@@ -912,15 +869,9 @@ export default function DonateNowPage() {
       {/* ── Bottom strip ──────────────────────────────────────────────────── */}
       <section className="py-12" style={warmBg}>
         <div className="max-w-3xl mx-auto px-6 text-center">
-          <Heart
-            className="w-6 h-6 mx-auto mb-3 text-orange-400"
-            fill="currentColor"
-          />
-          <p
-            className="text-base leading-relaxed"
-            style={{ fontFamily: "Georgia, serif", color: "#92400e" }}
-          >
-            Want to give by bank transfer or check?{" "}
+          <Heart className="w-6 h-6 mx-auto mb-3 text-orange-400" fill="currentColor" />
+          <p className="text-base leading-relaxed" style={{ fontFamily: "Georgia, serif", color: "#92400e" }}>
+            Want to give by bank transfer or cheque?{" "}
             <a
               href="/how-to-donate"
               className="font-semibold underline underline-offset-4 hover:text-orange-600 transition-colors"

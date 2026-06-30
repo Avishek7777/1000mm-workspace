@@ -3,10 +3,15 @@ import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
 import { CreateLmdButton } from "./_components/CreateLmdButton";
+import { CreateTraineeButton } from "./_components/CreateTraineeButton";
+import { CreateUserButton } from "./_components/CreateUserButton";
+import { FilterBar } from "../_components/FilterBar";
 
 const ROLE_LABELS: Record<string, string> = {
   SYSTEM_ADMIN: "System Admin",
   MAIN_DIRECTOR: "Union Director",
+  SECRETARY: "Secretary",
+  ASSOCIATE_DIRECTOR: "Associate Director",
   LOCAL_DIRECTOR: "Local Director",
   TRAINER: "Trainer",
   TRAINEE: "Trainee",
@@ -15,26 +20,12 @@ const ROLE_LABELS: Record<string, string> = {
 const ROLE_COLORS: Record<string, string> = {
   SYSTEM_ADMIN: "bg-red-100 text-red-700",
   MAIN_DIRECTOR: "bg-purple-100 text-purple-700",
+  SECRETARY: "bg-teal-100 text-teal-700",
+  ASSOCIATE_DIRECTOR: "bg-teal-100 text-teal-700",
   LOCAL_DIRECTOR: "bg-blue-100 text-blue-700",
   TRAINER: "bg-amber-100 text-amber-700",
   TRAINEE: "bg-gray-100 text-gray-600",
 };
-
-function filterCls(active: boolean) {
-  return `rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-    active
-      ? "border-teal-400 bg-teal-50 text-teal-800"
-      : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-  }`;
-}
-
-function buildUrl(params: Record<string, string | undefined>) {
-  const p = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) {
-    if (v) p.set(k, v);
-  }
-  return `?${p.toString()}`;
-}
 
 export default async function UsersPage({
   searchParams,
@@ -46,7 +37,7 @@ export default async function UsersPage({
     status?: string;
   }>;
 }) {
-  await requireRole(["SYSTEM_ADMIN", "MAIN_DIRECTOR"]);
+  await requireRole(["SYSTEM_ADMIN"]);
   const session = await auth();
   const { role, mission, q, status } = await searchParams;
 
@@ -91,6 +82,8 @@ export default async function UsersPage({
   const roles = [
     "SYSTEM_ADMIN",
     "MAIN_DIRECTOR",
+    "SECRETARY",
+    "ASSOCIATE_DIRECTOR",
     "LOCAL_DIRECTOR",
     "TRAINER",
     "TRAINEE",
@@ -107,7 +100,9 @@ export default async function UsersPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {isSA && <CreateTraineeButton missions={missionList} />}
           {isSA && <CreateLmdButton missions={missionList} />}
+          {isSA && <CreateUserButton missions={missionList} />}
           {isSA && pendingFlagCount > 0 && (
             <Link
               href="/dashboard/users/flag-requests"
@@ -123,72 +118,50 @@ export default async function UsersPage({
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-end gap-4">
         <form method="GET">
           {role && <input type="hidden" name="role" value={role} />}
           {mission && <input type="hidden" name="mission" value={mission} />}
           {status && <input type="hidden" name="status" value={status} />}
-          <input
-            name="q"
-            defaultValue={q ?? ""}
-            placeholder="Search by name…"
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-teal-500"
-          />
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+              Search
+            </label>
+            <input
+              name="q"
+              defaultValue={q ?? ""}
+              placeholder="Search by name…"
+              className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 outline-none focus:border-teal-500"
+            />
+          </div>
         </form>
-        <div className="flex flex-wrap gap-1">
-          <Link
-            href={buildUrl({ mission, q, status })}
-            className={filterCls(!role)}
-          >
-            All roles
-          </Link>
-          {roles.map((r) => (
-            <Link
-              key={r}
-              href={buildUrl({ role: r, mission, q, status })}
-              className={filterCls(role === r)}
-            >
-              {ROLE_LABELS[r]}
-            </Link>
-          ))}
-        </div>
-        <div className="flex gap-1">
-          <Link
-            href={buildUrl({ role, q, status })}
-            className={filterCls(!mission)}
-          >
-            All
-          </Link>
-          {missions.map((m) => (
-            <Link
-              key={m}
-              href={buildUrl({ role, mission: m, q, status })}
-              className={filterCls(mission === m)}
-            >
-              {m}
-            </Link>
-          ))}
-        </div>
-        <div className="flex gap-1">
-          <Link
-            href={buildUrl({ role, mission, q })}
-            className={filterCls(!status)}
-          >
-            All
-          </Link>
-          <Link
-            href={buildUrl({ role, mission, q, status: "active" })}
-            className={filterCls(status === "active")}
-          >
-            Active
-          </Link>
-          <Link
-            href={buildUrl({ role, mission, q, status: "inactive" })}
-            className={filterCls(status === "inactive")}
-          >
-            Inactive
-          </Link>
-        </div>
+        <FilterBar
+          basePath="/dashboard/users"
+          current={{ role: role ?? "", mission: mission ?? "", status: status ?? "", q: q ?? "" }}
+          filters={[
+            {
+              name: "role",
+              label: "Role",
+              allLabel: "All roles",
+              options: roles.map((r) => ({ value: r, label: ROLE_LABELS[r] })),
+            },
+            {
+              name: "mission",
+              label: "Mission",
+              allLabel: "All missions",
+              options: missions.map((m) => ({ value: m, label: m })),
+            },
+            {
+              name: "status",
+              label: "Status",
+              allLabel: "All statuses",
+              options: [
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" },
+              ],
+            },
+          ]}
+        />
       </div>
 
       {users.length === 0 ? (
@@ -196,7 +169,7 @@ export default async function UsersPage({
           <p className="text-sm text-gray-400">No users found.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto overflow-hidden rounded-xl border border-gray-200 bg-white">
           <table className="w-full text-sm">
             <thead className="border-b border-gray-100 bg-gray-50">
               <tr>

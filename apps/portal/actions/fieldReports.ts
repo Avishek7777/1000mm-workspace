@@ -206,7 +206,7 @@ export async function addFieldReportCommentAction(
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (
     !user ||
-    !["LOCAL_DIRECTOR", "MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role)
+    !["LOCAL_DIRECTOR", "MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role)
   ) {
     return {
       ok: false,

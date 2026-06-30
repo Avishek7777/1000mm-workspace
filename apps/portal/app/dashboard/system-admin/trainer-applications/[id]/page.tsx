@@ -16,12 +16,18 @@ import {
   Mail,
   Phone,
   Briefcase,
+  Globe,
 } from "lucide-react";
 import {
   approveTrainerApplicationAction,
   rejectTrainerApplicationAction,
 } from "@/actions/trainerApplications";
 import { ExportButtons } from "../_components/ExportButtons";
+import { TopicAssignSelect } from "./_components/TopicAssignSelect";
+import { EditLetterForm } from "./_components/EditLetterForm";
+import { ApplicationExportButton } from "./_components/ApplicationExportButton";
+import { AttachDocumentPanel } from "./_components/AttachDocumentPanel";
+import { PrintButton } from "@/components/PrintButton";
 
 export const metadata = { title: "Trainer Application Review" };
 
@@ -36,17 +42,26 @@ export default async function TrainerApplicationDetailPage({
 
   const { id } = await params;
 
-  const [application, missions] = await Promise.all([
+  const [application, programs] = await Promise.all([
     db.trainerApplication.findUnique({
       where: { id },
       include: {
-        reviewedBy: { select: { fullName: true } },
+        reviewedBy:  { select: { fullName: true } },
         createdUser: { select: { id: true, fullName: true, role: true } },
+        attachments: { include: { uploadedBy: { select: { fullName: true } } }, orderBy: { uploadedAt: "desc" } },
       },
     }),
-    db.localMission.findMany({
-      where: { deletedAt: null },
-      orderBy: { name: "asc" },
+    db.trainingProgram.findMany({
+      where: { deletedAt: null, isPublished: true },
+      orderBy: { startDate: "desc" },
+      select: {
+        id: true, code: true, title: true,
+        topics: {
+          where: { deletedAt: null },
+          orderBy: { order: "asc" },
+          select: { id: true, title: true, trainerId: true },
+        },
+      },
     }),
   ]);
 
@@ -56,8 +71,23 @@ export default async function TrainerApplicationDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      {/* Print-only bio-data header */}
+      <div className="hidden print:block mb-6">
+        <h1 className="text-xl font-bold text-gray-900">Trainer Application — Bio-data</h1>
+        <p className="text-sm text-gray-500 mt-0.5">1000 Missionary Movement Bangladesh · {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</p>
+        <hr className="my-3 border-gray-300" />
+        <h2 className="text-lg font-semibold text-gray-900">{application.fullName}</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          <strong>Email:</strong> {application.email}{application.phone ? ` · Phone: ${application.phone}` : ""}
+          {application.country ? ` · Country: ${application.country}` : ""}
+        </p>
+        <p className="text-sm text-gray-600"><strong>Address:</strong> {application.fullAddress}</p>
+        <p className="text-sm text-gray-600"><strong>Specialization:</strong> {application.specialization}</p>
+        <p className="text-sm text-gray-600 mt-1"><strong>Status:</strong> {application.status}</p>
+      </div>
+
       {/* Back + header */}
-      <div>
+      <div className="print:hidden">
         <Link
           href="/dashboard/system-admin/trainer-applications"
           className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700"
@@ -81,7 +111,11 @@ export default async function TrainerApplicationDetailPage({
             </p>
           </div>
           <StatusBadge status={application.status} />
-          <ExportButtons trainerId={application.createdUser?.id} />
+          <div className="flex items-center gap-2 print:hidden">
+            <PrintButton label="Print Bio-data" />
+            <ApplicationExportButton applicationId={application.id} />
+            <ExportButtons trainerId={application.createdUser?.id} />
+          </div>
         </div>
       </div>
 
@@ -132,11 +166,14 @@ export default async function TrainerApplicationDetailPage({
           label="Phone"
           value={application.phone ?? "Not provided"}
         />
+        {application.country && (
+          <InfoCard icon={Globe} label="Country" value={application.country} />
+        )}
         <InfoCard
           icon={MapPin}
           label="Full Address"
           value={application.fullAddress}
-          wide
+          wide={!application.country}
         />
         <InfoCard
           icon={Briefcase}
@@ -187,6 +224,68 @@ export default async function TrainerApplicationDetailPage({
         </div>
       </div>
 
+      {/* Official letters */}
+      <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+        <h2 className="mb-4 text-sm font-semibold text-gray-700">Official Letters</h2>
+        <div className="space-y-4">
+          {/* Invitation */}
+          <div>
+            <div className="flex items-center gap-3">
+              <a
+                href={`/api/export/trainer-letter?id=${application.id}&type=invitation`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+              >
+                <FileText className="h-4 w-4" />
+                Invitation Letter
+              </a>
+              {application.invitationLetterBody && (
+                <span className="text-xs text-teal-600 font-medium">● Customized</span>
+              )}
+            </div>
+            <EditLetterForm
+              applicationId={application.id}
+              letterType="invitation"
+              defaultBody={application.invitationLetterBody ?? `We are pleased to invite you to serve as a Trainer with the 1000 Missionary Movement Bangladesh (1000MM BD) programme. Your application has been reviewed and we would like to formally extend an invitation for you to participate in our upcoming training sessions.\n\nThe 1000 Missionary Movement Bangladesh is a national mission initiative aimed at training and deploying missionaries across Bangladesh. As a Trainer, you will play a vital role in equipping participants with the spiritual and practical tools necessary for effective missionary work.\n\nYour area of specialisation — ${application.specialization} — aligns well with the needs of our programme. We look forward to welcoming you to our team.\n\nPlease present this letter along with a valid form of identification upon your arrival. For any queries regarding logistics or programme details, do not hesitate to contact our office.`}
+              requiredDoc1={application.requiredDoc1}
+              requiredDoc2={application.requiredDoc2}
+              requiredDoc3={application.requiredDoc3}
+              requiredDoc4={application.requiredDoc4}
+            />
+          </div>
+
+          {/* Recommendation */}
+          <div>
+            <div className="flex items-center gap-3">
+              <a
+                href={`/api/export/trainer-letter?id=${application.id}&type=recommendation`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100 transition-colors"
+              >
+                <FileText className="h-4 w-4" />
+                Recommendation Letter
+              </a>
+              {application.recommendationLetterBody && (
+                <span className="text-xs text-teal-600 font-medium">● Customized</span>
+              )}
+            </div>
+            <EditLetterForm
+              applicationId={application.id}
+              letterType="recommendation"
+              defaultBody={application.recommendationLetterBody ?? `This letter serves as a formal recommendation for ${application.fullName} as a prospective Trainer with the 1000 Missionary Movement Bangladesh (1000MM BD) programme.\n\n${application.fullName} has applied to serve as a Trainer within our organisation and their application has been thoroughly reviewed. Based on their stated expertise in ${application.specialization} and their background as presented in their application, we find them to be a suitable candidate for the Trainer role.\n\nWe commend ${application.fullName} to any institution or organisation that may require confirmation of their participation and standing with the 1000 Missionary Movement Bangladesh.`}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Admin attachments */}
+      <AttachDocumentPanel
+        applicationId={application.id}
+        attachments={application.attachments}
+      />
+
       {/* Action panel — only for pending */}
       {isPending && (
         <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
@@ -204,26 +303,18 @@ export default async function TrainerApplicationDetailPage({
               Approve & Create Account
             </h3>
 
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Assign Home Mission <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="homeMissionId"
-                required
-                defaultValue=""
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="" disabled>
-                  Select a mission…
-                </option>
-                {missions.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.code})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <TopicAssignSelect
+              programs={programs.map((p) => ({
+                id: p.id,
+                code: p.code,
+                title: p.title,
+                topics: p.topics.map((t) => ({
+                  id: t.id,
+                  title: t.title,
+                  hasTrainer: !!t.trainerId,
+                })),
+              }))}
+            />
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">

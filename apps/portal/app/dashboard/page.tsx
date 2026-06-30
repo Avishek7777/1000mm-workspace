@@ -22,6 +22,12 @@ export default async function DashboardPage() {
     case "MAIN_DIRECTOR":
       return <DirectorDashboardPage />;
 
+    case "SECRETARY":
+      return <DirectorDashboardPage />;
+
+    case "ASSOCIATE_DIRECTOR":
+      return <DirectorDashboardPage />;
+
     case "LOCAL_DIRECTOR":
       return <LmdDashboardPage />;
 

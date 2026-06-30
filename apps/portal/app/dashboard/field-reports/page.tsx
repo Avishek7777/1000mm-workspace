@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
+import { PrintButton } from "@/components/PrintButton";
 
 const MONTHS = [
   "Jan",
@@ -18,9 +19,16 @@ const MONTHS = [
   "Dec",
 ];
 
-export default async function FieldReportsPage() {
+export default async function FieldReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string; month?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+  const { year, month } = await searchParams;
+  const yearNum = year ? parseInt(year, 10) : undefined;
+  const monthNum = month ? parseInt(month, 10) : undefined;
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
   if (!user || user.role !== "TRAINEE") redirect("/dashboard");
@@ -38,8 +46,20 @@ export default async function FieldReportsPage() {
     orderBy: { enrolledAt: "desc" },
   });
 
-  const reports = await prisma.fieldReport.findMany({
+  const allReports = await prisma.fieldReport.findMany({
     where: { traineeId: user.id },
+    select: { reportYear: true },
+    distinct: ["reportYear"],
+    orderBy: { reportYear: "desc" },
+  });
+  const availableYears = allReports.map((r) => r.reportYear);
+
+  const reports = await prisma.fieldReport.findMany({
+    where: {
+      traineeId: user.id,
+      ...(yearNum ? { reportYear: yearNum } : {}),
+      ...(monthNum ? { reportMonth: monthNum } : {}),
+    },
     orderBy: [{ reportYear: "desc" }, { reportMonth: "desc" }],
     include: {
       _count: { select: { comments: true } },
@@ -64,7 +84,11 @@ export default async function FieldReportsPage() {
               : "Monthly activity reports from the mission field"}
           </p>
         </div>
-        {enrollment && !hasThisMonth && (
+        <div className="flex items-center gap-2 print:hidden">
+          <Link href="/dashboard/field-reports/immersion" className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">Immersion Report</Link>
+          <Link href="/dashboard/field-reports/stats" className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">My Statistics</Link>
+          <PrintButton label="Print" />
+          {enrollment && !hasThisMonth && (
           <Link
             href="/dashboard/field-reports/new"
             className="inline-flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
@@ -84,8 +108,45 @@ export default async function FieldReportsPage() {
             </svg>
             Submit {MONTHS[currentMonth - 1]} Report
           </Link>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Year/Month filters */}
+      {availableYears.length > 0 && (
+        <form method="GET" className="print:hidden flex flex-wrap items-center gap-2">
+          <select
+            name="year"
+            defaultValue={year ?? ""}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+          >
+            <option value="">All years</option>
+            {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select
+            name="month"
+            defaultValue={month ?? ""}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+          >
+            <option value="">All months</option>
+            {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+          </select>
+          <button
+            type="submit"
+            className="rounded-lg bg-teal-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
+          >
+            Filter
+          </button>
+          {(year || month) && (
+            <Link
+              href="/dashboard/field-reports"
+              className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Clear
+            </Link>
+          )}
+        </form>
+      )}
 
       {/* Not enrolled */}
       {!enrollment && (

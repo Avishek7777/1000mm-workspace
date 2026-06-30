@@ -3,58 +3,68 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 
-const testimonies = [
+export type Testimony = {
+  id: string;
+  name: string;
+  location: string;
+  quote: string;
+  color: string;
+};
+
+const FALLBACK_TESTIMONIES: Testimony[] = [
   {
+    id: "1",
     name: "Samuel Das",
     location: "Dhaka",
-    initials: "SD",
     color: "from-green-400 to-emerald-600",
     quote:
       "Joining the 1000 Missionary Movement was the best decision of my life. I was a shy university student with no experience in public speaking. During my one year of service in rural Sylhet, I conducted children's programs and health seminars. God gave me courage I never had before. I saw 27 people give their hearts to Jesus. Now I am no longer afraid — I am a missionary for life.",
   },
   {
+    id: "2",
     name: "Rebecca Sarkar",
     location: "Barishal",
-    initials: "RS",
     color: "from-orange-400 to-red-500",
     quote:
       "Before joining 1000MM, I was struggling with my faith and purpose. The training in the Philippines and my mission assignment in northern Bangladesh completely changed me. I learned how to share the Gospel through health education. Many families who never heard about Jesus before opened their hearts. This one year gave me a new identity in Christ.",
   },
   {
+    id: "3",
     name: "Timothy Gomes",
     location: "Chattogram",
-    initials: "TG",
     color: "from-emerald-500 to-teal-600",
     quote:
       "I left my job to serve as a missionary for one year. It was not easy, but it was worth it. My team and I planted a new church in a village near Bandarban. We faced many challenges, but God performed miracles. Today that small group has grown to more than 45 members. I discovered that when we step out in faith, God steps in with power.",
   },
   {
+    id: "4",
     name: "Esther Akter",
     location: "Khulna",
-    initials: "EA",
     color: "from-amber-400 to-orange-500",
     quote:
       "As a young woman, I was nervous about going into mission work. But the 1000 Missionary Movement gave me confidence and purpose. I served in a remote area focusing on women and children's ministry. Seeing hopeless mothers find hope in Jesus was the most beautiful experience. I now understand that God can use anyone who is willing.",
   },
   {
+    id: "5",
     name: "Immanuel Paul",
     location: "Rajshahi",
-    initials: "IP",
     color: "from-green-500 to-lime-600",
     quote:
-      "The 1000MM experience taught me the real meaning of sacrifice. I left my comfortable city life and lived in a simple village for 10 months. Through literature distribution and Bible studies, we baptized 18 precious souls. My own spiritual life grew deeper than ever. This movement is truly raising a new generation of committed youth for God.",
+      "The 1000MM experience taught me the real meaning of sacrifice. I left my comfortable city life and lived in a simple village for 10 months. Through literature distribution and Bible studies, we saw 18 precious souls make decisions for Christ. My own spiritual life grew deeper than ever. This movement is truly raising a new generation of committed youth for God.",
   },
   {
+    id: "6",
     name: "Hannah D'Costa",
     location: "Sylhet",
-    initials: "HD",
     color: "from-rose-400 to-orange-400",
     quote:
       "God called me during a youth camp, and I answered. Serving as a 1000 missionary in a different culture taught me humility and dependence on God. I worked with media and digital evangelism, reaching hundreds of young people online. Many told me they found Christ through the videos we created. I came back changed — on fire for mission!",
   },
 ];
 
-export default function Testimonies() {
+export default function Testimonies({ testimonies }: { testimonies?: Testimony[] }) {
+  const items = testimonies && testimonies.length > 0 ? testimonies : FALLBACK_TESTIMONIES;
+
   return (
     <section
       className="relative py-15 overflow-hidden"
@@ -118,11 +128,11 @@ export default function Testimonies() {
           </p>
         </motion.div>
 
-        {/* 2-column, 3-row grid */}
+        {/* 2-column grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {testimonies.map((t, i) => (
+          {items.map((t, i) => (
             <motion.div
-              key={t.name}
+              key={t.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: false, amount: 0.1 }}
@@ -151,7 +161,7 @@ export default function Testimonies() {
                     className="text-white font-bold text-lg z-10 select-none"
                     style={{ fontFamily: "Georgia, serif" }}
                   >
-                    {t.initials}
+                    {t.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
                   </span>
                 </div>
                 {/* Location pill */}
@@ -174,7 +184,7 @@ export default function Testimonies() {
                     backgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     color: "transparent",
-                    display: "inline-block", // ← the fix
+                    display: "inline-block",
                   }}
                   aria-hidden="true"
                 >

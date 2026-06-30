@@ -15,9 +15,12 @@ export default function NewUrgentReportPage() {
     Array(MAX_ATTACHMENTS).fill(null),
   );
   const [error, setError] = useState("");
-  const inputRefs = Array.from({ length: MAX_ATTACHMENTS }, () =>
-    useRef<HTMLInputElement>(null),
-  );
+  const ref0 = useRef<HTMLInputElement>(null);
+  const ref1 = useRef<HTMLInputElement>(null);
+  const ref2 = useRef<HTMLInputElement>(null);
+  const ref3 = useRef<HTMLInputElement>(null);
+  const ref4 = useRef<HTMLInputElement>(null);
+  const inputRefs = [ref0, ref1, ref2, ref3, ref4];
 
   function handleFile(index: number, file: File | null) {
     setFiles((prev) => {
@@ -36,7 +39,10 @@ export default function NewUrgentReportPage() {
     });
     startTransition(async () => {
       try {
-        await issueUrgentReportAction(fd);
+        const result = await issueUrgentReportAction(fd);
+        if (result.ok) {
+          router.push("/dashboard/system-admin/urgent-reports");
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }

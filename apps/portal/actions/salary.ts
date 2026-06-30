@@ -3,8 +3,8 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
+import { requireDbUser, requireAuthenticatedDbUser } from "@/lib/auth/helpers";
 import { isSettingEnabled, SETTINGS, getSettings } from "@/lib/settings";
 
 export type ActionResult = {
@@ -16,30 +16,18 @@ export type ActionResult = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function requireDirector() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user || !["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role))
-    redirect("/dashboard");
-  return user;
+  return requireDbUser(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
 }
 
 async function requireLmd() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    include: { homeMission: true },
-  });
-  if (!user || user.role !== "LOCAL_DIRECTOR") redirect("/dashboard");
-  return user;
+  const user = await requireDbUser(["LOCAL_DIRECTOR"]);
+  const mission = await prisma.localMission.findFirst({ where: { directorId: user.id } });
+  return { ...user, directedMission: mission };
 }
 
 async function requireMissionary() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user || !user.isMissionary) redirect("/dashboard");
+  const user = await requireAuthenticatedDbUser();
+  if (!user.isMissionary) redirect("/dashboard");
   return user;
 }
 
@@ -157,6 +145,46 @@ export async function assignSalaryAction(
   return { ok: true };
 }
 
+// ─── REMOVE SALARY ASSIGNMENT (LMD) ──────────────────────────────────────────
+
+export async function removeSalaryAssignmentAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireLmd();
+
+  const missionaryId = formData.get("missionaryId")?.toString();
+  const cycle = parseInt(formData.get("cycle")?.toString() ?? "0", 10);
+  if (!missionaryId || !cycle) return { ok: false, error: "Invalid request." };
+
+  const mission = await prisma.localMission.findFirst({
+    where: { directorId: user.id },
+  });
+  if (!mission) return { ok: false, error: "No mission assigned to your account." };
+
+  const assignment = await prisma.salaryAssignment.findUnique({
+    where: { missionaryId_cycle: { missionaryId, cycle } },
+    select: { missionId: true },
+  });
+  if (!assignment || assignment.missionId !== mission.id)
+    return { ok: false, error: "Assignment not found." };
+
+  // Block removal if the missionary already submitted a request this cycle
+  const today = new Date();
+  const hasRequest = await prisma.salaryRequest.findFirst({
+    where: { missionaryId, year: today.getFullYear() },
+  });
+  if (hasRequest)
+    return { ok: false, error: "Cannot remove assignment — a salary request has already been submitted." };
+
+  await prisma.salaryAssignment.delete({
+    where: { missionaryId_cycle: { missionaryId, cycle } },
+  });
+
+  revalidatePath("/dashboard/lmd/salary");
+  return { ok: true };
+}
+
 // ─── SUBMIT SALARY REQUEST (MISSIONARY) ──────────────────────────────────────
 
 export async function submitSalaryRequestAction(
@@ -215,16 +243,24 @@ export async function submitSalaryRequestAction(
       error: "No salary assigned to you yet. Contact your Local Director.",
     };
 
-  await prisma.salaryRequest.create({
-    data: {
-      missionaryId: user.id,
-      missionId: assignment.missionId,
-      amount: assignment.amount,
-      month,
-      year,
-      status: "PENDING",
-    },
-  });
+  try {
+    await prisma.salaryRequest.create({
+      data: {
+        missionaryId: user.id,
+        missionId: assignment.missionId,
+        amount: assignment.amount,
+        month,
+        year,
+        status: "PENDING",
+      },
+    });
+  } catch (err: unknown) {
+    // Unique constraint violation means a concurrent submission already won
+    if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "P2002") {
+      return { ok: false, error: "You already submitted a request for this month." };
+    }
+    throw err;
+  }
 
   revalidatePath("/dashboard/salary-request");
   return { ok: true };
@@ -261,12 +297,8 @@ export async function reviewSalaryRequestAction(
 export async function toggleMissionaryStatusAction(
   userId: string,
 ): Promise<ActionResult> {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  const actor = await prisma.user.findUnique({
-    where: { id: session.user.id },
-  });
-  if (!actor || actor.role !== "SYSTEM_ADMIN")
+  const actor = await requireDbUser(["SYSTEM_ADMIN"]);
+  if (actor.role !== "SYSTEM_ADMIN")
     return {
       ok: false,
       error: "Only System Admins can grant missionary status.",
@@ -293,12 +325,8 @@ export async function toggleMissionaryStatusAction(
 // ─── RESET ALL MISSIONARY STATUS (triggered on main program creation) ─────────
 
 export async function resetMissionaryStatusAction(): Promise<ActionResult> {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  const actor = await prisma.user.findUnique({
-    where: { id: session.user.id },
-  });
-  if (!actor || !["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(actor.role))
+  const actor = await requireDbUser(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
+  if (!["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"].includes(actor.role))
     return { ok: false, error: "Not permitted." };
 
   await prisma.user.updateMany({

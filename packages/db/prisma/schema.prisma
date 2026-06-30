@@ -1,6 +1,7 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["fullTextSearchPostgres"]
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x", "rhel-openssl-1.0.x"]
 }
 
 datasource db {
@@ -11,7 +12,7 @@ datasource db {
 
 // ─── Reference Number Counter ────────────────────────────────────────────────
 model ApplicationCounter {
-  missionCode LocalMissionCode
+  missionCode String
   year        Int
   lastSerial  Int              @default(0)
 
@@ -22,7 +23,7 @@ model ApplicationCounter {
 // ─── Local Missions ───────────────────────────────────────────────────────────
 model LocalMission {
   id                 String              @id @default(cuid())
-  code               LocalMissionCode    @unique
+  code               String              @unique
   name               String
   nameBangla         String
   description        String?
@@ -42,9 +43,35 @@ model LocalMission {
   salaryRanges            SalaryRange[]
   salaryAssignments       SalaryAssignment[]
   salaryRequests          SalaryRequest[]
+  financialEntries        FinancialEntry[]
+  deployments             MissionaryDeployment[]
+  attendanceScans         AttendanceScan[]       @relation("AttendanceScanMission")
 
   @@index([code])
   @@map("local_missions")
+}
+
+// ─── Financial Management ─────────────────────────────────────────────────────
+model FinancialEntry {
+  id          String               @id @default(cuid())
+  type        FinancialEntryType
+  amount      Float
+  date        DateTime             @db.Date
+  description String
+  missionId   String?              // null = all-mission / organization-level entry
+  reference   String?
+  createdById String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  deletedAt   DateTime?
+
+  mission     LocalMission?        @relation(fields: [missionId], references: [id])
+  createdBy   User                 @relation("FinancialEntryCreatedBy", fields: [createdById], references: [id])
+
+  @@index([missionId])
+  @@index([type])
+  @@index([date])
+  @@map("financial_entries")
 }
 
 model UserFlagRequest {
@@ -117,6 +144,11 @@ model SalaryRequest {
   reviewedBy   User?               @relation("SalaryRequestReviewedBy", fields: [reviewedById], references: [id])
 
   @@unique([missionaryId, month, year])
+  @@index([missionId])
+  @@index([missionaryId])
+  @@index([reviewedById])
+  @@index([status])
+  @@index([year, month])
   @@map("salary_requests")
 }
 // ─── Urgent Reports ────────────────────────────────────────────────────────────────────
@@ -177,12 +209,13 @@ model User {
   dateOfBirth             DateTime?
   preferredLanguage       String                   @default("en")
   role                    UserRole                 @default(TRAINEE)
-  homeMissionId           String
+  homeMissionId           String?
   isActive                Boolean                  @default(true)
   failedLoginCount        Int                      @default(0)
   isMissionary            Boolean                  @default(false)
   lockedUntil             DateTime?
   lastLoginAt             DateTime?
+  profilePicture          String?
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   deletedAt               DateTime?
@@ -203,8 +236,8 @@ model User {
   enrollmentsAsTrainee    ProgramEnrollment[]
   recommendations         Recommendation[]
   sessionsHistory         Session[]
-  homeMission             LocalMission             @relation("UserHomeMission", fields: [homeMissionId], references: [id])
-  trainingsAsTrainer      TrainingProgram[]        @relation("ProgramTrainers")
+  homeMission             LocalMission?            @relation("UserHomeMission", fields: [homeMissionId], references: [id])
+  assignedTopics          ProgramTopic[]           @relation("TopicTrainer")
   deploymentAssignments   ProgramEnrollment[]      @relation("DeploymentAssignedBy")
   fieldReportComments     FieldReportComment[]     @relation("FieldReportCommentAuthor")
   lmdReportWindowsCreated LmdReportWindow[]        @relation("LmdReportWindowCreatedBy")
@@ -217,10 +250,21 @@ model User {
   salaryAssignmentsMade   SalaryAssignment[]       @relation("SalaryAssignedBy")
   salaryRequests          SalaryRequest[]          @relation("MissionarySalaryRequests")
   salaryRequestsReviewed  SalaryRequest[]          @relation("SalaryRequestReviewedBy")
+  financialEntries        FinancialEntry[]         @relation("FinancialEntryCreatedBy")
   trainerApplicationsReviewed TrainerApplication[] @relation("TrainerApplicationReviewedBy")
   trainerApplicationCreated   TrainerApplication?  @relation("TrainerApplicationCreatedUser")
-  urgentReportsIssued    UrgentReport[]           @relation("UrgentReportIssuedBy")
+  trainerAppAttachments       TrainerApplicationAttachment[] @relation("TrainerAppAttachmentUploader")
+  attendanceScansRecorded  AttendanceScan[]               @relation("AttendanceScanScanner")
+  attendanceScans          AttendanceScan[]               @relation("AttendanceScanTrainee")
+  urgentReportsIssued     UrgentReport[]           @relation("UrgentReportIssuedBy")
   urgentReportSubmissions UrgentReportSubmission[] @relation("UrgentReportSubmissions")
+  assignmentsCreated      Assignment[]             @relation("AssignmentCreatedBy")
+  assignmentSubmissions   AssignmentSubmission[]   @relation("AssignmentSubmissions")
+  assignmentFeedback      AssignmentSubmission[]   @relation("AssignmentFeedback")
+  resourcesUploaded       Resource[]               @relation("ResourceUploadedBy")
+  missionaryDeployments   MissionaryDeployment[]   @relation("MissionaryDeployments")
+  deploymentRequests      MissionaryDeployment[]   @relation("DeploymentRequestedBy")
+  deploymentReviews       MissionaryDeployment[]   @relation("DeploymentReviewedBy")
 
   @@index([email])
   @@index([homeMissionId])
@@ -291,8 +335,9 @@ model TrainerApplication {
 
   // Personal info
   fullName        String
-  email           String
+  email           String                    @unique
   phone           String?
+  country         String?                   // country of origin / residence
   fullAddress     String
   specialization  String                    // free text — what they teach / area of expertise
 
@@ -314,17 +359,43 @@ model TrainerApplication {
   // If approved — link to the created User account
   createdUserId   String?                   @unique
 
+  // Optional custom letter bodies (SA can edit the template text before generating)
+  invitationLetterBody     String?
+  recommendationLetterBody String?
+
+  // Necessary documents attachment section (up to 4 document requirements listed in letters)
+  requiredDoc1    String?
+  requiredDoc2    String?
+  requiredDoc3    String?
+  requiredDoc4    String?
+
   ipAddress       String?
   createdAt       DateTime                  @default(now())
   updatedAt       DateTime                  @updatedAt
 
   reviewedBy      User?                     @relation("TrainerApplicationReviewedBy", fields: [reviewedById], references: [id])
   createdUser     User?                     @relation("TrainerApplicationCreatedUser", fields: [createdUserId], references: [id])
+  attachments     TrainerApplicationAttachment[]
 
   @@index([status])
-  @@index([email])
   @@index([createdAt])
   @@map("trainer_applications")
+}
+
+model TrainerApplicationAttachment {
+  id            String   @id @default(cuid())
+  applicationId String
+  storageKey    String
+  fileName      String
+  label         String?
+  uploadedById  String
+  uploadedAt    DateTime @default(now())
+
+  application  TrainerApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  uploadedBy   User               @relation("TrainerAppAttachmentUploader", fields: [uploadedById], references: [id])
+
+  @@index([applicationId])
+  @@map("trainer_application_attachments")
 }
 
 // ─── Announcements ────────────────────────────────────────────────────────────
@@ -362,6 +433,7 @@ model TrainingProgram {
   locationBangla     String?
   targetIntake       Int
   maxIntake          Int?
+  batch              Int?
   isPublished        Boolean             @default(false)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -369,13 +441,109 @@ model TrainingProgram {
   applicationWindows ApplicationWindow[]
   enrollments        ProgramEnrollment[]
   fieldReports       FieldReport[]
-  trainers           User[]              @relation("ProgramTrainers")
   isMain                  Boolean                  @default(false)
+
+  assignments      Assignment[]
+  resources        Resource[]
+  topics           ProgramTopic[]
+  attendanceScans  AttendanceScan[] @relation("AttendanceScanProgram")
 
   @@index([category])
   @@index([startDate])
   @@index([code])
   @@map("training_programs")
+}
+
+// ─── Program Topics ───────────────────────────────────────────────────────────
+model ProgramTopic {
+  id          String    @id @default(cuid())
+  programId   String
+  title       String
+  trainerId   String?
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  program     TrainingProgram @relation(fields: [programId], references: [id])
+  trainer     User?           @relation("TopicTrainer", fields: [trainerId], references: [id])
+  assignments Assignment[]
+
+  @@index([programId])
+  @@index([trainerId])
+  @@map("program_topics")
+}
+
+// ─── Assignments ──────────────────────────────────────────────────────────────
+model Assignment {
+  id             String    @id @default(cuid())
+  programId      String
+  topicId        String?
+  title          String
+  description    String?   @db.Text
+  dueDate        DateTime?
+  fileStorageKey String?
+  fileName       String?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  program     TrainingProgram        @relation(fields: [programId], references: [id])
+  topic       ProgramTopic?          @relation(fields: [topicId], references: [id])
+  createdBy   User                   @relation("AssignmentCreatedBy", fields: [createdById], references: [id])
+  submissions AssignmentSubmission[]
+
+  @@index([programId])
+  @@index([topicId])
+  @@index([createdById])
+  @@map("assignments")
+}
+
+model AssignmentSubmission {
+  id             String    @id @default(cuid())
+  assignmentId   String
+  traineeId      String
+  fileStorageKey String?
+  fileName       String?
+  notes          String?   @db.Text
+  submittedAt    DateTime  @default(now())
+  feedback       String?   @db.Text
+  feedbackAt     DateTime?
+  feedbackById   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id])
+  trainee    User       @relation("AssignmentSubmissions", fields: [traineeId], references: [id])
+  feedbackBy User?      @relation("AssignmentFeedback", fields: [feedbackById], references: [id])
+
+  @@unique([assignmentId, traineeId])
+  @@index([traineeId])
+  @@map("assignment_submissions")
+}
+
+// ─── Resources ────────────────────────────────────────────────────────────────
+model Resource {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  fileStorageKey String
+  fileName      String
+  mimeType      String?
+  fileSizeBytes Int?
+  programId     String?   // null = general (SA/UD only); set = program-specific (trainer)
+  uploadedById  String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  program    TrainingProgram? @relation(fields: [programId], references: [id])
+  uploadedBy User             @relation("ResourceUploadedBy", fields: [uploadedById], references: [id])
+
+  @@index([programId])
+  @@index([uploadedById])
+  @@map("resources")
 }
 
 model ProgramEnrollment {
@@ -401,11 +569,34 @@ model ProgramEnrollment {
   trainee                User            @relation(fields: [traineeId], references: [id])
   deploymentAssignedBy   User?           @relation("DeploymentAssignedBy", fields: [deploymentAssignedById], references: [id])
 
+  status      EnrollmentStatus @default(ENROLLED)
+  appliedAt   DateTime?
   @@unique([programId, traineeId])
   @@index([programId])
   @@index([traineeId])
   @@index([deploymentLocation])
   @@map("program_enrollments")
+}
+
+model AttendanceScan {
+  id           String   @id @default(cuid())
+  enrollmentId String
+  traineeId    String
+  programId    String
+  missionId    String?
+  scannedAt    DateTime @default(now())
+  scannedById  String
+
+  program    TrainingProgram    @relation("AttendanceScanProgram", fields: [programId], references: [id])
+  trainee    User               @relation("AttendanceScanTrainee", fields: [traineeId], references: [id])
+  scannedBy  User               @relation("AttendanceScanScanner", fields: [scannedById], references: [id])
+  mission    LocalMission?      @relation("AttendanceScanMission", fields: [missionId], references: [id])
+
+  @@index([programId])
+  @@index([traineeId])
+  @@index([missionId])
+  @@index([scannedAt])
+  @@map("attendance_scans")
 }
 
 model ApplicationWindow {
@@ -672,7 +863,7 @@ model Complaint {
   description   String
   isAnonymous   Boolean           @default(true)
   submittedById String?
-  missionCode   LocalMissionCode?
+  missionCode   String?
   missionId     String?
   isResolved    Boolean           @default(false)
   resolvedAt    DateTime?
@@ -729,7 +920,7 @@ model AuditLog {
   severity         AuditSeverity     @default(INFO)
   actorId          String?
   actorRole        UserRole?
-  actorMissionCode LocalMissionCode?
+  actorMissionCode String?
   targetType       String?
   targetId         String?
   ipAddress        String?
@@ -874,12 +1065,6 @@ enum FlagRequestStatus {
   REJECTED
 }
 
-enum LocalMissionCode {
-  EBM
-  NBM
-  SBM
-  WBM
-}
 
 enum LmdReportWindowState {
   OPEN
@@ -893,6 +1078,8 @@ enum UserRole {
   TRAINER
   LOCAL_DIRECTOR
   MAIN_DIRECTOR
+  SECRETARY
+  ASSOCIATE_DIRECTOR
   SYSTEM_ADMIN
 }
 
@@ -1067,6 +1254,10 @@ enum AuditAction {
   TRAINER_APPLICATION_REJECTED
   URGENT_REPORT_ISSUED
   URGENT_REPORT_SUBMITTED
+  PROGRAM_APPLIED
+  TRAINEE_ENROLLED
+  SALARY_REQUEST_REVIEWED
+  SALARY_INVOICE_GENERATED
 }
 
 enum TrainerApplicationStatus {
@@ -1091,4 +1282,99 @@ enum SalaryRequestStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum EnrollmentStatus {
+  APPLIED    // trainee applied to this program (consent given) — awaiting SA/UD placement
+  ENROLLED   // SA/UD has placed the trainee into the program
+}
+
+enum FinancialEntryType {
+  INCOME
+  EXPENSE
+  TRANSFER_TO_MISSION
+  DEPOSIT
+  DONATION
+  OTHER
+}
+
+enum DeploymentStatus {
+  PENDING    // LMD requested, awaiting SA/UD approval
+  ACTIVE     // Approved and active
+  COMPLETED  // Ended (manually or endDate passed)
+  REJECTED   // SA/UD rejected the request
+}
+
+model MissionaryDeployment {
+  id           String           @id @default(cuid())
+  missionaryId String
+  missionId    String
+  location     String?
+  startDate    DateTime
+  endDate      DateTime?
+  status       DeploymentStatus @default(PENDING)
+  requestedById String
+  reviewedById  String?
+  reviewNote    String?
+  reviewedAt    DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  deletedAt    DateTime?
+
+  missionary  User         @relation("MissionaryDeployments", fields: [missionaryId], references: [id])
+  mission     LocalMission @relation(fields: [missionId], references: [id])
+  requestedBy User         @relation("DeploymentRequestedBy", fields: [requestedById], references: [id])
+  reviewedBy  User?        @relation("DeploymentReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([missionaryId])
+  @@index([missionId])
+  @@index([status])
+  @@map("missionary_deployments")
+}
+
+// ─── Public Website Testimonies ───────────────────────────────────────────────
+// Managed by SA in the portal; fetched by the public website via /api/public/testimonials
+
+model Testimony {
+  id          String   @id @default(cuid())
+  name        String
+  location    String
+  quote       String   @db.Text
+  color       String   @default("from-green-400 to-emerald-600")
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublished])
+  @@map("testimonies")
+}
+
+// ─── Public Website Projects ──────────────────────────────────────────────────
+// Managed by SA in the portal; fetched by the public website via /api/public/projects
+
+model Project {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  subtitle    String
+  description String   @db.Text
+  location    String
+  date        String   // display string e.g. "Dec 10, 2025 — Ongoing"
+  images      String[] // up to 5 image URLs; first is the cover
+  tags        String[]
+  status      String   @default("Active") // "Active" | "Completed" | "Upcoming"
+  goal        String?  // short one-line objective
+  participants Int?    // number of people impacted
+  highlight   String?  // key achievement or highlight text
+  body        String?  @db.Text // full article body (multi-paragraph) for detail page
+  budget      String?  // funding info e.g. "BDT 1,891,382 (≈ USD 15,503)"
+  objectives  String[] // bullet-point list of key activities/objectives
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublished])
+  @@map("projects")
 }

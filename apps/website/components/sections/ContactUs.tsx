@@ -19,7 +19,7 @@ export default async function ContactUs() {
     const portalUrl =
       process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3001";
     const res = await fetch(`${portalUrl}/api/public/programs`, {
-      next: { revalidate: 300 }, // ISR: revalidate every 5 minutes
+      cache: "no-store",
     });
     if (res.ok) {
       programs = await res.json();

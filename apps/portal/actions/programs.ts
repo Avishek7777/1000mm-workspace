@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth/config";
+import { requireDbUser, requireRole } from "@/lib/auth/helpers";
 import { prisma } from "@1000mm/db";
 import { TrainingCategory, ApplicationWindowState } from "@1000mm/db";
 import { headers } from "next/headers";
@@ -21,13 +21,8 @@ const MAX_ACTIVE_PROGRAMS = 5;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function requireDirector() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user || !["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role)) {
-    redirect("/dashboard");
-  }
-  if (user.role === "MAIN_DIRECTOR") {
+  const user = await requireDbUser(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
+  if (user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR") {
     const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_PROGRAMS);
     if (!allowed) redirect("/dashboard/director");
   }
@@ -54,50 +49,74 @@ const optionalStr = (max = 1000) =>
     .transform((v) => v || undefined)
     .optional();
 
-const programSchema = z
-  .object({
-    code: z
-      .string()
-      .trim()
-      .min(2)
-      .max(20)
-      .regex(
-        /^[A-Z0-9-]+$/,
-        "Code must be uppercase letters, numbers, and hyphens only.",
-      ),
-    title: z.string().trim().min(3, "Title is required.").max(120),
-    titleBangla: optionalStr(120),
-    category: z.nativeEnum(TrainingCategory, {
-      error: "Please select a category.",
-    }),
-    summary: optionalStr(1000),
-    summaryBangla: optionalStr(1000),
-    startDate: z
-      .string()
-      .min(1, "Start date is required.")
-      .refine((v) => !isNaN(Date.parse(v)), "Invalid start date."),
-    endDate: z
-      .string()
-      .min(1, "End date is required.")
-      .refine((v) => !isNaN(Date.parse(v)), "Invalid end date."),
-    location: optionalStr(120),
-    locationBangla: optionalStr(120),
-    targetIntake: z.coerce
-      .number({ error: "Target intake is required." })
-      .int()
-      .min(1, "Must be at least 1.")
-      .max(10000),
-    // Empty string from form → undefined, otherwise parse as int
-    maxIntake: z.preprocess(
-      (v) =>
-        v === "" || v === undefined || v === null ? undefined : Number(v),
-      z.number().int().min(1).max(10000).optional(),
+const programBaseSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2)
+    .max(20)
+    .regex(
+      /^[A-Z0-9-]+$/,
+      "Code must be uppercase letters, numbers, and hyphens only.",
     ),
-  })
-  .refine((d) => new Date(d.endDate) > new Date(d.startDate), {
-    path: ["endDate"],
-    message: "End date must be after start date.",
-  });
+  title: z.string().trim().min(3, "Title is required.").max(120),
+  titleBangla: optionalStr(120),
+  category: z.nativeEnum(TrainingCategory, {
+    error: "Please select a category.",
+  }),
+  summary: optionalStr(1000),
+  summaryBangla: optionalStr(1000),
+  startDate: z.string().min(1, "Start date is required."),
+  endDate: z.string().min(1, "End date is required."),
+  location: optionalStr(120),
+  locationBangla: optionalStr(120),
+  targetIntake: z.coerce
+    .number({ error: "Target intake is required." })
+    .int()
+    .min(1, "Must be at least 1.")
+    .max(10000),
+  maxIntake: z.preprocess(
+    (v) => (v === "" || v === undefined || v === null ? undefined : Number(v)),
+    z.number().int().min(1).max(10000).optional(),
+  ),
+  batch: z.coerce.number({ error: "Batch is required." }).int().min(1, "Must be at least 1.").max(999),
+});
+
+// Helper for date validation
+const dateValidationRefinement = (d: any, ctx: any) => {
+  // Validate startDate parses
+  if (isNaN(Date.parse(d.startDate))) {
+    ctx.addIssue({
+      path: ["startDate"],
+      code: z.ZodIssueCode.custom,
+      message: "Invalid start date.",
+    });
+  }
+  // Validate endDate parses
+  if (isNaN(Date.parse(d.endDate))) {
+    ctx.addIssue({
+      path: ["endDate"],
+      code: z.ZodIssueCode.custom,
+      message: "Invalid end date.",
+    });
+  }
+  // Cross-field: end > start
+  if (new Date(d.endDate) <= new Date(d.startDate)) {
+    ctx.addIssue({
+      path: ["endDate"],
+      code: z.ZodIssueCode.custom,
+      message: "End date must be after start date.",
+    });
+  }
+};
+
+// For creates
+const programSchema = programBaseSchema.superRefine(dateValidationRefinement);
+
+// For edits — omit code, keep the date check
+const editProgramSchema = programBaseSchema
+  .omit({ code: true })
+  .superRefine(dateValidationRefinement);
 
 export async function createProgramAction(
   _prev: ActionResult,
@@ -113,7 +132,7 @@ export async function createProgramAction(
     }),
   );
 
-  const parsed = schemaWithIsMain.safeParse(raw);
+  const parsed = programSchema.safeParse(raw);
 
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -144,13 +163,14 @@ export async function createProgramAction(
       category: d.category,
       summary: d.summary || null,
       summaryBangla: d.summaryBangla || null,
-      isMain: d.isMain ?? false,
+      isMain: (d as any).isMain ?? false,
       startDate: new Date(d.startDate),
       endDate: new Date(d.endDate),
       location: d.location || null,
       locationBangla: d.locationBangla || null,
       targetIntake: d.targetIntake,
       maxIntake: d.maxIntake || null,
+      batch: d.batch,
       isPublished: false,
     },
   });
@@ -167,7 +187,7 @@ export async function createProgramAction(
     },
   });
 
-  if (d.isMain) {
+  if ((d as any).isMain) {
     await prisma.user.updateMany({
       where: { isMissionary: true },
       data: { isMissionary: false },
@@ -194,7 +214,7 @@ export async function editProgramAction(
 
   const raw = Object.fromEntries(formData.entries());
   // Code is not editable after creation
-  const parsed = programSchema.omit({ code: true }).safeParse(raw);
+  const parsed = editProgramSchema.safeParse(raw);
 
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -221,6 +241,7 @@ export async function editProgramAction(
       locationBangla: d.locationBangla || null,
       targetIntake: d.targetIntake,
       maxIntake: d.maxIntake || null,
+      batch: d.batch,
     },
   });
 
@@ -360,7 +381,7 @@ export async function createWindowAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireDirector();
-  if (user.role === "MAIN_DIRECTOR") {
+  if (user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR") {
     const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_WINDOWS);
     if (!allowed) return { ok: false, error: "Not permitted." };
   }
@@ -423,7 +444,7 @@ export async function openWindowAction(
   windowId: string,
 ): Promise<ActionResult> {
   const user = await requireDirector();
-  if (user.role === "MAIN_DIRECTOR") {
+  if (user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR") {
     const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_WINDOWS);
     if (!allowed) return { ok: false, error: "Not permitted." };
   }
@@ -470,7 +491,7 @@ export async function closeWindowAction(
   windowId: string,
 ): Promise<ActionResult> {
   const user = await requireDirector();
-  if (user.role === "MAIN_DIRECTOR") {
+  if (user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR") {
     const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_WINDOWS);
     if (!allowed) return { ok: false, error: "Not permitted." };
   }
@@ -525,5 +546,142 @@ export async function archiveWindowAction(
   });
 
   revalidatePath(`/dashboard/director/programs/${window.programId}`);
+  return { ok: true };
+}
+
+export type EditWindowInput = {
+  windowId: string;
+  advertisingStartDate: string; // yyyy-mm-dd
+  applicationOpenDate: string;
+  applicationCloseDate: string;
+  trainingStartDate: string;
+  targetIntake: number;
+  notes?: string;
+};
+
+const editWindowSchema = z.object({
+  windowId: z.string().min(1),
+  advertisingStartDate: z.coerce.date(),
+  applicationOpenDate: z.coerce.date(),
+  applicationCloseDate: z.coerce.date(),
+  trainingStartDate: z.coerce.date(),
+  targetIntake: z.coerce.number().int().positive(),
+  notes: z.string().trim().max(2000).optional(),
+});
+
+export async function editWindowAction(
+  input: EditWindowInput,
+): Promise<{ ok: boolean; error?: string }> {
+  const user = await requireRole(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
+  if (user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR") {
+    const allowed = await isSettingEnabled(SETTINGS.UD_CAN_MANAGE_WINDOWS);
+    if (!allowed)
+      return {
+        ok: false,
+        error: "You don't have permission to manage windows.",
+      };
+  }
+
+  const parsed = editWindowSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid input.",
+    };
+  }
+  const d = parsed.data;
+
+  const window = await prisma.applicationWindow.findFirst({
+    where: { id: d.windowId, deletedAt: null },
+  });
+  if (!window) return { ok: false, error: "Window not found." };
+  if (window.state === "ARCHIVED") {
+    return { ok: false, error: "Archived windows can't be edited." };
+  }
+
+  if (
+    !(
+      d.advertisingStartDate <= d.applicationOpenDate &&
+      d.applicationOpenDate <= d.applicationCloseDate &&
+      d.applicationCloseDate < d.trainingStartDate
+    )
+  ) {
+    return {
+      ok: false,
+      error: "Dates must run: advertising ≤ open ≤ close < training start.",
+    };
+  }
+
+  const isLive = window.state === "OPEN" || window.state === "CLOSED";
+  if (isLive) {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    if (d.applicationCloseDate < startOfToday)
+      return { ok: false, error: "New close date must be today or later." };
+    if (d.applicationCloseDate < window.applicationCloseDate)
+      return {
+        ok: false,
+        error: "You can only extend the close date, not pull it earlier.",
+      };
+    if (d.targetIntake < window.targetIntake)
+      return {
+        ok: false,
+        error: "Target intake can only be increased on a live window.",
+      };
+    if (
+      d.advertisingStartDate.getTime() !==
+        window.advertisingStartDate.getTime() ||
+      d.applicationOpenDate.getTime() !== window.applicationOpenDate.getTime()
+    )
+      return {
+        ok: false,
+        error: "Advertising and open dates are locked once a window is live.",
+      };
+  }
+
+  const nextState = window.state === "CLOSED" ? "OPEN" : window.state; // reopen on extend
+
+  try {
+    await prisma.applicationWindow.update({
+      where: { id: window.id },
+      data: {
+        advertisingStartDate: d.advertisingStartDate,
+        applicationOpenDate: d.applicationOpenDate,
+        applicationCloseDate: d.applicationCloseDate,
+        trainingStartDate: d.trainingStartDate,
+        targetIntake: d.targetIntake,
+        notes: d.notes?.length ? d.notes : null,
+        state: nextState,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        action: "WINDOW_EDITED",
+        severity: "NOTICE",
+        actorId: user.id,
+        actorRole: user.role,
+        targetType: "ApplicationWindow",
+        targetId: window.id,
+        details: {
+          from: {
+            close: window.applicationCloseDate,
+            intake: window.targetIntake,
+            state: window.state,
+          },
+          to: {
+            close: d.applicationCloseDate,
+            intake: d.targetIntake,
+            state: nextState,
+          },
+        },
+      },
+    });
+  } catch (e) {
+    console.error("editWindowAction failed", e);
+    return { ok: false, error: "Could not save changes. Please try again." };
+  }
+
+  revalidatePath("/dashboard/director/windows");
   return { ok: true };
 }

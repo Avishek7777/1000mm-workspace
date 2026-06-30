@@ -1,15 +1,25 @@
 // apps/website/app/current-projects/page.tsx
-// Server component — no "use client" needed.
-// Reads from lib/projects.ts; adding a project there makes it appear here automatically.
-
-import { motion } from "framer-motion"; // still works in RSC for static props
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowRight, MapPin, Calendar } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/sections/Footer";
-import { PROJECTS } from "@/lib/projects";
+import { PROJECTS as FALLBACK_PROJECTS } from "@/lib/projects";
 import ProjectsGrid from "./_components/ProjectsGrid";
+import type { Project } from "@/components/sections/CurrentProjectsSection";
+
+async function fetchProjects(): Promise<Project[]> {
+  const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL;
+  if (!portalUrl) return FALLBACK_PROJECTS.map((p) => ({ ...p, id: p.slug }));
+  try {
+    const res = await fetch(`${portalUrl}/api/public/projects`, {
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error();
+    return res.json();
+  } catch {
+    return FALLBACK_PROJECTS.map((p) => ({ ...p, id: p.slug }));
+  }
+}
 
 const warmBg = {
   background: "linear-gradient(160deg, #fdf6ec 0%, #fef3e2 50%, #fdf0d5 100%)",
@@ -21,7 +31,9 @@ export const metadata = {
     "Active initiatives your donations are building right now. Every gift moves the mission forward.",
 };
 
-export default function CurrentProjectsPage() {
+export default async function CurrentProjectsPage() {
+  const projects = await fetchProjects();
+
   return (
     <>
       <NavBar />
@@ -78,12 +90,11 @@ export default function CurrentProjectsPage() {
             Every gift moves the mission forward.
           </p>
 
-          {/* Live count */}
           <p
             className="mt-4 text-xs font-semibold tracking-widest uppercase text-amber-600/70"
             style={{ fontFamily: "Georgia, serif" }}
           >
-            {PROJECTS.length} active project{PROJECTS.length !== 1 ? "s" : ""}
+            {projects.length} project{projects.length !== 1 ? "s" : ""}
           </p>
         </div>
       </section>
@@ -91,8 +102,7 @@ export default function CurrentProjectsPage() {
       {/* ── Project cards ────────────────────────────────────────────────── */}
       <section className="bg-white py-20 border-y border-amber-100">
         <div className="max-w-5xl mx-auto px-6">
-          {/* Client component handles framer-motion animations */}
-          <ProjectsGrid projects={PROJECTS} />
+          <ProjectsGrid projects={projects} />
         </div>
       </section>
 

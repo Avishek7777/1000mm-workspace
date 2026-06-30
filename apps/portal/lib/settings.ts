@@ -17,6 +17,8 @@ export const SETTING_KEYS = {
   ID_CARDS_PRINTING_ENABLED: "idcards.printing_enabled",
   SALARY_WINDOW_START: "salary.request_window_start",
   SALARY_WINDOW_END: "salary.request_window_end",
+  LMD_ATTENDANCE_ENABLED: "lmd.attendance_enabled",
+  AI_API_KEY: "ai.api_key",
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];

@@ -5,8 +5,6 @@ import Link from "next/link";
 import { startDirectorReviewAction } from "@/actions/director";
 import { DirectorActionPanel } from "./_components/DirectorActionPanel";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
-
 function formatDate(d?: Date | string | null) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-GB", {
@@ -75,7 +73,7 @@ export default async function DirectorApplicationDetailPage({
 }: {
   params: Promise<{ applicationId: string }>;
 }) {
-  await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+  await requireRole(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
   const { applicationId } = await params;
 
   const app = await prisma.application.findFirst({
@@ -105,13 +103,14 @@ export default async function DirectorApplicationDetailPage({
   }
 
   const fd = (app.formData as Record<string, unknown>) ?? {};
-  const educationEntries =
-    (fd.education as Array<{
-      degree: string;
-      institutionName: string;
-      gpa: string;
-      passingYear: string;
-    }> | null) ?? [];
+  const educationEntries = Array.isArray(fd.education)
+    ? (fd.education as Array<{
+        degree: string;
+        institutionName: string;
+        gpa: string;
+        passingYear: string;
+      }>)
+    : [];
 
   const presentAddress = [
     app.presentAddressVillage,
@@ -157,7 +156,7 @@ export default async function DirectorApplicationDetailPage({
 
   const profilePhoto = app.documents.find((d) => d.kind === "PROFILE_PHOTO");
   const profilePhotoUrl = profilePhoto
-    ? `${appUrl}/uploads/${profilePhoto.storageKey}`
+    ? `/api/uploads/${profilePhoto.storageKey}`
     : null;
 
   const mCode = app.submittedFromMission.code;
@@ -196,15 +195,39 @@ export default async function DirectorApplicationDetailPage({
             </span>
           </div>
         </div>
-        {profilePhotoUrl && (
-          <div className="h-16 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-            <img
-              src={profilePhotoUrl}
-              alt="Applicant"
-              className="h-full w-full object-cover"
-            />
-          </div>
-        )}
+        <div className="flex flex-col items-end gap-3">
+          <Link
+            href={`/dashboard/director/applications/${applicationId}/print`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="6 9 6 2 18 2 18 9" />
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+              <rect x="6" y="14" width="12" height="8" />
+            </svg>
+            Print
+          </Link>
+          {profilePhotoUrl && (
+            <div className="h-30 w-28 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+              <img
+                src={profilePhotoUrl}
+                alt="Applicant"
+                className="h-full w-full object-cover"
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── LMD Recommendation Summary (shown before application details) ── */}
@@ -430,7 +453,7 @@ export default async function DirectorApplicationDetailPage({
               {(fd.missionaryDesire as string) || "—"}
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-4 border-t border-gray-100 pt-3">
+          <div className="grid grid-cols-1 gap-4 border-t border-gray-100 pt-3 sm:grid-cols-3">
             <Field
               label="Criminal / Court Record"
               value={

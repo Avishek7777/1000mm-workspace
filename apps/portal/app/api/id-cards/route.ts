@@ -3,6 +3,19 @@ import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { IdCardPdf } from "@/lib/exports/IdCardPdf";
+import QRCode from "qrcode";
+import fs from "fs";
+import path from "path";
+
+function loadLogoDataUrl(): string {
+  try {
+    const logoPath = path.join(process.cwd(), "public", "logos", "1000mm-logo.png");
+    const buffer = fs.readFileSync(logoPath);
+    return `data:image/png;base64,${buffer.toString("base64")}`;
+  } catch {
+    return "";
+  }
+}
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -13,13 +26,12 @@ export async function GET(req: NextRequest) {
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
   const isSA = user.role === "SYSTEM_ADMIN";
-  const isUD = user.role === "MAIN_DIRECTOR";
+  const isUD = user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR";
 
   if (!isSA && !isUD) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
-  // Check if ID card printing is enabled (UD must have SA permission)
   if (isUD) {
     const setting = await prisma.systemSetting.findUnique({
       where: { key: "idcards.printing_enabled" },
@@ -35,16 +47,13 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const programId = searchParams.get("programId") ?? undefined;
-  // Selective: comma-separated enrollment IDs
   const enrollmentIdsParam = searchParams.get("enrollmentIds") ?? undefined;
   const enrollmentIds = enrollmentIdsParam
     ? enrollmentIdsParam.split(",").filter(Boolean)
     : undefined;
 
   if (!programId && !enrollmentIds?.length) {
-    return new NextResponse("Provide programId or enrollmentIds.", {
-      status: 400,
-    });
+    return new NextResponse("Provide programId or enrollmentIds.", { status: 400 });
   }
 
   const enrollments = await prisma.programEnrollment.findMany({
@@ -57,6 +66,7 @@ export async function GET(req: NextRequest) {
     include: {
       trainee: {
         select: {
+          id: true,
           fullName: true,
           homeMission: { select: { code: true } },
         },
@@ -66,6 +76,7 @@ export async function GET(req: NextRequest) {
           code: true,
           title: true,
           endDate: true,
+          batch: true,
         },
       },
       application: {
@@ -92,28 +103,40 @@ export async function GET(req: NextRequest) {
     minute: "2-digit",
   });
 
-  const cards = enrollments.map((e) => ({
-    enrollmentId: e.id,
-    referenceNumber:
-      e.application?.referenceNumber ?? e.id.slice(-8).toUpperCase(),
-    fullName: e.trainee.fullName,
-    missionCode: e.trainee.homeMission?.code ?? "—",
-    programCode: e.program.code,
-    programTitle: e.program.title,
-    deploymentLocation: e.deploymentLocation ?? null,
-    enrolledAt: new Date(e.enrolledAt).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }),
-    validUntil: new Date(e.program.endDate).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }),
-  }));
+  const logoUrl = loadLogoDataUrl();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://portal.1000mmbd.org";
 
-  // Log audit
+  const cards = await Promise.all(
+    enrollments.map(async (e) => {
+      const refNum = e.application?.referenceNumber ?? e.id.slice(-8).toUpperCase();
+      const qrDataUrl = await QRCode.toDataURL(`${appUrl}/verify/${refNum}`, {
+        width: 80,
+        margin: 1,
+        color: { dark: "#0F6E56", light: "#FAFAF8" },
+      });
+      return {
+        enrollmentId: e.id,
+        referenceNumber: refNum,
+        fullName: e.trainee.fullName,
+        missionCode: e.trainee.homeMission?.code ?? "—",
+        programCode: e.program.code,
+        programTitle: e.program.title,
+        batch: e.program.batch ?? null,
+        enrolledAt: new Date(e.enrolledAt).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }),
+        validUntil: new Date(e.program.endDate).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }),
+        qrDataUrl,
+      };
+    }),
+  );
+
   await prisma.auditLog.create({
     data: {
       action: "ID_CARDS_GENERATED",
@@ -128,7 +151,7 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const buffer = await renderToBuffer(IdCardPdf({ cards, generatedAt }));
+  const buffer = await renderToBuffer(IdCardPdf({ cards, generatedAt, logoUrl }));
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {

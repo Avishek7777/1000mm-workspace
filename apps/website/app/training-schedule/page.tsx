@@ -79,6 +79,8 @@ const STATUS_STYLE: Record<string, { bg: string; dot: string; text: string }> =
     Completed: { bg: "#e5e7eb", dot: "#9ca3af", text: "#6b7280" },
   };
 
+export const revalidate = 60; // revalidate every 60 seconds
+
 export default async function TrainingSchedulePage() {
   let programs: Program[] = [];
 
@@ -86,7 +88,7 @@ export default async function TrainingSchedulePage() {
     const portalUrl =
       process.env.NEXT_PUBLIC_PORTAL_URL ?? "http://localhost:3001";
     const res = await fetch(`${portalUrl}/api/public/programs`, {
-      next: { revalidate: 300 },
+      cache: "no-store",
     });
     if (res.ok) programs = await res.json();
   } catch {

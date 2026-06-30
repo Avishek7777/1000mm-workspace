@@ -117,6 +117,27 @@
   --sidebar-ring: oklch(0.547 0.021 43.1);
 }
 
+/* ── Dashboard Shell Theme Variables ─────────────────────────────────────── */
+/* Light mode defaults */
+:root {
+  --dash-sb-bg: oklch(1 0 0);
+  --dash-sb-border: oklch(0.91 0.003 265);
+  --dash-main-bg: oklch(0.972 0 0);
+  --dash-sb-text: oklch(0.43 0.006 265);
+  --dash-sb-sub: oklch(0.56 0.006 265);
+  --dash-sb-head: oklch(0.15 0.006 265);
+}
+
+/* Light — per-role sidebar + main tints */
+[data-role="SYSTEM_ADMIN"]       { --dash-sb-bg: oklch(0.994 0.007 12);  --dash-sb-border: oklch(0.91 0.016 12);  --dash-main-bg: oklch(0.976 0.004 12); }
+[data-role="MAIN_DIRECTOR"]      { --dash-sb-bg: oklch(0.994 0.006 240); --dash-sb-border: oklch(0.91 0.013 240); --dash-main-bg: oklch(0.976 0.003 240); }
+[data-role="SECRETARY"]          { --dash-sb-bg: oklch(0.994 0.006 280); --dash-sb-border: oklch(0.91 0.013 280); --dash-main-bg: oklch(0.976 0.003 280); }
+[data-role="ASSOCIATE_DIRECTOR"] { --dash-sb-bg: oklch(0.994 0.006 265); --dash-sb-border: oklch(0.91 0.013 265); --dash-main-bg: oklch(0.976 0.003 265); }
+[data-role="LOCAL_DIRECTOR"]     { --dash-sb-bg: oklch(0.994 0.008 175); --dash-sb-border: oklch(0.91 0.016 175); --dash-main-bg: oklch(0.976 0.004 175); }
+[data-role="TRAINER"]            { --dash-sb-bg: oklch(0.994 0.010 65);  --dash-sb-border: oklch(0.91 0.019 65);  --dash-main-bg: oklch(0.976 0.005 65); }
+[data-role="TRAINEE"]            { --dash-sb-bg: oklch(0.994 0.006 205); --dash-sb-border: oklch(0.91 0.013 205); --dash-main-bg: oklch(0.976 0.003 205); }
+
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

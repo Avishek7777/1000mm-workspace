@@ -242,7 +242,7 @@ function PipelineCharts({ data }: { data: any }) {
   return (
     <div className="space-y-6">
       <ChartCard title="Pipeline Funnel">
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {data.funnelStages.map((s: any, i: number) => (
             <div
               key={i}
@@ -512,7 +512,7 @@ function DecisionsCharts({ data }: { data: any }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           {
             label: "Total",

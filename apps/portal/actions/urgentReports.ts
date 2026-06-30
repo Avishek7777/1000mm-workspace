@@ -3,7 +3,6 @@
 
 import { prisma as db } from "@1000mm/db";
 import { auth } from "@/lib/auth/config";
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
@@ -24,10 +23,10 @@ async function saveAttachment(
   slot: number,
   reportSlug: string,
 ): Promise<string> {
-  const uploadsRoot = path.resolve(process.cwd(), "../../uploads");
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
-  const key = `urgent-reports/${reportSlug}-${slot}.${ext}`;
-  const fullPath = path.join(uploadsRoot, key);
+  const fileName = `${reportSlug}-${slot}.${ext}`;
+  const key = `urgent-reports/${fileName}`;
+  const fullPath = path.join(process.cwd(), "public", "uploads", "urgent-reports", fileName);
   await mkdir(path.dirname(fullPath), { recursive: true });
   await writeFile(fullPath, Buffer.from(await file.arrayBuffer()));
   return key;
@@ -99,13 +98,10 @@ export async function issueUrgentReportAction(formData: FormData) {
       targetId: report.id,
       details: { title, recipientCount: missionaries.length },
     },
-  });
+  }).catch((err: unknown) => console.error("[auditLog urgent_report_issued]", err));
 
-  console.log(
-    `[DEV EMAIL] Urgent report "${title}" issued to ${missionaries.length} missionaries.`,
-  );
-
-  redirect("/dashboard/system-admin/urgent-reports");
+  revalidatePath("/dashboard/system-admin/urgent-reports");
+  return { ok: true as const, id: report.id };
 }
 
 // ── SA: delete an urgent report ───────────────────────────────────────────────
@@ -158,7 +154,7 @@ export async function submitUrgentReportResponseAction(formData: FormData) {
       targetType: "UrgentReport",
       targetId: reportId,
     },
-  });
+  }).catch((err: unknown) => console.error("[auditLog urgent_report_submitted]", err));
 
   revalidatePath(`/dashboard/urgent-reports/${reportId}`);
 }

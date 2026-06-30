@@ -132,13 +132,13 @@ export async function respondToComplaintAction(
   if (!session?.user?.id) redirect("/login");
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user || !["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role)) {
+  if (!user || !["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role)) {
     return {
       ok: false,
       error: "You are not permitted to respond to complaints.",
     };
   }
-  if (user.role === "MAIN_DIRECTOR") {
+  if (user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR") {
     const allowed = await isSettingEnabled(SETTINGS.UD_CAN_RESPOND_COMPLAINTS);
     if (!allowed) return { ok: false, error: "Not permitted." };
   }

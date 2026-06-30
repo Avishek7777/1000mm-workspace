@@ -28,7 +28,7 @@ import bcrypt from "bcrypt";
 import { z } from "zod";
 import { prisma } from "@1000mm/db";
 import { edgeAuthConfig } from "./edge.config";
-import type { LocalMissionCode, UserRole } from "@1000mm/db";
+import type { UserRole } from "@1000mm/db";
 
 // ─────────────────────────────────────────────────────────────────────
 // Module augmentation: add our custom fields to Session and JWT.
@@ -39,22 +39,22 @@ declare module "next-auth" {
     user: {
       id: string;
       role: UserRole;
-      homeMissionId: string;
-      homeMissionCode: LocalMissionCode;
+      homeMissionId: string | null;
+      homeMissionCode: string | null;
     } & DefaultSession["user"];
   }
 
   interface User {
     role: UserRole;
-    homeMissionId: string;
-    homeMissionCode: LocalMissionCode;
+    homeMissionId: string | null;
+    homeMissionCode: string | null;
   }
 
   interface JWT {
     id: string;
     role: UserRole;
-    homeMissionId: string;
-    homeMissionCode: LocalMissionCode;
+    homeMissionId: string | null;
+    homeMissionCode: string | null;
   }
 }
 
@@ -100,6 +100,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           return null;
         }
         if (!user.isActive) return null;
+        if (user.role === "TRAINEE" && !user.emailVerified) return null;
         if (user.lockedUntil && user.lockedUntil > new Date()) return null;
 
         const passwordOk = await bcrypt.compare(password, user.passwordHash);
@@ -138,7 +139,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           name: user.fullName,
           role: user.role,
           homeMissionId: user.homeMissionId,
-          homeMissionCode: user.homeMission.code,
+          homeMissionCode: user.homeMission?.code ?? null,
         };
       },
     }),
@@ -158,19 +159,26 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         // This is the "JWT with revocation" pattern: one extra query per request,
         // but no full session table. If a user is deactivated mid-session, their
         // next request returns null and the session is invalidated.
-        const fresh = await prisma.user.findFirst({
-          where: { id: token.id, isActive: true, deletedAt: null },
-          select: {
-            role: true,
-            homeMissionId: true,
-            homeMission: { select: { code: true } },
-          },
-        });
-        if (!fresh) return {} as never;
-        // Refresh in case role or mission changed
-        token.role = fresh.role;
-        token.homeMissionId = fresh.homeMissionId;
-        token.homeMissionCode = fresh.homeMission.code;
+        // If the DB is unreachable we fall through with the existing token claims
+        // rather than throwing — this prevents [auth][cause] console noise during
+        // transient DB downtime and keeps the user's session intact until DB recovers.
+        try {
+          const fresh = await prisma.user.findFirst({
+            where: { id: token.id, isActive: true, deletedAt: null },
+            select: {
+              role: true,
+              homeMissionId: true,
+              homeMission: { select: { code: true } },
+            },
+          });
+          if (!fresh) return {} as never;
+          // Refresh in case role or mission changed
+          token.role = fresh.role;
+          token.homeMissionId = fresh.homeMissionId;
+          token.homeMissionCode = fresh.homeMission?.code ?? null;
+        } catch {
+          // DB unreachable — keep existing claims, don't throw
+        }
       }
       return token;
     },
@@ -180,9 +188,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       if (token.id) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
-        session.user.homeMissionId = token.homeMissionId as string;
-        session.user.homeMissionCode =
-          token.homeMissionCode as LocalMissionCode;
+        session.user.homeMissionId = (token.homeMissionId as string | null) ?? null;
+        session.user.homeMissionCode = (token.homeMissionCode as string | null) ?? null;
       }
       return session;
     },

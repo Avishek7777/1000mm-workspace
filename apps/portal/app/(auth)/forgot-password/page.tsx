@@ -2,10 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import {
-  requestPasswordResetAction,
-  type FormState,
-} from "@/lib/auth/actions";
+import { requestPasswordResetAction, type FormState } from "@/lib/auth/actions";
 
 const initial: FormState = { ok: false };
 
@@ -25,7 +22,7 @@ export default function ForgotPasswordPage() {
       {state.ok && (
         <div className="mb-6 rounded border border-green-300 bg-green-50 p-3 text-sm text-green-900">
           If an account with that email exists, a reset link is on its way.
-          Check your inbox (and in dev mode, check the server terminal).
+          Check your inbox — the link expires in 1 hour.
         </div>
       )}
 
@@ -59,7 +56,7 @@ export default function ForgotPasswordPage() {
       </form>
 
       <p className="mt-6 text-sm text-center">
-        <Link href="/login" className="text-blue-700 hover:underline">
+        <Link href="/" className="text-blue-700 hover:underline">
           Back to sign in
         </Link>
       </p>

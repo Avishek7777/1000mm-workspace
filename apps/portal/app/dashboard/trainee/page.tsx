@@ -408,7 +408,7 @@ export default async function TraineeDashboard() {
               {(application.status === "DRAFT" ||
                 application.status === "RETURNED_TO_APPLICANT") && (
                 <Link
-                  href={`/dashboard/my-application/${application.id}/edit`}
+                  href="/dashboard/my-application/new"
                   className="flex-shrink-0 rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 transition-colors"
                 >
                   {application.status === "DRAFT"
@@ -533,16 +533,50 @@ export default async function TraineeDashboard() {
             </div>
           </div>
 
-          {/* Locked missionary features */}
+          {/* Accepted-phase quick links */}
           {application.status === "ACCEPTED" && (
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {/* My Program */}
+              <Link
+                href="/dashboard/my-program"
+                className="rounded-xl border border-gray-200 bg-white p-5 hover:border-teal-300 hover:shadow-sm transition-all"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 mb-3">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                    <path d="M6 12v5c3 3 9 3 12 0v-5" />
+                  </svg>
+                </div>
+                <h3 className="text-sm font-medium text-gray-900">My Program</h3>
+                <p className="mt-1 text-xs text-gray-500">{application.window.program.title}</p>
+              </Link>
+
+              {/* Certificate — unlocked if issued */}
+              {application.enrollment?.certificateIssued ? (
+                <Link
+                  href="/dashboard/my-application/certificate"
+                  className="rounded-xl border border-amber-200 bg-amber-50 p-5 hover:border-amber-300 hover:shadow-sm transition-all"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 mb-3">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
+                      <circle cx="12" cy="8" r="6" />
+                      <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-medium text-gray-900">My Certificate</h3>
+                  <p className="mt-1 text-xs text-amber-700 font-medium">Ready — tap to download</p>
+                </Link>
+              ) : (
+                <LockedCard
+                  title="My Certificate"
+                  reason="Your certificate will be available here once it has been issued by the Union Director."
+                />
+              )}
+
+              {/* Field Reports — locked until deployed */}
               <LockedCard
                 title="Field Reports"
-                reason="You will be able to submit monthly field reports once your deployment location has been assigned."
-              />
-              <LockedCard
-                title="My Certificate"
-                reason="Your certificate will be available here once it has been issued by the Union Director."
+                reason="Monthly field reports become available once your deployment location has been assigned."
               />
             </div>
           )}

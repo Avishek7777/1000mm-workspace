@@ -17,6 +17,8 @@ export async function GET(
     where: { id: applicationId },
     include: {
       submittedFromMission: true,
+      lmdReviewer: { select: { fullName: true } },
+      directorReviewer: { select: { fullName: true } },
       documents: {
         where: { deletedAt: null },
         select: {
@@ -55,13 +57,17 @@ export async function GET(
   }
 
   const fd = (app.formData as Record<string, unknown>) ?? {};
-  const educationEntries =
-    (fd.education as Array<{
-      degree: string;
-      institutionName: string;
-      gpa: string;
-      passingYear: string;
-    }> | null) ?? [];
+  let rawEducation = fd.education;
+  // Guard against double-serialized JSON stored as a string
+  if (typeof rawEducation === "string") {
+    try { rawEducation = JSON.parse(rawEducation); } catch { rawEducation = []; }
+  }
+  const educationEntries = (Array.isArray(rawEducation) ? rawEducation : []) as Array<{
+    degree: string;
+    institutionName: string;
+    gpa: string;
+    passingYear: string;
+  }>;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
   const photoDoc = app.documents.find((d) => d.kind === "PROFILE_PHOTO");
@@ -140,6 +146,8 @@ export async function GET(
     missionName: app.submittedFromMission?.name ?? undefined,
     submittedAt: app.submittedAt?.toISOString() ?? new Date().toISOString(),
     ipAddress: submitLog?.ipAddress ?? undefined,
+    lmdReviewerName: app.lmdReviewer?.fullName ?? undefined,
+    directorReviewerName: app.directorReviewer?.fullName ?? undefined,
   };
   return NextResponse.json(data);
 }
