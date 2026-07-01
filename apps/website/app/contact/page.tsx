@@ -7,7 +7,12 @@ import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/sections/Footer";
 
-type FormData = { name: string; email: string; phone?: string; message: string };
+type FormData = {
+  name: string;
+  email: string;
+  phone?: string;
+  message: string;
+};
 
 const staticInfo = [
   {
@@ -37,8 +42,8 @@ const staticInfo = [
     icon: Calendar,
     title: "Office Hours",
     lines: [
-      "Sunday – Thursday",
-      "9:00 AM – 5:00 PM (BST)",
+      "Monday – Friday",
+      "8:00 AM – 5:00 PM (BST)",
       "Closed on Saturdays (Sabbath)",
     ],
     gradient: "linear-gradient(135deg, #16a34a, #f97316)",
@@ -130,7 +135,8 @@ export default function ContactPage() {
               style={{ fontFamily: "Georgia, serif" }}
             >
               Have a question, prayer request, or want to partner with us? We'd
-              love to hear from you. Fill in the form below or reach us directly.
+              love to hear from you. Fill in the form below or reach us
+              directly.
             </p>
           </motion.div>
 
