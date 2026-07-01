@@ -142,25 +142,25 @@ async function seedUsers(missions: Record<LocalMissionCode, { id: string }>) {
 
   const admin = await prisma.user.upsert({
     where: { email: process.env.SEED_ADMIN_EMAIL ?? "admin@1000mm.local" },
-    update: {},
+    update: { passwordHash: pw.admin, isActive: true, emailVerified: new Date() },
     create: { email: process.env.SEED_ADMIN_EMAIL ?? "admin@1000mm.local", passwordHash: pw.admin, fullName: "System Administrator", role: UserRole.SYSTEM_ADMIN, homeMissionId: missions.EBM.id, emailVerified: new Date(), isActive: true },
   });
 
   const director = await prisma.user.upsert({
     where: { email: process.env.SEED_DIRECTOR_EMAIL ?? "director@1000mm.local" },
-    update: {},
+    update: { passwordHash: pw.director, isActive: true, emailVerified: new Date() },
     create: { email: process.env.SEED_DIRECTOR_EMAIL ?? "director@1000mm.local", passwordHash: pw.director, fullName: "Union Director", role: UserRole.MAIN_DIRECTOR, homeMissionId: missions.EBM.id, emailVerified: new Date(), isActive: true },
   });
 
   const secretary = await prisma.user.upsert({
     where: { email: "secretary@1000mm.local" },
-    update: {},
+    update: { passwordHash: pw.staff, isActive: true, emailVerified: new Date() },
     create: { email: "secretary@1000mm.local", passwordHash: pw.staff, fullName: "Mission Secretary", role: UserRole.SECRETARY, homeMissionId: missions.EBM.id, emailVerified: new Date(), isActive: true },
   });
 
   const assocDirector = await prisma.user.upsert({
     where: { email: "assoc@1000mm.local" },
-    update: {},
+    update: { passwordHash: pw.staff, isActive: true, emailVerified: new Date() },
     create: { email: "assoc@1000mm.local", passwordHash: pw.staff, fullName: "Associate Director", role: UserRole.ASSOCIATE_DIRECTOR, homeMissionId: missions.NBM.id, emailVerified: new Date(), isActive: true },
   });
 
@@ -171,7 +171,7 @@ async function seedUsers(missions: Record<LocalMissionCode, { id: string }>) {
       const email = `lmd.${code.toLowerCase()}@1000mm.local`;
       const user = await prisma.user.upsert({
         where: { email },
-        update: {},
+        update: { passwordHash: pw.lmd, isActive: true, emailVerified: new Date() },
         create: { email, passwordHash: pw.lmd, fullName: lmdNames[code], role: UserRole.LOCAL_DIRECTOR, homeMissionId: missions[code].id, emailVerified: new Date(), isActive: true },
       });
       await prisma.localMission.update({ where: { id: missions[code].id }, data: { directorId: user.id } });
