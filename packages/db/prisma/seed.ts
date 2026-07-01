@@ -347,7 +347,11 @@ async function seedAssignments(
   for (const [code, tpls] of Object.entries(templates)) {
     const prog = programs[code];
     if (!prog) continue;
-    await prisma.assignment.deleteMany({ where: { programId: prog.program.id, createdById: adminId } });
+    const existingAssignments = await prisma.assignment.findMany({ where: { programId: prog.program.id, createdById: adminId }, select: { id: true } });
+    if (existingAssignments.length) {
+      await prisma.assignmentSubmission.deleteMany({ where: { assignmentId: { in: existingAssignments.map((a) => a.id) } } });
+      await prisma.assignment.deleteMany({ where: { id: { in: existingAssignments.map((a) => a.id) } } });
+    }
     const programTopics = topics[code] ?? [];
     for (const t of tpls) {
       const topic = programTopics[t.topicIdx];
@@ -692,8 +696,11 @@ async function seedRecommendations(
   lmds: Array<{ user: { id: string }; missionCode: LocalMissionCode }>,
   missions: Record<LocalMissionCode, { id: string }>,
 ) {
-  const RECOMMENDABLE = new Set([ApplicationStatus.RECOMMENDED, ApplicationStatus.UNDER_MAIN_DIRECTOR_REVIEW, ApplicationStatus.ACCEPTED]);
-  const eligible = applications.filter((a) => RECOMMENDABLE.has(a.status));
+  const eligible = applications.filter((a) =>
+    a.status === ApplicationStatus.RECOMMENDED ||
+    a.status === ApplicationStatus.UNDER_MAIN_DIRECTOR_REVIEW ||
+    a.status === ApplicationStatus.ACCEPTED,
+  );
 
   const lmdByMission: Record<string, string> = {};
   for (const lmd of lmds) {
