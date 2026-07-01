@@ -132,8 +132,8 @@ async function seedLocalMissions() {
 
 async function seedUsers(missions: Record<LocalMissionCode, { id: string }>) {
   const pw = {
-    admin:    await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD    ?? "Admin!2026",    BCRYPT_ROUNDS),
-    director: await bcrypt.hash(process.env.SEED_DIRECTOR_PASSWORD ?? "Director!2026", BCRYPT_ROUNDS),
+    admin:    await bcrypt.hash("Admin!2026",    BCRYPT_ROUNDS),
+    director: await bcrypt.hash("Director!2026", BCRYPT_ROUNDS),
     staff:    await bcrypt.hash("Staff!2026",   BCRYPT_ROUNDS),
     lmd:      await bcrypt.hash("Lmd!2026",     BCRYPT_ROUNDS),
     trainer:  await bcrypt.hash("Trainer!2026", BCRYPT_ROUNDS),
@@ -141,15 +141,15 @@ async function seedUsers(missions: Record<LocalMissionCode, { id: string }>) {
   };
 
   const admin = await prisma.user.upsert({
-    where: { email: process.env.SEED_ADMIN_EMAIL ?? "admin@1000mm.local" },
+    where: { email: "admin@1000mm.local" },
     update: { passwordHash: pw.admin, isActive: true, emailVerified: new Date() },
-    create: { email: process.env.SEED_ADMIN_EMAIL ?? "admin@1000mm.local", passwordHash: pw.admin, fullName: "System Administrator", role: UserRole.SYSTEM_ADMIN, homeMissionId: missions.EBM.id, emailVerified: new Date(), isActive: true },
+    create: { email: "admin@1000mm.local", passwordHash: pw.admin, fullName: "System Administrator", role: UserRole.SYSTEM_ADMIN, homeMissionId: missions.EBM.id, emailVerified: new Date(), isActive: true },
   });
 
   const director = await prisma.user.upsert({
-    where: { email: process.env.SEED_DIRECTOR_EMAIL ?? "director@1000mm.local" },
+    where: { email: "director@1000mm.local" },
     update: { passwordHash: pw.director, isActive: true, emailVerified: new Date() },
-    create: { email: process.env.SEED_DIRECTOR_EMAIL ?? "director@1000mm.local", passwordHash: pw.director, fullName: "Union Director", role: UserRole.MAIN_DIRECTOR, homeMissionId: missions.EBM.id, emailVerified: new Date(), isActive: true },
+    create: { email: "director@1000mm.local", passwordHash: pw.director, fullName: "Union Director", role: UserRole.MAIN_DIRECTOR, homeMissionId: missions.EBM.id, emailVerified: new Date(), isActive: true },
   });
 
   const secretary = await prisma.user.upsert({
