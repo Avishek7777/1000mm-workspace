@@ -1,5 +1,6 @@
 import { prisma } from "@1000mm/db";
 import { RegisterForm } from "./_components/RegisterForm";
+export const dynamic = "force-dynamic";
 
 export default async function RegisterPage() {
   const missions = await prisma.localMission.findMany({
@@ -15,28 +16,32 @@ export default async function RegisterPage() {
       <div
         className="blob absolute -left-24 -top-24 h-96 w-96 rounded-full blur-2xl"
         style={{
-          background: "radial-gradient(circle at 30% 30%, rgba(0,127,152,0.82), transparent 72%)",
+          background:
+            "radial-gradient(circle at 30% 30%, rgba(0,127,152,0.82), transparent 72%)",
           animation: "blobFloat1 24s linear infinite",
         }}
       />
       <div
         className="blob absolute -bottom-28 -right-20 h-[28rem] w-[28rem] rounded-full blur-2xl"
         style={{
-          background: "radial-gradient(circle at 60% 40%, rgba(249,115,22,0.76), transparent 72%)",
+          background:
+            "radial-gradient(circle at 60% 40%, rgba(249,115,22,0.76), transparent 72%)",
           animation: "blobFloat2 30s linear infinite",
         }}
       />
       <div
         className="blob absolute left-1/4 top-1/4 h-80 w-80 rounded-full blur-2xl"
         style={{
-          background: "radial-gradient(circle at 50% 50%, rgba(74,222,128,0.64), transparent 72%)",
+          background:
+            "radial-gradient(circle at 50% 50%, rgba(74,222,128,0.64), transparent 72%)",
           animation: "blobFloat3 26s linear infinite",
         }}
       />
       <div
         className="blob absolute -top-16 right-10 h-72 w-72 rounded-full blur-2xl"
         style={{
-          background: "radial-gradient(circle at 40% 60%, rgba(0,127,152,0.66), transparent 72%)",
+          background:
+            "radial-gradient(circle at 40% 60%, rgba(0,127,152,0.66), transparent 72%)",
           animation: "blobFloat4 28s linear infinite",
         }}
       />

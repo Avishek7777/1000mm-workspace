@@ -1,3 +1,4 @@
+-- @prisma-no-transaction
 -- CreateEnum
 CREATE TYPE "EnrollmentStatus" AS ENUM ('APPLIED', 'ENROLLED');
 

@@ -24,13 +24,6 @@
       "@prisma/client": ["../../packages/db/node_modules/@prisma/client"]
     }
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
-  ],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.mts"],
   "exclude": ["node_modules"]
 }
