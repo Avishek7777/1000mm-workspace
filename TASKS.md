@@ -1,11 +1,12 @@
 # Task List — 1000MMBD Portal
 
-Last updated: 2026-06-28
+Last updated: 2026-07-02
 
 > **Session backlog added 2026-06-26** — items #28–#49 below
 > **Session backlog added 2026-06-27 (session 2)** — items #51–#55 below
 > **Session backlog added 2026-06-27 (session 3)** — items #57–#73 below; #56 fixed; #38 #41 #43 #45 #47 #57 #58 #59 completed
 > **Session backlog added 2026-06-28** — items #74–#98 below
+> **Session backlog added 2026-07-02** — item #99 below
 
 ---
 
@@ -197,6 +198,12 @@ Last updated: 2026-06-28
 - [x] **#96** SA: Trainer Applications — filters + print with heading and logo added.
 - [x] **#97** SA: Trainer Applications — Official Letters: added edit option (collapsible textarea + 4 doc fields for invitation); custom body saved to DB; letter API uses custom body if set; "Customized" indicator shown; migrated `invitationLetterBody`, `recommendationLetterBody`, `requiredDoc1-4` fields (2026-06-28 s5).
 - [x] **#98** Website: Projects — added `goal`, `participants`, `highlight` fields to `Project` model (migration); `ProjectForm` image uploader (`/api/upload`); `ProjectCard` shows thumbnail + goal + highlight + participants; `/api/public/projects` updated; `EditProjectButton` type updated (2026-06-29)
+
+---
+
+## 🔵 P5 — New Major Feature (2026-07-02 backlog)
+
+- [ ] **#99** Contact Messages — website `/contact` form now saves to `ContactMessage` table via `/api/contact` (done 2026-07-02), but there's no admin view yet. Add `dashboard/system-admin/contact-messages` list page (SA/UD) with mark-as-handled/spam actions using existing `isHandled`/`isSpam`/`handledById` fields. Reply-from-dashboard requires an outbound email provider (e.g. Resend) to be wired up first — decide provider before starting.
 
 ---
 

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { MapPin, Phone, Mail, Calendar, ArrowLeft, Send } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/sections/Footer";
@@ -57,11 +58,30 @@ export default function ContactPage() {
     formState: { errors, isSubmitting, isSubmitSuccessful },
     reset,
   } = useForm<FormData>();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const onSubmit = async (data: FormData) => {
-    await new Promise((r) => setTimeout(r, 1000));
-    console.log(data);
-    reset();
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? "Something went wrong. Please try again.");
+      }
+
+      reset();
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
+    }
   };
 
   return (
@@ -347,6 +367,12 @@ export default function ContactPage() {
                         </p>
                       )}
                     </div>
+
+                    {submitError && (
+                      <p className="text-red-500 text-xs -mt-1">
+                        {submitError}
+                      </p>
+                    )}
 
                     <button
                       type="submit"

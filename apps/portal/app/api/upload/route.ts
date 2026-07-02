@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const folder = (formData.get("folder") as string | null) ?? "misc";
+  const fileName = (formData.get("fileName") as string | null)?.trim() || null;
 
   if (!file) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -56,13 +57,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File extension does not match file type" }, { status: 415 });
   }
 
-  // Sanitize folder name to path-safe characters
-  const safeFolder = folder.replace(/[^a-z0-9_-]/gi, "_");
-  const uniqueName = `${randomUUID()}.${ext}`;
+  // Sanitize folder name to path-safe segments (slashes allowed for nesting,
+  // e.g. "projects/training-center")
+  const safeFolder = folder
+    .split("/")
+    .map((segment) => segment.replace(/[^a-z0-9_-]/gi, "_"))
+    .filter(Boolean)
+    .join("/");
+  // A deterministic file name (e.g. "cover") lets callers organize uploads
+  // predictably instead of an opaque UUID; falls back to a UUID otherwise.
+  const safeFileName = fileName?.replace(/[^a-z0-9_-]/gi, "_") || null;
+  const uniqueName = `${safeFileName ?? randomUUID()}.${ext}`;
   const storageKey = `${safeFolder}/${uniqueName}`;
 
   const dir = path.join(process.cwd(), "public", "uploads", safeFolder);
   await fs.mkdir(dir, { recursive: true });
+
+  if (safeFileName) {
+    // Replacing a deterministic-named file: remove any stale sibling with a
+    // different extension (e.g. previous upload was .png, this one is .jpg)
+    // so it doesn't linger as an orphan.
+    const entries = await fs.readdir(dir).catch(() => [] as string[]);
+    await Promise.all(
+      entries
+        .filter((entry) => entry !== uniqueName && entry.startsWith(`${safeFileName}.`))
+        .map((entry) => fs.unlink(path.join(dir, entry)).catch(() => {})),
+    );
+  }
+
   await fs.writeFile(path.join(dir, uniqueName), Buffer.from(await file.arrayBuffer()));
 
   return NextResponse.json({

@@ -23,25 +23,37 @@ type ProjectFormData = {
   isPublished?: boolean;
 };
 
+// Image file names within a project's folder, in upload order (index 0 = cover).
+const IMAGE_FILE_NAMES = ["cover", "extra-1", "extra-2", "extra-3", "extra-4"];
+
+function slugToFolder(slug: string): string | null {
+  const safe = slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+  return safe ? `projects/${safe}` : null;
+}
+
 function SingleImageUploader({
   index,
   defaultValue,
   required,
+  folder,
 }: {
   index: number;
   defaultValue?: string;
   required?: boolean;
+  folder: string | null;
 }) {
   const [preview, setPreview] = useState<string>(defaultValue ?? "");
   const [uploading, setUploading] = useState(false);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !folder) return;
     setUploading(true);
     try {
       const fd = new FormData();
       fd.append("file", file);
+      fd.append("folder", folder);
+      fd.append("fileName", IMAGE_FILE_NAMES[index]);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (data.storageKey) setPreview(`/api/uploads/${data.storageKey}`);
@@ -72,12 +84,15 @@ function SingleImageUploader({
           </div>
         ) : null}
         <div className="flex-1 min-w-0">
-          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-500 hover:border-teal-400 hover:text-teal-600 transition-colors">
+          <label
+            className={`flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-500 transition-colors ${folder ? "cursor-pointer hover:border-teal-400 hover:text-teal-600" : "cursor-not-allowed opacity-60"}`}
+            title={folder ? undefined : "Enter a slug first"}
+          >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
             </svg>
             {uploading ? "Uploading…" : preview ? "Replace" : "Upload"}
-            <input type="file" accept="image/*" onChange={handleFile} className="hidden" disabled={uploading} />
+            <input type="file" accept="image/*" onChange={handleFile} className="hidden" disabled={uploading || !folder} />
           </label>
           <input
             type="text"
@@ -109,6 +124,8 @@ export function ProjectForm({
     : defaults.tags ?? "";
   const objectivesStr = (defaults.objectives ?? []).join("\n");
   const defaultImages = defaults.images ?? [];
+  const [slug, setSlug] = useState(defaults.slug ?? "");
+  const imageFolder = slugToFolder(slug);
 
   return (
     <div className="space-y-4">
@@ -125,7 +142,8 @@ export function ProjectForm({
           </label>
           <input
             name="slug"
-            defaultValue={defaults.slug ?? ""}
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
             placeholder="e.g. training-center"
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono outline-none focus:border-teal-500"
           />
@@ -297,6 +315,9 @@ export function ProjectForm({
           Project Images <span className="text-red-500">*</span>
           <span className="ml-1 font-normal text-gray-400">(1 cover required, up to 4 additional)</span>
         </label>
+        {!imageFolder && (
+          <p className="mb-2 text-[11px] text-amber-600">Enter a slug above before uploading images.</p>
+        )}
         <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
           {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} className="flex gap-3">
@@ -308,6 +329,7 @@ export function ProjectForm({
                   index={i}
                   defaultValue={defaultImages[i] ?? ""}
                   required={i === 0}
+                  folder={imageFolder}
                 />
               </div>
             </div>
