@@ -74,8 +74,7 @@ export default function Testimonies({ testimonies }: { testimonies?: Testimony[]
     >
       {/* Background watermark */}
       <div
-        className="absolute right-[-2rem] top-1/2 -translate-y-1/2 text-[18vw] font-bold select-none pointer-events-none leading-none opacity-[0.04] text-orange-400"
-        style={{ fontFamily: "Georgia, serif" }}
+        className="font-heading absolute right-[-2rem] top-1/2 -translate-y-1/2 text-[18vw] font-bold select-none pointer-events-none leading-none opacity-[0.04] text-orange-400"
         aria-hidden="true"
       >
         STORIES
@@ -86,7 +85,7 @@ export default function Testimonies({ testimonies }: { testimonies?: Testimony[]
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.1 }}
+          viewport={{ once: true, amount: 0.1 }}
           transition={{ duration: 0.6 }}
           className="mb-10"
         >
@@ -99,14 +98,12 @@ export default function Testimonies({ testimonies }: { testimonies?: Testimony[]
             />
             <span
               className="text-xs font-semibold tracking-[0.25em] uppercase text-orange-500"
-              style={{ fontFamily: "Georgia, serif" }}
             >
               Testimonies
             </span>
           </div>
           <h2
             className="text-4xl md:text-5xl font-bold text-stone-800 leading-tight"
-            style={{ fontFamily: "Georgia, serif" }}
           >
             Lives{" "}
             <span
@@ -121,7 +118,6 @@ export default function Testimonies({ testimonies }: { testimonies?: Testimony[]
           </h2>
           <p
             className="text-stone-500 mt-3 text-base max-w-lg"
-            style={{ fontFamily: "Georgia, serif" }}
           >
             Hear from those whose lives were forever changed by one year of
             faithful service.
@@ -135,7 +131,7 @@ export default function Testimonies({ testimonies }: { testimonies?: Testimony[]
               key={t.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.1 }}
+              viewport={{ once: true, amount: 0.1 }}
               transition={{ duration: 0.6, delay: (i % 2) * 0.15 }}
               className="relative flex gap-5 rounded-3xl p-6 bg-white shadow-sm hover:shadow-md transition-shadow duration-300 border border-stone-100"
             >
@@ -159,7 +155,6 @@ export default function Testimonies({ testimonies }: { testimonies?: Testimony[]
                   {/* Fallback initials */}
                   <span
                     className="text-white font-bold text-lg z-10 select-none"
-                    style={{ fontFamily: "Georgia, serif" }}
                   >
                     {t.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
                   </span>
@@ -176,9 +171,8 @@ export default function Testimonies({ testimonies }: { testimonies?: Testimony[]
               <div className="flex flex-col justify-center min-w-0">
                 {/* Quote mark */}
                 <div
-                  className="text-4xl leading-none mb-1 select-none"
+                  className="font-heading text-4xl leading-none mb-1 select-none"
                   style={{
-                    fontFamily: "Georgia, serif",
                     background: "linear-gradient(90deg, #16a34a, #f97316)",
                     WebkitBackgroundClip: "text",
                     backgroundClip: "text",
@@ -192,13 +186,11 @@ export default function Testimonies({ testimonies }: { testimonies?: Testimony[]
                 </div>
                 <p
                   className="text-stone-600 text-sm leading-relaxed line-clamp-5"
-                  style={{ fontFamily: "Georgia, serif" }}
                 >
                   {t.quote}
                 </p>
                 <p
                   className="mt-3 font-bold text-stone-800 text-sm"
-                  style={{ fontFamily: "Georgia, serif" }}
                 >
                   {t.name}
                 </p>

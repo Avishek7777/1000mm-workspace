@@ -1,14 +1,17 @@
 import { requireRole } from "@/lib/auth/helpers";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
+import { SETTINGS } from "@/lib/settings";
 import { SalaryRangeForm } from "./_components/SalaryRangeForm";
+import { SalaryWindowForm } from "./_components/SalaryWindowForm";
 
 export default async function SalaryPage() {
-  await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+  const user = await requireRole(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
+  const isSA = user.role === "SYSTEM_ADMIN";
 
   const currentCycle = new Date().getFullYear();
 
-  const [missions, ranges] = await Promise.all([
+  const [missions, ranges, windowStartSetting, windowEndSetting] = await Promise.all([
     prisma.localMission.findMany({
       where: { deletedAt: null },
       orderBy: { code: "asc" },
@@ -16,7 +19,12 @@ export default async function SalaryPage() {
     prisma.salaryRange.findMany({
       include: { mission: { select: { code: true } } },
     }),
+    prisma.systemSetting.findUnique({ where: { key: SETTINGS.SALARY_WINDOW_START } }),
+    prisma.systemSetting.findUnique({ where: { key: SETTINGS.SALARY_WINDOW_END } }),
   ]);
+
+  const windowStart = (windowStartSetting?.value as number) ?? 8;
+  const windowEnd = (windowEndSetting?.value as number) ?? 14;
 
   const rangeMap = new Map(ranges.map((r) => [r.missionId, r]));
 
@@ -47,6 +55,11 @@ export default async function SalaryPage() {
           )}
         </Link>
       </div>
+
+      {/* Request window control — SA only */}
+      {isSA && (
+        <SalaryWindowForm windowStart={windowStart} windowEnd={windowEnd} />
+      )}
 
       <div className="space-y-4">
         {missions.map((mission) => {

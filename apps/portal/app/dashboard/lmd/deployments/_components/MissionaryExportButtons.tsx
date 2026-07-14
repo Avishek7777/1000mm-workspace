@@ -7,11 +7,13 @@ export function MissionaryExportButtons({
   mission,
   year,
   search,
+  program,
 }: {
   status?: string;
   mission?: string;
   year?: string;
   search?: string;
+  program?: string;
 }) {
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [loadingXlsx, setLoadingXlsx] = useState(false);
@@ -22,6 +24,7 @@ export function MissionaryExportButtons({
     if (mission) p.set("mission", mission);
     if (year) p.set("year", year);
     if (search) p.set("search", search);
+    if (program) p.set("program", program);
     return `/api/export/missionaries/${format}?${p.toString()}`;
   }
 

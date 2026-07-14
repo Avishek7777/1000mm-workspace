@@ -45,9 +45,12 @@ export async function GET(
   });
 
   const isApplicant = app.applicantId === session.user.id;
-  const isStaffAdmin = ["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(
-    user?.role ?? "",
-  );
+  const isStaffAdmin = [
+    "MAIN_DIRECTOR",
+    "SECRETARY",
+    "ASSOCIATE_DIRECTOR",
+    "SYSTEM_ADMIN",
+  ].includes(user?.role ?? "");
   const isLmdOfMission =
     user?.role === "LOCAL_DIRECTOR" &&
     user.directedMission?.id === app.submittedFromMissionId;
@@ -69,10 +72,9 @@ export async function GET(
     passingYear: string;
   }>;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
   const photoDoc = app.documents.find((d) => d.kind === "PROFILE_PHOTO");
   const profilePhotoUrl = photoDoc
-    ? `${appUrl}/uploads/${photoDoc.storageKey}`
+    ? new URL(`/api/uploads/${photoDoc.storageKey}`, req.url).toString()
     : undefined;
 
   const formatAddress = (
@@ -139,6 +141,9 @@ export async function GET(
     familyEmail: app.familyEmail ?? undefined,
     educationEntries,
     missionaryDesire: fd.missionaryDesire?.toString() ?? undefined,
+    districtPastorName: fd.districtPastorName?.toString() ?? undefined,
+    districtPastorMobile: fd.districtPastorMobile?.toString() ?? undefined,
+    districtPastorEmail: fd.districtPastorEmail?.toString() ?? undefined,
     courtRecord: fd.courtRecord != null ? Boolean(fd.courtRecord) : undefined,
     healthCondition:
       fd.healthCondition != null ? Boolean(fd.healthCondition) : undefined,

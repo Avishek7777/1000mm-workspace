@@ -84,14 +84,13 @@ export default function CurrentProjectsSection({
               <span className="h-px w-8 bg-orange-400" />
               <span
                 className="text-orange-500 text-xs font-semibold tracking-[0.2em] uppercase"
-                style={{ fontFamily: "Georgia, serif" }}
               >
                 Active Initiatives
               </span>
             </div>
             <h2
               className="text-3xl md:text-4xl font-bold leading-tight"
-              style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}
+              style={{ color: "#3b1f08" }}
             >
               Current{" "}
               <span
@@ -108,7 +107,7 @@ export default function CurrentProjectsSection({
           <Link
             href="/current-projects"
             className="inline-flex items-center gap-2 text-sm font-semibold hover:gap-3 transition-all duration-200 w-fit"
-            style={{ color: "#c2410c", fontFamily: "Georgia, serif" }}
+            style={{ color: "#c2410c" }}
           >
             View All Projects <ArrowRight className="w-4 h-4" />
           </Link>
@@ -177,7 +176,6 @@ export default function CurrentProjectsSection({
                     <span
                       key={tag}
                       className="px-2.5 py-0.5 rounded-full text-xs font-semibold text-white/80 border border-white/20"
-                      style={{ fontFamily: "Georgia, serif" }}
                     >
                       {tag}
                     </span>
@@ -189,7 +187,6 @@ export default function CurrentProjectsSection({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: 0.18 }}
                   className="text-orange-300 text-xs font-semibold tracking-[0.2em] uppercase mb-2"
-                  style={{ fontFamily: "Georgia, serif" }}
                 >
                   {project.subtitle}
                 </motion.p>
@@ -199,7 +196,6 @@ export default function CurrentProjectsSection({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.25 }}
                   className="text-2xl md:text-4xl font-bold text-white leading-tight mb-3"
-                  style={{ fontFamily: "Georgia, serif" }}
                 >
                   {project.title}
                 </motion.h3>
@@ -209,7 +205,6 @@ export default function CurrentProjectsSection({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: 0.33 }}
                   className="text-white/70 text-sm leading-relaxed mb-5 hidden md:block"
-                  style={{ fontFamily: "Georgia, serif" }}
                 >
                   {project.description}
                 </motion.p>
@@ -222,13 +217,11 @@ export default function CurrentProjectsSection({
                 >
                   <span
                     className="flex items-center gap-1.5 text-white/50 text-xs"
-                    style={{ fontFamily: "Georgia, serif" }}
                   >
                     <MapPin className="w-3.5 h-3.5" /> {project.location}
                   </span>
                   <span
                     className="flex items-center gap-1.5 text-white/50 text-xs"
-                    style={{ fontFamily: "Georgia, serif" }}
                   >
                     <Calendar className="w-3.5 h-3.5" /> {project.date}
                   </span>
@@ -246,7 +239,6 @@ export default function CurrentProjectsSection({
                     style={{
                       background:
                         "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
-                      fontFamily: "Georgia, serif",
                     }}
                   >
                     Read Full Story <ArrowRight className="w-3.5 h-3.5" />
@@ -254,7 +246,6 @@ export default function CurrentProjectsSection({
                   <Link
                     href="/donate-now"
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-white text-xs border border-white/30 hover:bg-white/10 transition-all duration-300"
-                    style={{ fontFamily: "Georgia, serif" }}
                   >
                     Donate Now
                   </Link>

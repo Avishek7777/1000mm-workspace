@@ -7,9 +7,10 @@ type Props = {
   year?: string;
   month?: string;
   status?: string;
+  program?: string;
 };
 
-export function SalaryExportButton({ mission, year, month, status }: Props) {
+export function SalaryExportButton({ mission, year, month, status, program }: Props) {
   const [open, setOpen] = useState(false);
 
   function buildUrl(format: "pdf" | "xlsx") {
@@ -18,6 +19,7 @@ export function SalaryExportButton({ mission, year, month, status }: Props) {
     if (year) params.set("year", year);
     if (month) params.set("month", month);
     if (status) params.set("status", status);
+    if (program) params.set("program", program);
     const base = format === "pdf" ? "/api/export/salary/pdf" : "/api/export/salary/xlsx";
     const qs = params.toString();
     return qs ? `${base}?${qs}` : base;

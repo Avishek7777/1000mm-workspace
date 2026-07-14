@@ -49,7 +49,7 @@ export async function createFinancialEntry(
 ): Promise<ActionResult> {
   const actor = await getActorSession();
   if (!actor) return { ok: false, error: "Not authenticated." };
-  if (!["SYSTEM_ADMIN", "SECRETARY", "ASSOCIATE_DIRECTOR", "MAIN_DIRECTOR"].includes(actor.role)) {
+  if (!["SYSTEM_ADMIN", "SECRETARY", "ASSOCIATE_DIRECTOR", "MAIN_DIRECTOR", "LOCAL_DIRECTOR"].includes(actor.role)) {
     return { ok: false, error: "Not permitted." };
   }
 
@@ -64,7 +64,17 @@ export async function createFinancialEntry(
   }
 
   const d = parsed.data;
-  const resolvedMissionId = d.missionId;
+  let resolvedMissionId = d.missionId;
+
+  // LMDs can only add entries to their own mission's ledger.
+  if (actor.role === "LOCAL_DIRECTOR") {
+    const directed = await prisma.localMission.findFirst({
+      where: { directorId: actor.id },
+      select: { id: true },
+    });
+    if (!directed) return { ok: false, error: "No mission assigned." };
+    resolvedMissionId = directed.id;
+  }
 
   // For OTHER type, append the write-in category to the description if provided
   const description =

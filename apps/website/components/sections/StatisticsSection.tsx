@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
+import { FOUNDING_YEAR, currentYear, yearsActive } from "@/lib/org";
 
 const stats = [
   { value: 4962, label: "Decisions", prefix: "", suffix: "+" },
@@ -61,7 +62,7 @@ function StatCard({
     <motion.div
       initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: false, amount: 0.1 }}
+      viewport={{ once: true, amount: 0.1 }}
       transition={{ duration: 0.6, delay: index * 0.1 }}
       className="relative group flex flex-col items-center justify-center text-center p-8 rounded-3xl overflow-hidden"
       style={{
@@ -86,9 +87,8 @@ function StatCard({
 
       {/* Number */}
       <div
-        className="text-5xl md:text-6xl font-bold pb-2 mb-2 tabular-nums"
+        className="font-heading text-5xl md:text-6xl font-bold pb-2 mb-2 tabular-nums"
         style={{
-          fontFamily: "Georgia, serif",
           background:
             index % 2 === 0
               ? "linear-gradient(135deg, #4ade80, #007f98)"
@@ -96,8 +96,8 @@ function StatCard({
           WebkitBackgroundClip: "text",
           backgroundClip: "text",
           WebkitTextFillColor: "transparent",
-          color: "transparent", // ← add this
-          display: "inline-block", // ← add this — critical fix
+          color: "transparent",
+          display: "inline-block",
         }}
       >
         {stat.prefix}
@@ -108,7 +108,6 @@ function StatCard({
       {/* Label */}
       <p
         className="text-white/70 text-sm font-medium tracking-wide leading-snug max-w-[140px]"
-        style={{ fontFamily: "Georgia, serif" }}
       >
         {stat.label}
       </p>
@@ -129,7 +128,7 @@ function StatCard({
 
 export default function StatisticsSection() {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: false, margin: "-100px" });
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
     <section
@@ -162,7 +161,7 @@ export default function StatisticsSection() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.1 }}
+          viewport={{ once: true, amount: 0.1 }}
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
@@ -173,10 +172,7 @@ export default function StatisticsSection() {
                 background: "linear-gradient(90deg, transparent, #4ade80)",
               }}
             />
-            <span
-              className="text-xs font-semibold tracking-[0.25em] uppercase text-green-400"
-              style={{ fontFamily: "Georgia, serif" }}
-            >
+            <span className="text-xs font-semibold tracking-[0.25em] uppercase text-green-400">
               By the Numbers
             </span>
             <span
@@ -189,9 +185,8 @@ export default function StatisticsSection() {
 
           <h2
             className="text-4xl md:text-5xl font-bold text-white leading-tight"
-            style={{ fontFamily: "Georgia, serif" }}
           >
-            29 Years of{" "}
+            {yearsActive()} Years of{" "}
             <span
               className="text-transparent bg-clip-text"
               style={{
@@ -204,9 +199,8 @@ export default function StatisticsSection() {
           </h2>
           <p
             className="text-white/50 mt-3 text-base max-w-md mx-auto"
-            style={{ fontFamily: "Georgia, serif" }}
           >
-            From 1997 to 2026 — God&apos;s faithfulness in numbers.
+            From {FOUNDING_YEAR} to {currentYear()} — God&apos;s faithfulness in numbers.
           </p>
         </motion.div>
 
@@ -226,10 +220,9 @@ export default function StatisticsSection() {
         <motion.p
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
-          viewport={{ once: false, amount: 0.1 }}
+          viewport={{ once: true, amount: 0.1 }}
           transition={{ duration: 0.8, delay: 0.6 }}
           className="text-center text-white/30 text-sm italic mt-14"
-          style={{ fontFamily: "Georgia, serif" }}
         >
           &ldquo;The harvest is plentiful, but the laborers are few.&rdquo; —
           Matthew 9:37

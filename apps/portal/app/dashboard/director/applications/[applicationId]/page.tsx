@@ -455,6 +455,20 @@ export default async function DirectorApplicationDetailPage({
           </div>
           <div className="grid grid-cols-1 gap-4 border-t border-gray-100 pt-3 sm:grid-cols-3">
             <Field
+              label="District Pastor's Name"
+              value={(fd.districtPastorName as string) || "—"}
+            />
+            <Field
+              label="Pastor's Mobile No"
+              value={(fd.districtPastorMobile as string) || "—"}
+            />
+            <Field
+              label="Pastor's Email"
+              value={(fd.districtPastorEmail as string) || "—"}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-4 border-t border-gray-100 pt-3 sm:grid-cols-3">
+            <Field
               label="Criminal / Court Record"
               value={
                 fd.courtRecord === true

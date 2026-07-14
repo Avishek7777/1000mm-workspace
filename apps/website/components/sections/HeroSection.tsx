@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
+import { FOUNDING_YEAR, currentYear } from "@/lib/org";
 
 export default function HeroSection() {
   return (
@@ -49,9 +50,8 @@ export default function HeroSection() {
           <span className="h-px w-10 bg-orange-400" />
           <span
             className="text-orange-300 text-sm font-semibold tracking-[0.2em] uppercase"
-            style={{ fontFamily: "Georgia, serif" }}
           >
-            Bangladesh · 1997 – 2026
+            Bangladesh · {FOUNDING_YEAR} – {currentYear()}
           </span>
           <span className="h-px w-10 bg-orange-400" />
         </motion.div>
@@ -62,7 +62,6 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.25 }}
           className="text-5xl md:text-7xl lg:text-8xl font-bold text-white leading-[1.05] tracking-tight mb-6"
-          style={{ fontFamily: "Georgia, serif" }}
         >
           Answer the Call,
           <br />
@@ -83,7 +82,6 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.45 }}
           className="text-white/80 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-10"
-          style={{ fontFamily: "Georgia, serif" }}
         >
           The 1000 Missionary Movement is a bold initiative of the{" "}
           <span className="text-orange-300 font-semibold">

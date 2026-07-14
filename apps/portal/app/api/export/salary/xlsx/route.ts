@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
   const yearParam = searchParams.get("year");
   const monthParam = searchParams.get("month");
   const statusParam = searchParams.get("status") ?? undefined;
+  const programParam = searchParams.get("program") ?? undefined;
 
   const yearNum = yearParam ? parseInt(yearParam, 10) : undefined;
   const monthNum = monthParam ? parseInt(monthParam, 10) : undefined;
@@ -39,6 +40,15 @@ export async function GET(req: NextRequest) {
       ...(yearNum ? { year: yearNum } : {}),
       ...(monthNum ? { month: monthNum } : {}),
       ...(statusParam ? { status: statusParam as any } : {}),
+      ...(programParam
+        ? {
+            missionary: {
+              enrollmentsAsTrainee: {
+                some: { programId: programParam, deletedAt: null },
+              },
+            },
+          }
+        : {}),
     },
     orderBy: [{ year: "desc" }, { month: "desc" }, { createdAt: "desc" }],
     include: {

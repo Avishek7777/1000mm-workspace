@@ -432,6 +432,16 @@ const NAV_SECTIONS: { section: string; labelColor: string; iconColor: string; ho
         ),
       },
       {
+        label: "Contact Messages",
+        href: "/dashboard/system-admin/contact-messages",
+        roles: ADMIN_ROLES,
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" />
+          </svg>
+        ),
+      },
+      {
         label: "Website Projects",
         href: "/dashboard/system-admin/projects",
         roles: ["SYSTEM_ADMIN"],
@@ -511,6 +521,8 @@ type SidebarProps = {
   applicantCount?: number;
   lmdAttendanceEnabled?: boolean;
   className?: string;
+  /** Hide the logo header (the mobile drawer renders its own). */
+  hideLogo?: boolean;
 };
 
 export default function Sidebar({
@@ -520,6 +532,7 @@ export default function Sidebar({
   applicantCount = 0,
   lmdAttendanceEnabled = false,
   className,
+  hideLogo = false,
 }: SidebarProps) {
   const displayName = user.name ?? user.email ?? "User";
 
@@ -529,17 +542,19 @@ export default function Sidebar({
       style={{ backgroundColor: "var(--dash-sb-bg)", borderColor: "var(--dash-sb-border)" }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 py-5">
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-teal-700 text-sm font-medium text-teal-100">
-          <Image src="/logos/1000mm-logo.png" alt="1000MM Logo" width={32} height={32} />
+      {!hideLogo && (
+        <div className="flex items-center gap-2.5 px-4 py-5">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-teal-700 text-sm font-medium text-teal-100">
+            <Image src="/logos/1000mm-logo.png" alt="1000MM Logo" width={32} height={32} />
+          </div>
+          <div>
+            <p className="text-sm font-medium leading-tight" style={{ color: "var(--dash-sb-head)" }}>
+              1000MM BD
+            </p>
+            <p className="text-xs" style={{ color: "var(--dash-sb-sub)" }}>Training Platform</p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-medium leading-tight" style={{ color: "var(--dash-sb-head)" }}>
-            1000MM BD
-          </p>
-          <p className="text-xs" style={{ color: "var(--dash-sb-sub)" }}>Training Platform</p>
-        </div>
-      </div>
+      )}
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 pb-4">

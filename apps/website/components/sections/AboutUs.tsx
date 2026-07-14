@@ -36,8 +36,7 @@ export default function AboutUs() {
 
       {/* Faint background text watermark */}
       <div
-        className="absolute right-0 top-1/2 -translate-y-1/2 text-[20vw] font-bold text-stone-100 select-none pointer-events-none leading-none"
-        style={{ fontFamily: "Georgia, serif" }}
+        className="font-heading absolute right-0 top-1/2 -translate-y-1/2 text-[20vw] font-bold text-stone-100 select-none pointer-events-none leading-none"
         aria-hidden="true"
       >
         1000
@@ -48,7 +47,7 @@ export default function AboutUs() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.1 }}
+          viewport={{ once: true, amount: 0.1 }}
           transition={{ duration: 0.5 }}
           className="flex items-center justify-center gap-3 mb-5"
         >
@@ -60,7 +59,6 @@ export default function AboutUs() {
           />
           <span
             className="text-xs font-semibold tracking-[0.25em] uppercase text-orange-500"
-            style={{ fontFamily: "Georgia, serif" }}
           >
             About Us
           </span>
@@ -89,12 +87,11 @@ export default function AboutUs() {
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: false, amount: 0.1 }}
+              viewport={{ once: true, amount: 0.1 }}
               transition={{ duration: 0.7 }}
             >
               <h2
                 className="text-4xl md:text-5xl font-bold text-stone-800 leading-tight mb-5"
-                style={{ fontFamily: "Georgia, serif" }}
               >
                 Who{" "}
                 <span
@@ -109,7 +106,6 @@ export default function AboutUs() {
               </h2>
               <p
                 className="text-stone-600 text-base md:text-lg leading-relaxed"
-                style={{ fontFamily: "Georgia, serif" }}
               >
                 The{" "}
                 <span className="font-semibold text-stone-800">
@@ -125,12 +121,11 @@ export default function AboutUs() {
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: false, amount: 0.1 }}
+              viewport={{ once: true, amount: 0.1 }}
               transition={{ duration: 0.7, delay: 0.15 }}
             >
               <p
                 className="text-stone-600 text-base leading-relaxed"
-                style={{ fontFamily: "Georgia, serif" }}
               >
                 Born out of a God-inspired vision to finish the work of the
                 Gospel, we mobilize passionate young people willing to dedicate
@@ -144,18 +139,16 @@ export default function AboutUs() {
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: false, amount: 0.1 }}
+              viewport={{ once: true, amount: 0.1 }}
               transition={{ duration: 0.7, delay: 0.25 }}
             >
               <h3
                 className="text-xl font-bold text-stone-800 mb-4"
-                style={{ fontFamily: "Georgia, serif" }}
               >
                 What We Do in Bangladesh
               </h3>
               <p
                 className="text-stone-600 text-base leading-relaxed mb-4"
-                style={{ fontFamily: "Georgia, serif" }}
               >
                 Since our beginning, we have trained batches of young
                 missionaries every year. Our missionaries conduct evangelistic
@@ -164,7 +157,7 @@ export default function AboutUs() {
                 especially in rural and underserved areas.
               </p>
               <div
-                className="inline-block px-5 py-3 rounded-xl text-sm font-semibold italic text-white shadow-md"
+                className="font-heading inline-block px-5 py-3 rounded-xl text-sm font-semibold italic text-white shadow-md"
                 style={{
                   background:
                     "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
@@ -181,7 +174,7 @@ export default function AboutUs() {
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: false, amount: 0.1 }}
+              viewport={{ once: true, amount: 0.1 }}
               transition={{ duration: 0.7, delay: 0.1 }}
               className="relative rounded-3xl p-8 overflow-hidden"
               style={{
@@ -197,13 +190,11 @@ export default function AboutUs() {
               />
               <h3
                 className="text-xl font-bold text-stone-800 mb-3"
-                style={{ fontFamily: "Georgia, serif" }}
               >
                 Our Vision
               </h3>
               <p
                 className="text-stone-600 text-base leading-relaxed"
-                style={{ fontFamily: "Georgia, serif" }}
               >
                 To see thousands of young people from Bangladesh transformed
                 into bold, Spirit-filled missionaries who hasten the soon return
@@ -215,12 +206,11 @@ export default function AboutUs() {
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: false, amount: 0.1 }}
+              viewport={{ once: true, amount: 0.1 }}
               transition={{ duration: 0.7, delay: 0.2 }}
             >
               <h3
                 className="text-xl font-bold text-stone-800 mb-5"
-                style={{ fontFamily: "Georgia, serif" }}
               >
                 Our Mission
               </h3>
@@ -230,7 +220,7 @@ export default function AboutUs() {
                     key={i}
                     initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: false, amount: 0.1 }}
+                    viewport={{ once: true, amount: 0.1 }}
                     transition={{ duration: 0.5, delay: 0.1 * i }}
                     className="flex items-start gap-4"
                   >
@@ -247,7 +237,6 @@ export default function AboutUs() {
                     </div>
                     <p
                       className="text-stone-600 text-sm leading-relaxed pt-1"
-                      style={{ fontFamily: "Georgia, serif" }}
                     >
                       {item.text}
                     </p>
@@ -260,13 +249,12 @@ export default function AboutUs() {
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.1 }}
+              viewport={{ once: true, amount: 0.1 }}
               transition={{ duration: 0.6, delay: 0.4 }}
               className="pt-2"
             >
               <p
                 className="text-stone-500 text-sm mb-4 italic"
-                style={{ fontFamily: "Georgia, serif" }}
               >
                 The harvest is great, but the laborers are few. Are you ready to
                 answer the call?

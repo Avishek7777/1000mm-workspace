@@ -336,3 +336,46 @@ export async function resetMissionaryStatusAction(): Promise<ActionResult> {
 
   return { ok: true };
 }
+
+// ─── SALARY REQUEST WINDOW (SA only) ─────────────────────────────────────────
+// Missionaries can only submit salary requests between two days of each month
+// (see submitSalaryRequestAction). This lets the SA control that window,
+// including closing it entirely (start=0, end=0).
+
+export async function updateSalaryWindowAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const actor = await requireDbUser(["SYSTEM_ADMIN"]);
+
+  const start = Number(formData.get("windowStart"));
+  const end = Number(formData.get("windowEnd"));
+
+  if (
+    !Number.isInteger(start) ||
+    !Number.isInteger(end) ||
+    start < 0 ||
+    start > 31 ||
+    end < 0 ||
+    end > 31
+  ) {
+    return { ok: false, error: "Days must be whole numbers between 0 and 31." };
+  }
+
+  await prisma.$transaction([
+    prisma.systemSetting.upsert({
+      where: { key: SETTINGS.SALARY_WINDOW_START },
+      update: { value: start, updatedById: actor.id },
+      create: { key: SETTINGS.SALARY_WINDOW_START, value: start, updatedById: actor.id },
+    }),
+    prisma.systemSetting.upsert({
+      where: { key: SETTINGS.SALARY_WINDOW_END },
+      update: { value: end, updatedById: actor.id },
+      create: { key: SETTINGS.SALARY_WINDOW_END, value: end, updatedById: actor.id },
+    }),
+  ]);
+
+  revalidatePath("/dashboard/salary");
+  revalidatePath("/dashboard/salary-request");
+  return { ok: true };
+}

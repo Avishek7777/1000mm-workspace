@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
 import * as XLSX from "xlsx";
 
-const ALLOWED_ROLES = ["MAIN_DIRECTOR", "SYSTEM_ADMIN", "LOCAL_DIRECTOR", "TRAINER"] as const;
+const ALLOWED_ROLES = ["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN", "LOCAL_DIRECTOR", "TRAINER"] as const;
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -16,9 +16,11 @@ export async function GET(req: NextRequest) {
   if (!user || !ALLOWED_ROLES.includes(user.role as typeof ALLOWED_ROLES[number]))
     return new NextResponse("Forbidden", { status: 403 });
 
-  const isStaff = ["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
+  const isStaff = ["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
+  const isLmd = user.role === "LOCAL_DIRECTOR";
+  const isTrainer = user.role === "TRAINER";
 
-  const lmdMission = !isStaff
+  const lmdMission = isLmd
     ? await prisma.localMission.findFirst({ where: { directorId: user.id } })
     : null;
 
@@ -33,9 +35,13 @@ export async function GET(req: NextRequest) {
       deletedAt: null,
       status: "ENROLLED",
       ...(programParam ? { programId: programParam } : {}),
+      // Trainer: only trainees of programs they teach (via their topics)
+      ...(isTrainer
+        ? { program: { topics: { some: { trainerId: user.id, deletedAt: null } } } }
+        : {}),
       ...(genderParam ? { application: { applicantGender: genderParam as "MALE" | "FEMALE" } } : {}),
       trainee: {
-        ...(!isStaff ? { homeMissionId: lmdMission?.id ?? user.homeMissionId } : {}),
+        ...(isLmd ? { homeMissionId: lmdMission?.id ?? user.homeMissionId } : {}),
         ...(isStaff && missionParam ? { homeMission: { code: missionParam } } : {}),
         ...(qParam ? { fullName: { contains: qParam, mode: "insensitive" as const } } : {}),
       },
@@ -67,24 +73,36 @@ export async function GET(req: NextRequest) {
 
   const fmt = (d: Date) => new Date(d).toLocaleDateString("en-GB");
 
-  const rows = enrollments.map((e, i) => ({
-    "#":                i + 1,
-    "Name":             e.trainee.fullName,
-    "Email":            e.trainee.email ?? "",
-    "Reference No":     e.application?.referenceNumber ?? "",
-    "Mission":          e.trainee.homeMission?.code ?? "",
-    "Mission Name":     e.trainee.homeMission?.name ?? "",
-    "Program":          e.program.code,
-    "Program Title":    e.program.title,
-    "Enrolled Date":    fmt(e.enrolledAt),
-    "Gender":           e.application?.applicantGender === "MALE" ? "Male" : e.application?.applicantGender === "FEMALE" ? "Female" : "",
-    "District":         e.application?.presentAddressDistrict ?? "",
-    "Deployment":       e.deploymentLocation ?? "",
-    "Deployment By":    e.deploymentAssignedBy?.fullName ?? "",
-    "Field Reports":    reportCountMap.get(e.traineeId) ?? 0,
-    "Attendance":       e.attendanceConfirmed ? "Yes" : "No",
-    "Certificate":      e.certificateIssued  ? "Yes" : "No",
-  }));
+  // Trainers only get the roster basics, matching what their page shows.
+  const rows = enrollments.map((e, i) =>
+    isTrainer
+      ? {
+          "#":             i + 1,
+          "Name":          e.trainee.fullName,
+          "Email":         e.trainee.email ?? "",
+          "Reference No":  e.application?.referenceNumber ?? "",
+          "Program":       e.program.code,
+          "Program Title": e.program.title,
+        }
+      : {
+          "#":                i + 1,
+          "Name":             e.trainee.fullName,
+          "Email":            e.trainee.email ?? "",
+          "Reference No":     e.application?.referenceNumber ?? "",
+          "Mission":          e.trainee.homeMission?.code ?? "",
+          "Mission Name":     e.trainee.homeMission?.name ?? "",
+          "Program":          e.program.code,
+          "Program Title":    e.program.title,
+          "Enrolled Date":    fmt(e.enrolledAt),
+          "Gender":           e.application?.applicantGender === "MALE" ? "Male" : e.application?.applicantGender === "FEMALE" ? "Female" : "",
+          "District":         e.application?.presentAddressDistrict ?? "",
+          "Deployment":       e.deploymentLocation ?? "",
+          "Deployment By":    e.deploymentAssignedBy?.fullName ?? "",
+          "Field Reports":    reportCountMap.get(e.traineeId) ?? 0,
+          "Attendance":       e.attendanceConfirmed ? "Yes" : "No",
+          "Certificate":      e.certificateIssued  ? "Yes" : "No",
+        },
+  );
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows);

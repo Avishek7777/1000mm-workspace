@@ -66,3 +66,34 @@ export async function saveStringSettingAction(
   revalidatePath("/dashboard/settings");
   return { ok: true };
 }
+
+/**
+ * Save certificate signatory config: director/president names and the storage
+ * keys of their uploaded signature images (empty string clears a value).
+ */
+export async function saveCertificateConfigAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const actor = await requireSA();
+
+  const fields: [SettingKey, string][] = [
+    [SETTING_KEYS.CERT_DIRECTOR_NAME, String(formData.get("directorName") ?? "").trim()],
+    [SETTING_KEYS.CERT_PRESIDENT_NAME, String(formData.get("presidentName") ?? "").trim()],
+    [SETTING_KEYS.CERT_DIRECTOR_SIGNATURE, String(formData.get("directorSignature") ?? "").trim()],
+    [SETTING_KEYS.CERT_PRESIDENT_SIGNATURE, String(formData.get("presidentSignature") ?? "").trim()],
+  ];
+
+  await prisma.$transaction(
+    fields.map(([key, value]) =>
+      prisma.systemSetting.upsert({
+        where: { key },
+        update: { value, updatedById: actor.id },
+        create: { key, value, description: key },
+      }),
+    ),
+  );
+
+  revalidatePath("/dashboard/settings/certificate");
+  return { ok: true };
+}

@@ -19,6 +19,19 @@ export const SETTING_KEYS = {
   SALARY_WINDOW_END: "salary.request_window_end",
   LMD_ATTENDANCE_ENABLED: "lmd.attendance_enabled",
   AI_API_KEY: "ai.api_key",
+  // Certificate signatories (configured by SA in Certificate Config)
+  CERT_DIRECTOR_NAME: "cert.director_name",
+  CERT_DIRECTOR_SIGNATURE: "cert.director_signature",
+  CERT_PRESIDENT_NAME: "cert.president_name",
+  CERT_PRESIDENT_SIGNATURE: "cert.president_signature",
+} as const;
+
+// Default signatory names/titles shown on the certificate.
+export const CERT_DEFAULTS = {
+  directorName: "Dr. Cho Choon Ho",
+  directorTitle: "Director, 1000 MM Bangladesh",
+  presidentName: "Pr. Won Sang Kim",
+  presidentTitle: "President, BAUM",
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];
@@ -31,6 +44,13 @@ export const SETTINGS = SETTING_KEYS;
 export async function isSettingEnabled(key: string): Promise<boolean> {
   const setting = await prisma.systemSetting.findUnique({ where: { key } });
   return (setting?.value as boolean | null) === true;
+}
+
+/** Read a string-valued setting (name, storage key, etc.), or null. */
+export async function getStringSetting(key: string): Promise<string | null> {
+  const setting = await prisma.systemSetting.findUnique({ where: { key } });
+  const v = setting?.value;
+  return typeof v === "string" && v.trim() ? v : null;
 }
 
 export async function getSettings(

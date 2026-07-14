@@ -24,9 +24,13 @@ export async function createAssignment(_: unknown, formData: FormData) {
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const d = parsed.data;
 
-  // Verify trainer belongs to this program
+  // Verify trainer belongs to this program (via its topics)
   const program = await prisma.trainingProgram.findFirst({
-    where: { id: d.programId, trainers: { some: { id: session.user.id } }, deletedAt: null } as any,
+    where: {
+      id: d.programId,
+      topics: { some: { trainerId: session.user.id, deletedAt: null } },
+      deletedAt: null,
+    },
     select: { id: true },
   });
   if (!program) return { ok: false, error: "Program not found or access denied" };
@@ -55,7 +59,13 @@ export async function deleteAssignment(_: unknown, formData: FormData) {
   const id = formData.get("id") as string;
 
   const assignment = await prisma.assignment.findFirst({
-    where: { id, createdById: session.user.id, deletedAt: null },
+    where: {
+      id,
+      deletedAt: null,
+      program: {
+        topics: { some: { trainerId: session.user.id, deletedAt: null } },
+      },
+    },
     select: { id: true, programId: true },
   });
   if (!assignment) return { ok: false, error: "Not found" };
@@ -138,7 +148,15 @@ export async function submitFeedback(_: unknown, formData: FormData) {
   const d = parsed.data;
 
   const submission = await prisma.assignmentSubmission.findFirst({
-    where: { id: d.submissionId, assignment: { createdById: session.user.id } },
+    where: {
+      id: d.submissionId,
+      assignment: {
+        deletedAt: null,
+        program: {
+          topics: { some: { trainerId: session.user.id, deletedAt: null } },
+        },
+      },
+    },
     select: { id: true },
   });
   if (!submission) return { ok: false, error: "Not found" };

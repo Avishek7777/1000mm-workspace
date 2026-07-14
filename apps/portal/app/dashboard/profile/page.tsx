@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth/helpers";
 import { prisma } from "@1000mm/db";
 import { ProfilePictureUpload } from "./_components/ProfilePictureUpload";
 import { ChangePasswordForm } from "./_components/ChangePasswordForm";
+import { ChangeEmailForm } from "./_components/ChangeEmailForm";
 import { EditProfileForm } from "./_components/EditProfileForm";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -64,6 +65,8 @@ export default async function ProfilePage() {
         currentNameBangla={dbUser.fullNameBangla}
         currentPhone={dbUser.phone}
       />
+
+      <ChangeEmailForm currentEmail={dbUser.email} />
 
       <ChangePasswordForm />
     </div>

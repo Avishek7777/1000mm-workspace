@@ -18,7 +18,12 @@ function formatDate(d: Date | null | undefined) {
 export default async function ProgramApplicantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ program?: string; mission?: string; year?: string }>;
+  searchParams: Promise<{
+    program?: string;
+    mission?: string;
+    year?: string;
+    q?: string;
+  }>;
 }) {
   const user = await requireRole(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
   if (user.role === "MAIN_DIRECTOR" || user.role === "SECRETARY" || user.role === "ASSOCIATE_DIRECTOR") {
@@ -26,8 +31,9 @@ export default async function ProgramApplicantsPage({
     if (!allowed) redirect("/dashboard/director");
   }
 
-  const { program, mission, year } = await searchParams;
+  const { program, mission, year, q } = await searchParams;
   const yearNum = year ? parseInt(year, 10) : undefined;
+  const search = q?.trim() || undefined;
 
   // All pending (APPLIED) enrollments
   const applicants = await prisma.programEnrollment.findMany({
@@ -35,7 +41,21 @@ export default async function ProgramApplicantsPage({
       deletedAt: null,
       status: "APPLIED",
       ...(program ? { programId: program } : {}),
-      ...(mission ? { trainee: { homeMission: { code: mission as any } } } : {}),
+      ...(mission || search
+        ? {
+            trainee: {
+              ...(mission ? { homeMission: { code: mission as any } } : {}),
+              ...(search
+                ? {
+                    OR: [
+                      { fullName: { contains: search, mode: "insensitive" as const } },
+                      { email: { contains: search, mode: "insensitive" as const } },
+                    ],
+                  }
+                : {}),
+            },
+          }
+        : {}),
       ...(yearNum
         ? {
             appliedAt: {
@@ -138,58 +158,65 @@ export default async function ProgramApplicantsPage({
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        {/* Program filter */}
-        <Link
-          href={`?${new URLSearchParams({ ...(mission ? { mission } : {}), ...(year ? { year } : {}) })}`}
-          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${!program ? "border-teal-400 bg-teal-50 text-teal-800" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
+      <form method="GET" className="flex flex-wrap items-center gap-2">
+        <select
+          name="program"
+          defaultValue={program ?? ""}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
         >
-          All programs
-        </Link>
-        {programsWithApplicants.map((p) => (
-          <Link
-            key={p.id}
-            href={`?${new URLSearchParams({ program: p.id, ...(mission ? { mission } : {}), ...(year ? { year } : {}) })}`}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${program === p.id ? "border-teal-400 bg-teal-50 text-teal-800" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
-          >
-            {p.code}
-          </Link>
-        ))}
-
-        <span className="self-center text-gray-200">|</span>
-
-        {/* Mission filter */}
-        <Link
-          href={`?${new URLSearchParams({ ...(program ? { program } : {}), ...(year ? { year } : {}) })}`}
-          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${!mission ? "border-purple-400 bg-purple-50 text-purple-800" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
+          <option value="">All programs</option>
+          {programsWithApplicants.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.code} — {p.title}
+            </option>
+          ))}
+        </select>
+        <select
+          name="mission"
+          defaultValue={mission ?? ""}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
         >
-          All missions
-        </Link>
-        {missions.map((m) => (
+          <option value="">All missions</option>
+          {missions.map((m) => (
+            <option key={m.code} value={m.code}>
+              {m.code}
+            </option>
+          ))}
+        </select>
+        <select
+          name="year"
+          defaultValue={year ?? ""}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+        >
+          <option value="">All years</option>
+          {appliedYears.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+        <input
+          type="text"
+          name="q"
+          defaultValue={q ?? ""}
+          placeholder="Search name or email…"
+          className="w-48 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+        />
+        <button
+          type="submit"
+          className="rounded-lg bg-teal-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
+        >
+          Filter
+        </button>
+        {(program || mission || year || search) && (
           <Link
-            key={m.code}
-            href={`?${new URLSearchParams({ mission: m.code, ...(program ? { program } : {}), ...(year ? { year } : {}) })}`}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${mission === m.code ? "border-purple-400 bg-purple-50 text-purple-800" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
+            href="?"
+            className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
           >
-            {m.code}
+            Clear
           </Link>
-        ))}
-
-        {appliedYears.length > 0 && (
-          <>
-            <span className="self-center text-gray-200">|</span>
-            {appliedYears.map((y) => (
-              <Link
-                key={y}
-                href={`?${new URLSearchParams({ year: String(y), ...(program ? { program } : {}), ...(mission ? { mission } : {}) })}`}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${yearNum === y ? "border-amber-400 bg-amber-50 text-amber-800" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
-              >
-                {y}
-              </Link>
-            ))}
-          </>
         )}
-      </div>
+      </form>
 
       {/* Empty state */}
       {applicants.length === 0 && (

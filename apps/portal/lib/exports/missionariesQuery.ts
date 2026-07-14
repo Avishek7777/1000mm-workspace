@@ -9,6 +9,8 @@ export type MissionariesExportFilters = {
   year?: string;
   /** Free-text match on missionary full name. */
   search?: string;
+  /** Training program id — missionaries enrolled in this program. */
+  program?: string;
 };
 
 export function parseMissionariesExportFilters(
@@ -19,6 +21,7 @@ export function parseMissionariesExportFilters(
     mission: searchParams.get("mission") ?? undefined,
     year: searchParams.get("year") ?? undefined,
     search: searchParams.get("search") ?? undefined,
+    program: searchParams.get("program") ?? undefined,
   };
 }
 
@@ -26,7 +29,7 @@ export function buildMissionariesExportWhere(
   filters: MissionariesExportFilters,
   opts: { lmdMissionId?: string | null },
 ): Prisma.MissionaryDeploymentWhereInput {
-  const { status, mission, year, search } = filters;
+  const { status, mission, year, search, program } = filters;
   const { lmdMissionId } = opts;
 
   const yearNum = year ? parseInt(year, 10) : NaN;
@@ -48,10 +51,19 @@ export function buildMissionariesExportWhere(
           },
         }
       : {}),
-    ...(search
+    ...(search || program
       ? {
           missionary: {
-            fullName: { contains: search, mode: "insensitive" as const },
+            ...(search
+              ? { fullName: { contains: search, mode: "insensitive" as const } }
+              : {}),
+            ...(program
+              ? {
+                  enrollmentsAsTrainee: {
+                    some: { programId: program, deletedAt: null },
+                  },
+                }
+              : {}),
           },
         }
       : {}),

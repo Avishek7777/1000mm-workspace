@@ -28,7 +28,12 @@ export default async function ProgramResourcesPage({
   if (session.user.role !== "TRAINER") redirect("/dashboard");
 
   const program = await prisma.trainingProgram.findFirst({
-    where: { id: programId, trainers: { some: { id: session.user.id } }, deletedAt: null } as any,
+    // A trainer belongs to a program via its topics (ProgramTopic.trainerId)
+    where: {
+      id: programId,
+      topics: { some: { trainerId: session.user.id, deletedAt: null } },
+      deletedAt: null,
+    },
     select: { id: true, title: true, code: true },
   });
   if (!program) redirect("/dashboard/programs");

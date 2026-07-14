@@ -24,6 +24,8 @@ export default async function TraineesPage({
 }) {
   await requireRole([
     "MAIN_DIRECTOR",
+    "SECRETARY",
+    "ASSOCIATE_DIRECTOR",
     "SYSTEM_ADMIN",
     "LOCAL_DIRECTOR",
     "TRAINER",
@@ -38,8 +40,9 @@ export default async function TraineesPage({
   });
   if (!user) return null;
 
-  const isStaff = ["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
+  const isStaff = ["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
   const isLmd = user.role === "LOCAL_DIRECTOR";
+  const isTrainer = user.role === "TRAINER";
   const canAssignDeployment = isStaff || isLmd;
 
   // LMD's mission for scoping
@@ -53,10 +56,18 @@ export default async function TraineesPage({
       deletedAt: null,
       status: "ENROLLED",
       ...(program ? { programId: program } : {}),
+      // Trainer: only trainees of programs they teach (via their topics)
+      ...(isTrainer
+        ? {
+            program: {
+              topics: { some: { trainerId: user.id, deletedAt: null } },
+            },
+          }
+        : {}),
       ...(gender ? { application: { applicantGender: gender as "MALE" | "FEMALE" } } : {}),
       trainee: {
-        // LMD/Trainer: scope to own mission
-        ...(!isStaff
+        // LMD: scope to own mission
+        ...(isLmd
           ? { homeMissionId: lmdMission?.id ?? user.homeMissionId }
           : {}),
         // Staff: optional mission filter
@@ -94,27 +105,44 @@ export default async function TraineesPage({
     reportCounts.map((r) => [r.traineeId, r._count]),
   );
 
-  // Programs for filter
+  // Programs for filter — trainers only see programs they teach
   const programs = await prisma.trainingProgram.findMany({
-    where: { deletedAt: null, enrollments: { some: { deletedAt: null } } },
+    where: {
+      deletedAt: null,
+      enrollments: { some: { deletedAt: null } },
+      ...(isTrainer
+        ? { topics: { some: { trainerId: user.id, deletedAt: null } } }
+        : {}),
+    },
     orderBy: { startDate: "desc" },
     select: { id: true, code: true, title: true },
   });
 
   const missions = ["EBM", "NBM", "SBM", "WBM"];
 
-  // Fetch all enrollments for print roster (no program/name filter — all years)
+  // Enrollments for the print roster — respects the same filters as the
+  // on-screen table so "Print" outputs exactly what is being viewed.
   const rosterEnrollments = await prisma.programEnrollment.findMany({
     where: {
       deletedAt: null,
       status: "ENROLLED",
+      ...(program ? { programId: program } : {}),
+      ...(gender ? { application: { applicantGender: gender as "MALE" | "FEMALE" } } : {}),
+      ...(isTrainer
+        ? {
+            program: {
+              topics: { some: { trainerId: user.id, deletedAt: null } },
+            },
+          }
+        : {}),
       trainee: {
-        ...(!isStaff
+        ...(isLmd
           ? { homeMissionId: lmdMission?.id ?? user.homeMissionId }
           : {}),
         ...(isStaff && mission
           ? { homeMission: { code: mission as any } }
           : {}),
+        ...(q ? { fullName: { contains: q, mode: "insensitive" as const } } : {}),
       },
     },
     include: {
@@ -238,7 +266,13 @@ export default async function TraineesPage({
             q={q}
           />
           <NameSheetButton
-            href={`?${new URLSearchParams({ sheet: "names", ...(mission ? { mission } : {}) })}`}
+            href={`?${new URLSearchParams({
+              sheet: "names",
+              ...(mission ? { mission } : {}),
+              ...(program ? { program } : {}),
+              ...(gender ? { gender } : {}),
+              ...(q ? { q } : {}),
+            })}`}
           />
           <PrintRosterButton />
         </div>
@@ -340,22 +374,27 @@ export default async function TraineesPage({
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
                   Program
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  Enrolled
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  Deployment
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">
-                  Reports
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">
-                  Attendance
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">
-                  Certificate
-                </th>
-                <th className="px-4 py-3"></th>
+                {/* Trainers only need the roster basics */}
+                {!isTrainer && (
+                  <>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                      Enrolled
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                      Deployment
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">
+                      Reports
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">
+                      Attendance
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">
+                      Certificate
+                    </th>
+                    <th className="px-4 py-3"></th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -392,6 +431,9 @@ export default async function TraineesPage({
                       </p>
                     </td>
 
+                    {/* Trainers only need the roster basics */}
+                    {!isTrainer && (
+                    <>
                     {/* Enrolled date */}
                     <td className="px-4 py-3 text-xs text-gray-500">
                       {formatDate(e.enrolledAt)}
@@ -500,6 +542,8 @@ export default async function TraineesPage({
                         View →
                       </Link>
                     </td>
+                    </>
+                    )}
                   </tr>
                 );
               })}
@@ -518,7 +562,13 @@ export default async function TraineesPage({
             <p className="text-xs text-gray-600 mt-0.5">Trainees Roster</p>
             {(program || mission || gender) && (
               <p className="text-[10px] text-gray-500 mt-0.5">
-                {[program, mission, gender === "MALE" ? "Male" : gender === "FEMALE" ? "Female" : ""].filter(Boolean).join(" · ")}
+                {[
+                  program
+                    ? (programs.find((p) => p.id === program)?.code ?? program)
+                    : "",
+                  mission,
+                  gender === "MALE" ? "Male" : gender === "FEMALE" ? "Female" : "",
+                ].filter(Boolean).join(" · ")}
               </p>
             )}
             <p className="text-[10px] text-gray-400 mt-0.5">

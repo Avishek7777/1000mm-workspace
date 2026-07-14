@@ -26,15 +26,18 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 
 // ── File storage helper ───────────────────────────────────────────────────────
 // Mirrors the saveFile() behaviour in apps/portal/lib/r2.ts.
-// Writes to <monorepo-root>/uploads/<storageKey> and returns storageKey.
+// Writes into the PORTAL's public/uploads folder — the portal's
+// /api/uploads/[...path] route serves from there, so files uploaded via the
+// website become downloadable in the portal dashboards.
 async function saveUploadedFile(
   file: File,
   storageKey: string,
 ): Promise<string> {
-  // __dirname is inside .next at runtime, so resolve relative to cwd() which
-  // Next.js sets to the app root (apps/website). Go up two levels to reach
-  // the monorepo root where the shared uploads/ folder lives.
-  const uploadsRoot = path.resolve(process.cwd(), "../../uploads");
+  // process.cwd() is the app root (apps/website); the portal app is a sibling.
+  const uploadsRoot = path.resolve(
+    process.cwd(),
+    "../portal/public/uploads",
+  );
   const fullPath = path.join(uploadsRoot, storageKey);
   const dir = path.dirname(fullPath);
 

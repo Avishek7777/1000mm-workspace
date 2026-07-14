@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
-import {
-  Geist,
-  Geist_Mono,
-  Noto_Sans,
-  Playfair_Display,
-} from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import BackToTop from "@/components/BackToTop";
 
-const playfairDisplayHeading = Playfair_Display({
+// Display serif for headlines and pull quotes; body text stays on Noto Sans.
+const frauncesHeading = Fraunces({
   subsets: ["latin"],
   variable: "--font-heading",
 });
@@ -41,7 +37,7 @@ export default function RootLayout({
         geistMono.variable,
         "font-sans",
         notoSans.variable,
-        playfairDisplayHeading.variable,
+        frauncesHeading.variable,
       )}
     >
       <body className="min-h-full flex flex-col">

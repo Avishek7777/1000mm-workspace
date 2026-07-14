@@ -175,6 +175,18 @@ export default async function NewApplicationPage() {
                   (
                     formSource.formData as Record<string, unknown>
                   )?.missionaryDesire?.toString() ?? "",
+                districtPastorName:
+                  (
+                    formSource.formData as Record<string, unknown>
+                  )?.districtPastorName?.toString() ?? "",
+                districtPastorMobile:
+                  (
+                    formSource.formData as Record<string, unknown>
+                  )?.districtPastorMobile?.toString() ?? "",
+                districtPastorEmail:
+                  (
+                    formSource.formData as Record<string, unknown>
+                  )?.districtPastorEmail?.toString() ?? "",
                 courtRecord:
                   (formSource.formData as Record<string, unknown>)
                     ?.courtRecord != null

@@ -7,7 +7,18 @@ import {
   View,
   Image,
   StyleSheet,
+  Font,
 } from "@react-pdf/renderer";
+
+// Bengali script isn't covered by the built-in Helvetica — without a
+// registered Bengali font, Bangla values render as broken glyphs.
+Font.register({
+  family: "NotoSansBengali",
+  fonts: [
+    { src: "/fonts/NotoSansBengali-Regular.ttf" },
+    { src: "/fonts/NotoSansBengali-Bold.ttf", fontWeight: 700 },
+  ],
+});
 
 // ── Encrypted reference number ────────────────────────────────────────────────
 // Short, on-the-fly encoding of the reference number for the applicant-facing
@@ -100,6 +111,12 @@ const styles = StyleSheet.create({
   col3: { flex: 1 },
   label: { fontSize: 7.5, color: "#888", marginBottom: 1 },
   value: { fontSize: 9, color: "#111", fontFamily: "Helvetica-Bold" },
+  valueBangla: {
+    fontSize: 9,
+    color: "#111",
+    fontFamily: "NotoSansBengali",
+    fontWeight: 700,
+  },
   valueNormal: { fontSize: 9, color: "#111" },
   divider: {
     borderBottomWidth: 0.5,
@@ -199,6 +216,9 @@ export type BioDataPDFProps = {
   }>;
   // Page 4
   missionaryDesire?: string;
+  districtPastorName?: string;
+  districtPastorMobile?: string;
+  districtPastorEmail?: string;
   courtRecord?: boolean;
   healthCondition?: boolean;
   badHabits?: boolean;
@@ -210,33 +230,53 @@ export type BioDataPDFProps = {
   directorReviewerName?: string;
 };
 
-function LabelValue({ label, value }: { label: string; value?: string }) {
+function LabelValue({
+  label,
+  value,
+  bangla,
+}: {
+  label: string;
+  value?: string;
+  bangla?: boolean;
+}) {
   return (
     <View style={{ marginBottom: 4 }}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value || "—"}</Text>
+      {/* Bengali font only when there is a real value — the "—" fallback
+          stays on Helvetica, which is guaranteed to have that glyph. */}
+      <Text style={bangla && value ? styles.valueBangla : styles.value}>
+        {value || "—"}
+      </Text>
     </View>
   );
 }
 
-function Row2({ items }: { items: Array<{ label: string; value?: string }> }) {
+function Row2({
+  items,
+}: {
+  items: Array<{ label: string; value?: string; bangla?: boolean }>;
+}) {
   return (
     <View style={styles.row}>
       {items.map((item, i) => (
         <View key={i} style={styles.col2}>
-          <LabelValue label={item.label} value={item.value} />
+          <LabelValue label={item.label} value={item.value} bangla={item.bangla} />
         </View>
       ))}
     </View>
   );
 }
 
-function Row3({ items }: { items: Array<{ label: string; value?: string }> }) {
+function Row3({
+  items,
+}: {
+  items: Array<{ label: string; value?: string; bangla?: boolean }>;
+}) {
   return (
     <View style={styles.row}>
       {items.map((item, i) => (
         <View key={i} style={styles.col3}>
-          <LabelValue label={item.label} value={item.value} />
+          <LabelValue label={item.label} value={item.value} bangla={item.bangla} />
         </View>
       ))}
     </View>
@@ -283,6 +323,9 @@ export function BioDataPDF({
   familyEmail,
   educationEntries,
   missionaryDesire,
+  districtPastorName,
+  districtPastorMobile,
+  districtPastorEmail,
   courtRecord,
   healthCondition,
   badHabits,
@@ -408,6 +451,7 @@ export function BioDataPDF({
                   {
                     label: "Full Name (Bangla)",
                     value: applicantFullNameBangla,
+                    bangla: true,
                   },
                 ]}
               />
@@ -561,6 +605,13 @@ export function BioDataPDF({
         <View style={styles.section}>
           <SectionTitle title="4. APPLICATION DETAILS" />
           <LabelValue label="Missionary Desire" value={missionaryDesire} />
+          <Row3
+            items={[
+              { label: "District Pastor's Name", value: districtPastorName },
+              { label: "Pastor's Mobile No", value: districtPastorMobile },
+              { label: "Pastor's Email", value: districtPastorEmail },
+            ]}
+          />
           <Row3
             items={[
               { label: "Criminal / Court Record", value: yesNo(courtRecord) },

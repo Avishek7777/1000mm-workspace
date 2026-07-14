@@ -20,11 +20,14 @@ export function SalaryRangeForm({
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    // Depend on the state OBJECT (new per submission) — depending on
+    // state.ok makes repeat saves show no feedback, since it stays true.
     if (state.ok) {
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      const t = setTimeout(() => setSaved(false), 2000);
+      return () => clearTimeout(t);
     }
-  }, [state.ok]);
+  }, [state]);
 
   return (
     <form action={action} className="space-y-3">

@@ -32,7 +32,13 @@ const STATUS_COLORS: Record<string, string> = {
   Upcoming: "bg-blue-100 text-blue-700",
 };
 
-export function ProjectCard({ project }: { project: Project }) {
+export function ProjectCard({
+  project,
+  siteUrl,
+}: {
+  project: Project;
+  siteUrl?: string;
+}) {
   const [isPending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const router = useRouter();
@@ -58,11 +64,17 @@ export function ProjectCard({ project }: { project: Project }) {
 
   return (
     <div className={`relative rounded-xl border bg-white shadow-sm transition-opacity ${!project.isPublished ? "opacity-60" : ""}`}>
-      {/* Image */}
+      {/* Image — website-static paths (/images/…) live on the public site,
+          portal uploads (/api/uploads/…) are served locally */}
       {project.images[0] && (
         <div className="h-36 overflow-hidden rounded-t-xl bg-gray-100">
           <img
-            src={project.images[0]}
+            src={
+              project.images[0].startsWith("/api/uploads") ||
+              project.images[0].startsWith("http")
+                ? project.images[0]
+                : `${siteUrl ?? ""}${project.images[0]}`
+            }
             alt={project.title}
             className="h-full w-full object-cover"
             onError={(e) => { e.currentTarget.parentElement!.style.display = "none"; }}
@@ -122,10 +134,44 @@ export function ProjectCard({ project }: { project: Project }) {
             </span>
           ))}
         </div>
+
+        {/* Content completeness indicators */}
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {[
+            { label: "Story", ok: !!project.body },
+            { label: `Objectives ${project.objectives?.length ?? 0}`, ok: (project.objectives?.length ?? 0) > 0 },
+            { label: `Photos ${project.images.length}/5`, ok: project.images.length > 1 },
+            { label: "Highlight", ok: !!project.highlight },
+            { label: "Budget", ok: !!project.budget },
+          ].map((c) => (
+            <span
+              key={c.label}
+              title={c.ok ? "Set" : "Missing — the website section for this stays hidden"}
+              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${c.ok ? "bg-teal-50 text-teal-700" : "bg-gray-50 text-gray-400 line-through decoration-gray-300"}`}
+            >
+              {c.label}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Footer actions */}
-      <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-4 py-2.5">
+      <div className="flex items-center justify-between gap-2 border-t border-gray-100 px-4 py-2.5">
+        {siteUrl && project.isPublished ? (
+          <a
+            href={`${siteUrl}/current-projects/${project.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-teal-600 hover:underline"
+          >
+            View on site ↗
+          </a>
+        ) : (
+          <span className="text-[10px] text-gray-300">
+            {project.isPublished ? "" : "Not visible on website"}
+          </span>
+        )}
+        <div className="flex items-center gap-2">
         <button
           onClick={handleTogglePublish}
           disabled={isPending}
@@ -145,6 +191,7 @@ export function ProjectCard({ project }: { project: Project }) {
         >
           {confirmDelete ? "Confirm delete" : "Delete"}
         </button>
+        </div>
       </div>
     </div>
   );

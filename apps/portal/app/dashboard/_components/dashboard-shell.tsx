@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import Sidebar from "./sidebar";
 import type { UserRole } from "@1000mm/db";
 
@@ -90,8 +91,8 @@ export default function DashboardShell({
         }}
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-700 text-sm font-medium text-teal-100">
-            M
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-700">
+            <Image src="/logos/1000mm-logo.png" alt="1000MM Logo" width={36} height={36} />
           </div>
           <div>
             <p className="text-sm font-medium" style={{ color: "var(--dash-sb-head)" }}>1000MM BD</p>
@@ -122,7 +123,7 @@ export default function DashboardShell({
         <div className={`print:hidden fixed inset-0 z-40 md:hidden ${sidebarOpen ? "block" : "hidden"}`}>
           <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
           <div
-            className="relative flex h-full w-full max-w-xs flex-col overflow-y-auto shadow-xl"
+            className="relative flex h-full w-full max-w-xs flex-col shadow-xl"
             style={{ backgroundColor: "var(--dash-sb-bg)" }}
           >
             <div
@@ -130,8 +131,8 @@ export default function DashboardShell({
               style={{ borderColor: "var(--dash-sb-border)" }}
             >
               <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-700 text-sm font-medium text-teal-100">
-                  M
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-700">
+                  <Image src="/logos/1000mm-logo.png" alt="1000MM Logo" width={36} height={36} />
                 </div>
                 <div>
                   <p className="text-sm font-medium" style={{ color: "var(--dash-sb-head)" }}>1000MM BD</p>
@@ -151,7 +152,7 @@ export default function DashboardShell({
                 </svg>
               </button>
             </div>
-            <Sidebar {...sidebarProps} className="h-full w-full" />
+            <Sidebar {...sidebarProps} hideLogo className="min-h-0 flex-1 w-full" />
           </div>
         </div>
 

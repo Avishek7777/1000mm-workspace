@@ -552,3 +552,70 @@ export async function removeLmdAction(userId: string): Promise<ActionResult> {
   revalidatePath("/dashboard/missions");
   return { ok: true };
 }
+
+// ─── CHANGE USER EMAIL (SA only) ─────────────────────────────────────────────
+// Recovery path for users locked out of their old inbox: the System Admin
+// sets the new address directly, no verification link needed — the admin is
+// the authority here. Audited with before/after values.
+
+export async function adminChangeUserEmailAction(
+  targetUserId: string,
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const actor = await getActor();
+  if (actor.role !== "SYSTEM_ADMIN") {
+    return { ok: false, error: "Only the System Admin can change a user's email." };
+  }
+
+  const newEmail = ((formData.get("newEmail") as string | null) ?? "")
+    .trim()
+    .toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+    return { ok: false, fieldErrors: { newEmail: "Invalid email address." } };
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: { id: true, email: true },
+  });
+  if (!target) return { ok: false, error: "User not found." };
+  if (target.email.toLowerCase() === newEmail) {
+    return { ok: false, error: "That is already this user's email address." };
+  }
+
+  const taken = await prisma.user.findUnique({ where: { email: newEmail } });
+  if (taken) {
+    return { ok: false, fieldErrors: { newEmail: "That email address is already in use." } };
+  }
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: targetUserId },
+      // SA-set addresses count as verified — the user may have no access
+      // to any inbox link flow at this point.
+      data: { email: newEmail, emailVerified: new Date() },
+    }),
+    // Invalidate any outstanding verification/email-change tokens for the
+    // old address so they can't flip the email afterwards.
+    prisma.emailVerificationToken.updateMany({
+      where: { userId: targetUserId, usedAt: null },
+      data: { usedAt: new Date() },
+    }),
+    prisma.auditLog.create({
+      data: {
+        action: "USER_EMAIL_CHANGED",
+        actorId: actor.id,
+        actorRole: actor.role,
+        targetType: "User",
+        targetId: targetUserId,
+        severity: "NOTICE",
+        details: { from: target.email, to: newEmail, via: "system-admin" },
+      },
+    }),
+  ]);
+
+  revalidatePath("/dashboard/users");
+  revalidatePath(`/dashboard/users/${targetUserId}`);
+  return { ok: true };
+}

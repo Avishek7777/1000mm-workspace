@@ -3,7 +3,6 @@ import { prisma } from "@1000mm/db";
 import { redirect } from "next/navigation";
 import { PrintControls } from "./_components/PrintControls";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
 
 function formatDate(d?: Date | string | null) {
   if (!d) return "—";
@@ -110,7 +109,7 @@ export default async function ApplicationPrintPage({
 
   const profilePhoto = app.documents.find((d) => d.kind === "PROFILE_PHOTO");
   const profilePhotoUrl = profilePhoto
-    ? `${appUrl}/uploads/${profilePhoto.storageKey}`
+    ? `/api/uploads/${profilePhoto.storageKey}`
     : null;
 
   const yesNo = (v: unknown) => (v === true ? "Yes" : v === false ? "No" : "—");
@@ -278,6 +277,20 @@ export default async function ApplicationPrintPage({
             <p className="whitespace-pre-wrap text-[12px] text-gray-900">
               {(fd.missionaryDesire as string) || "—"}
             </p>
+          </div>
+          <div className="grid grid-cols-3 gap-x-6">
+            <Cell
+              label="District Pastor's Name"
+              value={(fd.districtPastorName as string) || "—"}
+            />
+            <Cell
+              label="Pastor's Mobile No"
+              value={(fd.districtPastorMobile as string) || "—"}
+            />
+            <Cell
+              label="Pastor's Email"
+              value={(fd.districtPastorEmail as string) || "—"}
+            />
           </div>
           <div className="grid grid-cols-3 gap-x-6">
             <Cell

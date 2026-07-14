@@ -12,16 +12,16 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 export default async function LmdSalaryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string; month?: string; gender?: string; district?: string }>;
+  searchParams: Promise<{ year?: string; month?: string; gender?: string; district?: string; program?: string }>;
 }) {
   await requireRole(["LOCAL_DIRECTOR"]);
   const session = await auth();
-  const { year, month, gender, district } = await searchParams;
+  const { year, month, gender, district, program } = await searchParams;
 
   const thisYear = new Date().getFullYear();
   const yearNum  = year  ? parseInt(year,  10) : thisYear;
   const monthNum = month ? parseInt(month, 10) : undefined;
-  const hasFilter = !!(month || gender || district || (year && parseInt(year, 10) !== thisYear));
+  const hasFilter = !!(month || gender || district || program || (year && parseInt(year, 10) !== thisYear));
 
   const lmd = await prisma.user.findUnique({ where: { id: session!.user!.id } });
   const mission = await prisma.localMission.findFirst({ where: { directorId: lmd!.id } });
@@ -49,13 +49,19 @@ export default async function LmdSalaryPage({
     };
   }
 
-  const [missionaries, range, assignments, districtRows, availableYears] = await Promise.all([
+  const [missionaries, range, assignments, districtRows, availableYears, programs] = await Promise.all([
     prisma.user.findMany({
       where: {
         homeMissionId: mission.id,
         isMissionary: true,
         isActive: true,
         ...(hasAppFilter ? { applications: { some: appFilter } } : {}),
+        // Program: missionaries enrolled in the selected training program
+        ...(program ? {
+          enrollmentsAsTrainee: {
+            some: { programId: program, deletedAt: null },
+          },
+        } : {}),
         ...(monthNum ? {
           salaryAssignments: {
             some: { missionId: mission.id, cycle: yearNum, createdAt: assignmentCreatedAtFilter },
@@ -96,6 +102,17 @@ export default async function LmdSalaryPage({
       distinct: ["cycle"],
       orderBy: { cycle: "desc" },
     }),
+    // Programs with enrollments from this mission — for the filter
+    prisma.trainingProgram.findMany({
+      where: {
+        deletedAt: null,
+        enrollments: {
+          some: { deletedAt: null, trainee: { homeMissionId: mission.id } },
+        },
+      },
+      orderBy: { startDate: "desc" },
+      select: { id: true, code: true, title: true },
+    }),
   ]);
 
   const assignmentMap = new Map(assignments.map((a) => [a.missionaryId, a]));
@@ -119,6 +136,7 @@ export default async function LmdSalaryPage({
             {monthNum ? ` · ${MONTHS[monthNum - 1]}` : ""}
             {gender ? ` · ${gender === "MALE" ? "Male" : "Female"}` : ""}
             {district ? ` · ${district}` : ""}
+            {program ? ` · ${programs.find((p) => p.id === program)?.code ?? ""}` : ""}
           </p>
           <p className="text-[10px] text-gray-400 mt-0.5">{missionaries.length} missionaries · Cycle {yearNum}</p>
         </div>
@@ -135,7 +153,7 @@ export default async function LmdSalaryPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <LmdSalaryExportButton year={String(yearNum)} month={month} gender={gender} district={district} />
+          <LmdSalaryExportButton year={String(yearNum)} month={month} gender={gender} district={district} program={program} />
           <PrintButton label="Print" />
         </div>
       </div>
@@ -173,6 +191,16 @@ export default async function LmdSalaryPage({
         >
           <option value="">All districts</option>
           {districts.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select
+          name="program"
+          defaultValue={program ?? ""}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+        >
+          <option value="">All programs</option>
+          {programs.map((p) => (
+            <option key={p.id} value={p.id}>{p.code} — {p.title}</option>
+          ))}
         </select>
         <button
           type="submit"

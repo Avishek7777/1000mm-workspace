@@ -29,10 +29,10 @@ const STATUS_STYLES: Record<string, string> = {
 export default async function SalaryRequestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mission?: string; year?: string; month?: string; status?: string }>;
+  searchParams: Promise<{ mission?: string; year?: string; month?: string; status?: string; program?: string }>;
 }) {
-  await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
-  const { mission, year, month, status } = await searchParams;
+  await requireRole(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
+  const { mission, year, month, status, program } = await searchParams;
   const yearNum = year ? parseInt(year, 10) : undefined;
   const monthNum = month ? parseInt(month, 10) : undefined;
   const VALID_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
@@ -42,11 +42,18 @@ export default async function SalaryRequestsPage({
       ? (status as ValidStatus)
       : undefined;
 
-  const missions = await prisma.localMission.findMany({
-    where: { deletedAt: null },
-    orderBy: { code: "asc" },
-    select: { id: true, code: true },
-  });
+  const [missions, programs] = await Promise.all([
+    prisma.localMission.findMany({
+      where: { deletedAt: null },
+      orderBy: { code: "asc" },
+      select: { id: true, code: true },
+    }),
+    prisma.trainingProgram.findMany({
+      where: { deletedAt: null, enrollments: { some: { deletedAt: null } } },
+      orderBy: { startDate: "desc" },
+      select: { id: true, code: true, title: true },
+    }),
+  ]);
   const missionId = mission ? missions.find((m) => m.code === mission)?.id : undefined;
 
   const requests = await prisma.salaryRequest.findMany({
@@ -55,6 +62,16 @@ export default async function SalaryRequestsPage({
       ...(yearNum ? { year: yearNum } : {}),
       ...(monthNum ? { month: monthNum } : {}),
       ...(validStatus ? { status: validStatus } : {}),
+      // Program: missionaries enrolled in the selected training program
+      ...(program
+        ? {
+            missionary: {
+              enrollmentsAsTrainee: {
+                some: { programId: program, deletedAt: null },
+              },
+            },
+          }
+        : {}),
     },
     orderBy: [{ year: "desc" }, { month: "desc" }, { createdAt: "desc" }],
     include: {
@@ -88,7 +105,7 @@ export default async function SalaryRequestsPage({
           </p>
         </div>
         <div className="flex items-center gap-2 print:hidden">
-          <SalaryExportButton mission={mission} year={year} month={month} status={status} />
+          <SalaryExportButton mission={mission} year={year} month={month} status={status} program={program} />
           <PrintButton label="Print" />
         </div>
       </div>
@@ -96,7 +113,7 @@ export default async function SalaryRequestsPage({
       {/* Filters */}
       <FilterBar
         basePath="/dashboard/salary/requests"
-        current={{ mission: mission ?? "", year: year ?? "", month: month ?? "", status: status ?? "" }}
+        current={{ mission: mission ?? "", year: year ?? "", month: month ?? "", status: status ?? "", program: program ?? "" }}
         className="print:hidden"
         filters={[
           {
@@ -104,6 +121,12 @@ export default async function SalaryRequestsPage({
             label: "Mission",
             allLabel: "All missions",
             options: missions.map((m) => ({ value: m.code, label: m.code })),
+          },
+          {
+            name: "program",
+            label: "Program",
+            allLabel: "All programs",
+            options: programs.map((p) => ({ value: p.id, label: `${p.code} — ${p.title}` })),
           },
           {
             name: "year",

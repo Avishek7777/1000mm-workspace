@@ -3,7 +3,6 @@ import { prisma } from "@1000mm/db";
 import { redirect } from "next/navigation";
 import { PrintControls } from "../print/_components/PrintControls";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
 
 function formatDate(d?: Date | string | null) {
   if (!d) return "—";
@@ -60,7 +59,7 @@ export default async function LmdApplicationBioDataPage({
     : [app.permanentAddressVillage, app.permanentAddressPostOffice, app.permanentAddressUpazila, app.permanentAddressDistrict].filter(Boolean).join(", ");
 
   const profilePhoto = app.documents.find((d) => d.kind === "PROFILE_PHOTO");
-  const profilePhotoUrl = profilePhoto ? `${appUrl}/uploads/${profilePhoto.storageKey}` : null;
+  const profilePhotoUrl = profilePhoto ? `/api/uploads/${profilePhoto.storageKey}` : null;
 
   const bloodType = app.applicantBloodType?.replace("_", " ").replace("POS", "+").replace("NEG", "-");
   const generatedAt = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });

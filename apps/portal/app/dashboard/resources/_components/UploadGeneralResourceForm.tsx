@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { createResource } from "@/actions/resources";
 import { FileUploadInput } from "@/app/dashboard/_components/FileUploadInput";
 import { Plus, X } from "lucide-react";
@@ -12,18 +12,19 @@ type Props = { programs: Program[] };
 export function UploadGeneralResourceForm({ programs }: Props) {
   const [open, setOpen] = useState(false);
   const [state, dispatch, pending] = useActionState(createResource, null);
-  const isFirstRender = useRef(true);
   const [fileKey, setFileKey] = useState("");
   const [fileName, setFileName] = useState("");
   const [fileMime, setFileMime] = useState("");
   const [fileSize, setFileSize] = useState(0);
 
-  if (state?.ok && !isFirstRender.current) {
-    setOpen(false);
-    setFileKey(""); setFileName(""); setFileMime(""); setFileSize(0);
-    isFirstRender.current = true;
-  }
-  if (state !== null) isFirstRender.current = false;
+  // Close and reset the form after a successful submission. Must run in an
+  // effect — setting state during render causes an infinite render loop.
+  useEffect(() => {
+    if (state?.ok) {
+      setOpen(false);
+      setFileKey(""); setFileName(""); setFileMime(""); setFileSize(0);
+    }
+  }, [state]);
 
   if (!open) {
     return (

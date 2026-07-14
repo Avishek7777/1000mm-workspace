@@ -45,25 +45,32 @@ export async function GET(
 
   const { applicationId } = await params;
 
-  // Fetch application — verify the requesting user is the LMD for this mission
-  const lmdUser = await prisma.user.findUnique({
+  // Union-office staff can download any application's documents;
+  // an LMD only those submitted from their own mission.
+  const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     include: { directedMission: true },
   });
 
-  if (
-    !lmdUser ||
-    lmdUser.role !== "LOCAL_DIRECTOR" ||
-    !lmdUser.directedMission
-  ) {
+  const isStaff = [
+    "MAIN_DIRECTOR",
+    "SECRETARY",
+    "ASSOCIATE_DIRECTOR",
+    "SYSTEM_ADMIN",
+  ].includes(user?.role ?? "");
+  const isLmd = user?.role === "LOCAL_DIRECTOR" && !!user.directedMission;
+
+  if (!user || (!isStaff && !isLmd)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const app = await prisma.application.findFirst({
     where: {
       id: applicationId,
-      submittedFromMissionId: lmdUser.directedMission.id,
       deletedAt: null,
+      ...(isLmd && !isStaff
+        ? { submittedFromMissionId: user.directedMission!.id }
+        : {}),
     },
     select: {
       applicantFullName: true,

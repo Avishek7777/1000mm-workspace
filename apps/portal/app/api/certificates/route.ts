@@ -8,6 +8,8 @@ import QRCode from "qrcode";
 import path from "path";
 import { readFileSync } from "fs";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
+import { overlayCertificate, ordinal, formatProgramPeriod, formatLongDate } from "@/lib/certificates/templateOverlay";
+import { getStringSetting, SETTINGS, CERT_DEFAULTS } from "@/lib/settings";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -21,7 +23,10 @@ export async function GET(req: NextRequest) {
 
   if (!isStaff && !isTrainee) return new NextResponse("Forbidden", { status: 403 });
 
-  const enrollmentId = new URL(req.url).searchParams.get("enrollmentId");
+  const url = new URL(req.url);
+  const enrollmentId = url.searchParams.get("enrollmentId");
+  // Reissue (staff only): re-stamp the issue date to today and regenerate.
+  const reissue = url.searchParams.get("reissue") === "1" && isStaff;
   if (!enrollmentId) return new NextResponse("enrollmentId required", { status: 400 });
 
   const enrollment = await prisma.programEnrollment.findFirst({
@@ -39,7 +44,7 @@ export async function GET(req: NextRequest) {
         },
       },
       program: {
-        select: { code: true, title: true, startDate: true, endDate: true },
+        select: { code: true, title: true, startDate: true, endDate: true, batch: true },
       },
       application: { select: { referenceNumber: true } },
     },
@@ -81,6 +86,25 @@ export async function GET(req: NextRequest) {
         actionUrl: "/dashboard/my-application/certificate",
       }),
     ]).catch(() => {});
+  } else if (reissue && enrollment.certificateIssued) {
+    // Reissue: re-stamp the issue date and record it.
+    await prisma.programEnrollment.update({
+      where: { id: enrollmentId },
+      data: { certificateIssuedAt: new Date() },
+    });
+    enrollment.certificateIssuedAt = new Date();
+    await prisma.auditLog
+      .create({
+        data: {
+          action: "CERTIFICATE_GENERATED",
+          actorId: user.id,
+          actorRole: user.role,
+          targetType: "ProgramEnrollment",
+          targetId: enrollmentId,
+          details: { referenceNumber: refNum, reissued: true, traineeName: enrollment.trainee.fullName },
+        },
+      })
+      .catch(() => {});
   }
 
   const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://portal.1000mmbd.org"}/verify/${refNum}`;
@@ -98,7 +122,8 @@ export async function GET(req: NextRequest) {
     color: { dark: "#0F6E56", light: "#FAFAF8" },
   });
 
-  const issuedAt = (enrollment.certificateIssuedAt ?? new Date()).toLocaleDateString("en-GB", {
+  const issuedAtDate = enrollment.certificateIssuedAt ?? new Date();
+  const issuedAt = issuedAtDate.toLocaleDateString("en-GB", {
     day: "numeric", month: "long", year: "numeric",
   });
 
@@ -119,11 +144,67 @@ export async function GET(req: NextRequest) {
     verifyUrl,
   };
 
-  const buffer = await renderToBuffer(
-    createElement(CertificatePdf, { data }) as any,
-  );
+  // ── Certificate signatories (configured by SA) ──────────────────────────
+  const [directorName, presidentName, directorSigKey, presidentSigKey] =
+    await Promise.all([
+      getStringSetting(SETTINGS.CERT_DIRECTOR_NAME),
+      getStringSetting(SETTINGS.CERT_PRESIDENT_NAME),
+      getStringSetting(SETTINGS.CERT_DIRECTOR_SIGNATURE),
+      getStringSetting(SETTINGS.CERT_PRESIDENT_SIGNATURE),
+    ]);
 
-  return new NextResponse(new Uint8Array(buffer), {
+  function readSignature(storageKey: string | null): Uint8Array | undefined {
+    if (!storageKey) return undefined;
+    try {
+      return new Uint8Array(
+        readFileSync(path.join(process.cwd(), "public", "uploads", storageKey)),
+      );
+    } catch {
+      return undefined;
+    }
+  }
+
+  // ── Preferred: overlay onto the official designed template ──────────────
+  // Drop the blank certificate at public/certificates/template.pdf and it is
+  // used automatically; without it, the built-in design below is generated.
+  let output: Uint8Array;
+  try {
+    const templateBytes = readFileSync(
+      path.join(process.cwd(), "public", "certificates", "template.pdf"),
+    );
+    const qrPng = await QRCode.toBuffer(verifyUrl, {
+      width: 300,
+      margin: 1,
+      color: { dark: "#1a1208", light: "#00000000" }, // transparent background
+    });
+    output = await overlayCertificate(new Uint8Array(templateBytes), {
+      batchLabel: enrollment.program.batch
+        ? ordinal(enrollment.program.batch)
+        : enrollment.program.code,
+      traineeName: enrollment.trainee.fullName,
+      programPeriod: formatProgramPeriod(
+        new Date(enrollment.program.startDate),
+        new Date(enrollment.program.endDate),
+      ),
+      issuedAt: formatLongDate(issuedAtDate),
+      qrPng: new Uint8Array(qrPng),
+      referenceNumber: refNum,
+      directorName: directorName ?? CERT_DEFAULTS.directorName,
+      directorTitle: CERT_DEFAULTS.directorTitle,
+      presidentName: presidentName ?? CERT_DEFAULTS.presidentName,
+      presidentTitle: CERT_DEFAULTS.presidentTitle,
+      directorSignaturePng: readSignature(directorSigKey),
+      presidentSignaturePng: readSignature(presidentSigKey),
+    });
+  } catch {
+    // Template missing or unreadable — fall back to the built-in design.
+    const buffer = await renderToBuffer(
+      createElement(CertificatePdf, { data }) as any,
+    );
+    output = new Uint8Array(buffer);
+  }
+
+  return new NextResponse(output as BodyInit, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="certificate-${refNum}.pdf"`,

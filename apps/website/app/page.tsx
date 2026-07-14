@@ -11,6 +11,7 @@ import Footer from "@/components/sections/Footer";
 import CurrentProjectsSection, { type Project } from "@/components/sections/CurrentProjectsSection";
 import PageShowFix from "@/components/PageShowFix";
 import { PROJECTS as FALLBACK_PROJECTS } from "@/lib/projects";
+import { resolveProjectImages } from "@/lib/portal";
 
 async function fetchProjects(): Promise<Project[]> {
   const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL;
@@ -20,7 +21,8 @@ async function fetchProjects(): Promise<Project[]> {
       cache: "no-store",
     });
     if (!res.ok) throw new Error("fetch failed");
-    return res.json();
+    const projects: Project[] = await res.json();
+    return projects.map(resolveProjectImages);
   } catch {
     return FALLBACK_PROJECTS.map((p) => ({ ...p, id: p.slug }));
   }

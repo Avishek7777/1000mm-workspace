@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
   const monthParam    = searchParams.get("month");
   const genderParam   = searchParams.get("gender");
   const districtParam = searchParams.get("district");
+  const programParam  = searchParams.get("program");
 
   const thisYear = new Date().getFullYear();
   const yearNum  = yearParam  ? parseInt(yearParam,  10) : thisYear;
@@ -49,6 +50,9 @@ export async function GET(req: NextRequest) {
         isMissionary: true,
         isActive: true,
         ...(hasAppFilter ? { applications: { some: appFilter } } : {}),
+        ...(programParam
+          ? { enrollmentsAsTrainee: { some: { programId: programParam, deletedAt: null } } }
+          : {}),
         ...(monthNum ? { salaryAssignments: { some: { missionId: mission.id, cycle: yearNum, createdAt: createdAtFilter } } } : {}),
       },
       orderBy: { fullName: "asc" },

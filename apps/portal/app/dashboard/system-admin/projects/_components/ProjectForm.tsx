@@ -56,7 +56,10 @@ function SingleImageUploader({
       fd.append("fileName", IMAGE_FILE_NAMES[index]);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
-      if (data.storageKey) setPreview(`/api/uploads/${data.storageKey}`);
+      // ?v= busts image caches when a slot is re-uploaded — the storage key
+      // is deterministic (cover/extra-N), so the path alone never changes.
+      if (data.storageKey)
+        setPreview(`/api/uploads/${data.storageKey}?v=${Date.now()}`);
     } finally {
       setUploading(false);
     }
@@ -193,7 +196,7 @@ export function ProjectForm({
 
       <div>
         <label className="mb-1 block text-xs font-medium text-gray-700">
-          Goal <span className="text-gray-400 font-normal">(optional)</span>
+          Goal <span className="text-gray-400 font-normal">(optional — shown in the impact band & sidebar)</span>
         </label>
         <input
           name="goal"
@@ -219,7 +222,7 @@ export function ProjectForm({
 
       <div>
         <label className="mb-1 block text-xs font-medium text-gray-700">
-          Key Highlight <span className="text-gray-400 font-normal">(optional)</span>
+          Key Highlight <span className="text-gray-400 font-normal">(optional — the pull-quote card on the detail page)</span>
         </label>
         <input
           name="highlight"
@@ -231,21 +234,35 @@ export function ProjectForm({
 
       <div>
         <label className="mb-1 block text-xs font-medium text-gray-700">
-          Full Story / Body <span className="text-gray-400 font-normal">(optional — shown only on detail page)</span>
+          Full Story / Body <span className="text-gray-400 font-normal">(optional — the article on the detail page)</span>
         </label>
         <textarea
           name="body"
           defaultValue={defaults.body ?? ""}
-          rows={6}
-          placeholder="Write a detailed article-style body. Separate paragraphs with a blank line.&#10;&#10;E.g.: This project began with a vision...&#10;&#10;Over the past year, we have..."
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500 resize-y"
+          rows={12}
+          placeholder={"## Section Heading\n\nA paragraph of the story. Separate paragraphs with a blank line.\n\n* Bullet point one\n* Bullet point two\n\n> \"A quote rendered as a pull-quote card.\""}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono outline-none focus:border-teal-500 resize-y"
         />
-        <p className="mt-0.5 text-[10px] text-gray-400">Blank line between paragraphs will render as separate paragraph blocks.</p>
+        <details className="mt-1.5 rounded-lg border border-blue-100 bg-blue-50/60 px-3 py-2">
+          <summary className="cursor-pointer text-[11px] font-semibold text-blue-700">
+            Formatting guide — how the story renders on the website
+          </summary>
+          <div className="mt-2 space-y-1 font-mono text-[11px] leading-relaxed text-blue-800">
+            <p><span className="font-bold">## Heading</span> → section heading with a gradient mark</p>
+            <p><span className="font-bold">### Sub-heading</span> → smaller teal heading</p>
+            <p><span className="font-bold">* item</span> (one per line) → bulleted list</p>
+            <p><span className="font-bold">**bold text**</span> → bold inline</p>
+            <p><span className="font-bold">&gt; "Quote"</span> → pull-quote card</p>
+            <p><span className="font-bold">| Item | Amount |</span> rows → styled table; a row with **bold** cells becomes the highlighted total row</p>
+            <p><span className="font-bold">* **$250** description</span> (all items money-led) → donation tier cards</p>
+            <p className="pt-1 font-sans text-blue-600">Blank line = new paragraph/block. Content pasted from Word works as-is.</p>
+          </div>
+        </details>
       </div>
 
       <div>
         <label className="mb-1 block text-xs font-medium text-gray-700">
-          Key Objectives <span className="text-gray-400 font-normal">(optional — one per line)</span>
+          Key Objectives <span className="text-gray-400 font-normal">(optional — one per line; rendered as the objectives card grid)</span>
         </label>
         <textarea
           name="objectivesRaw"

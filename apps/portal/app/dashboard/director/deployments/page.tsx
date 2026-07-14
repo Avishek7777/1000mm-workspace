@@ -32,6 +32,7 @@ export default async function DirectorDeploymentsPage({
     : undefined;
   const missionFilter = sp.mission || undefined;
   const yearFilter = sp.year ? parseInt(sp.year) : undefined;
+  const programFilter = sp.program || undefined;
 
   const baseWhere = {
     deletedAt: null,
@@ -44,9 +45,19 @@ export default async function DirectorDeploymentsPage({
           },
         }
       : {}),
+    // Program: missionaries enrolled in the selected training program
+    ...(programFilter
+      ? {
+          missionary: {
+            enrollmentsAsTrainee: {
+              some: { programId: programFilter, deletedAt: null },
+            },
+          },
+        }
+      : {}),
   };
 
-  const [pending, active, history, allYears, allMissions] = await Promise.all([
+  const [pending, active, history, allYears, allMissions, allPrograms] = await Promise.all([
     prisma.missionaryDeployment.findMany({
       where: { ...baseWhere, status: "PENDING" },
       include: {
@@ -86,6 +97,11 @@ export default async function DirectorDeploymentsPage({
       select: { code: true },
       orderBy: { code: "asc" },
     }),
+    prisma.trainingProgram.findMany({
+      where: { deletedAt: null, enrollments: { some: { deletedAt: null } } },
+      orderBy: { startDate: "desc" },
+      select: { id: true, code: true, title: true },
+    }),
   ]);
 
   // Apply status filter to section visibility
@@ -103,6 +119,7 @@ export default async function DirectorDeploymentsPage({
     status: sp.status ?? "",
     mission: sp.mission ?? "",
     year: sp.year ?? "",
+    program: sp.program ?? "",
   };
 
   return (
@@ -116,6 +133,7 @@ export default async function DirectorDeploymentsPage({
           status={sp.status}
           mission={sp.mission}
           year={sp.year}
+          program={sp.program}
         />
       </div>
 
@@ -144,6 +162,15 @@ export default async function DirectorDeploymentsPage({
             label: "Year",
             allLabel: "All Years",
             options: yearOptions,
+          },
+          {
+            name: "program",
+            label: "Program",
+            allLabel: "All Programs",
+            options: allPrograms.map((p) => ({
+              value: p.id,
+              label: `${p.code} — ${p.title}`,
+            })),
           },
         ]}
         current={current}

@@ -85,7 +85,6 @@ export default function NavBar() {
           </div>
           <span
             className="font-semibold text-white text-sm tracking-tight leading-tight hidden sm:block"
-            style={{ fontFamily: "Georgia, serif" }}
           >
             1000 Missionary Movement Bangladesh
           </span>
@@ -101,7 +100,15 @@ export default function NavBar() {
                 onMouseEnter={() => handleMouseEnter(link.label)}
                 onMouseLeave={handleMouseLeave}
               >
-                <button className="flex items-center gap-1 text-white/75 hover:text-white text-sm font-medium tracking-wide transition-colors duration-200">
+                <button
+                  className="flex items-center gap-1 text-white/75 hover:text-white text-sm font-medium tracking-wide transition-colors duration-200"
+                  aria-expanded={activeDropdown === link.label}
+                  onClick={() =>
+                    setActiveDropdown(
+                      activeDropdown === link.label ? null : link.label,
+                    )
+                  }
+                >
                   {link.label}
                   <ChevronDown
                     className={`w-3.5 h-3.5 transition-transform duration-200 ${
@@ -164,7 +171,6 @@ export default function NavBar() {
               className="px-4 py-2 rounded-full font-bold text-white text-xs hover:opacity-90 hover:scale-105 transition-all duration-200 shadow-sm"
               style={{
                 background: "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
-                fontFamily: "Georgia, serif",
               }}
             >
               Apply Now
@@ -173,7 +179,6 @@ export default function NavBar() {
               href={PORTAL_URL}
               target="_blank"
               className="px-4 py-2 rounded-full font-bold text-sm border border-white/25 text-white/80 hover:text-white hover:border-white/50 hover:bg-white/10 transition-all duration-200"
-              style={{ fontFamily: "Georgia, serif" }}
             >
               Login
             </Link>
@@ -250,7 +255,6 @@ export default function NavBar() {
               className="py-3 rounded-full font-bold text-white text-sm text-center hover:opacity-90 transition-all"
               style={{
                 background: "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
-                fontFamily: "Georgia, serif",
               }}
               onClick={() => setMenuOpen(false)}
             >
@@ -260,7 +264,6 @@ export default function NavBar() {
               href={PORTAL_URL}
               target="_blank"
               className="py-3 rounded-full font-bold text-sm text-center border border-white/25 text-white/80 hover:bg-white/10 transition-all"
-              style={{ fontFamily: "Georgia, serif" }}
               onClick={() => setMenuOpen(false)}
             >
               Login

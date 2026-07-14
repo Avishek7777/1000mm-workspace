@@ -3,10 +3,25 @@ import { Resend } from "resend";
 import VerifyEmail from "./templates/VerifyEmail";
 import PasswordReset from "./templates/PasswordReset";
 import TrainerSetup from "./templates/TrainerSetup";
+import ContactReply from "./templates/ContactReply";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM_EMAIL ?? "noreply@1000mm.org.bd";
+// Contact-form replies always come from the public info address so
+// recipients can reply directly to it.
+const CONTACT_REPLY_FROM = "info@1000mm.org.bd";
 const APP_URL = process.env.AUTH_URL ?? "http://localhost:3001";
+
+// Lazy so that merely importing this module (e.g. via an actions barrel)
+// doesn't crash when RESEND_API_KEY is absent in the environment.
+let resendClient: Resend | null = null;
+function getResend(): Resend {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    throw new Error("RESEND_API_KEY is not set — email sending is disabled.");
+  }
+  resendClient ??= new Resend(key);
+  return resendClient;
+}
 
 export async function sendVerificationEmail(
   to: string,
@@ -15,7 +30,7 @@ export async function sendVerificationEmail(
 ) {
   const url = `${APP_URL}/verify-email?token=${token}`;
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to,
       subject: "Verify your email — 1000MM Bangladesh",
@@ -32,7 +47,7 @@ export async function sendPasswordResetEmail(
   url: string,
 ) {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to,
       subject: "Reset your password — 1000MM Bangladesh",
@@ -43,13 +58,42 @@ export async function sendPasswordResetEmail(
   }
 }
 
+/**
+ * Reply to a website contact-form message.
+ * Unlike the fire-and-forget senders above, this THROWS on failure so the
+ * caller can tell the admin the reply was not delivered.
+ */
+export async function sendContactReplyEmail(
+  to: string,
+  name: string,
+  subject: string,
+  originalMessage: string,
+  reply: string,
+) {
+  const { error } = await getResend().emails.send({
+    from: `1000MM Bangladesh <${CONTACT_REPLY_FROM}>`,
+    to,
+    subject,
+    react: (
+      <ContactReply
+        name={name}
+        originalMessage={originalMessage}
+        reply={reply}
+      />
+    ),
+  });
+  if (error) {
+    throw new Error(`Resend rejected the email: ${error.message}`);
+  }
+}
+
 export async function sendTrainerSetupEmail(
   to: string,
   name: string,
   url: string,
 ) {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to,
       subject: "Set up your 1000MM Trainer account",

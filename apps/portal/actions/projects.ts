@@ -53,6 +53,27 @@ function parseTags(raw: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Optional fields: empty input must CLEAR the stored value (null), not skip
+ * the update (undefined). Also normalizes Windows line endings in the story
+ * body so the website renderer's block parsing always works.
+ */
+function normalizeOptionals(rest: {
+  goal?: string;
+  highlight?: string;
+  body?: string;
+  budget?: string;
+  participants?: number;
+}) {
+  return {
+    goal: rest.goal ?? null,
+    highlight: rest.highlight ?? null,
+    body: rest.body ? rest.body.replace(/\r\n/g, "\n") : null,
+    budget: rest.budget ?? null,
+    participants: rest.participants ?? null,
+  };
+}
+
 function parseImages(formData: FormData): string[] {
   return [0, 1, 2, 3, 4]
     .map((i) => (formData.get(`image_${i}`) as string ?? "").trim())
@@ -92,7 +113,9 @@ export async function createProjectAction(
   if (existing)
     return { ok: false, fieldErrors: { slug: "This slug is already in use." } };
 
-  await prisma.project.create({ data: { ...rest, tags, images, objectives } });
+  await prisma.project.create({
+    data: { ...rest, ...normalizeOptionals(rest), tags, images, objectives },
+  });
 
   revalidatePath("/dashboard/system-admin/projects");
   return { ok: true };
@@ -132,7 +155,10 @@ export async function updateProjectAction(
   if (existing && existing.id !== id)
     return { ok: false, fieldErrors: { slug: "This slug is already in use." } };
 
-  await prisma.project.update({ where: { id }, data: { ...rest, tags, images, objectives } });
+  await prisma.project.update({
+    where: { id },
+    data: { ...rest, ...normalizeOptionals(rest), tags, images, objectives },
+  });
 
   revalidatePath("/dashboard/system-admin/projects");
   return { ok: true };

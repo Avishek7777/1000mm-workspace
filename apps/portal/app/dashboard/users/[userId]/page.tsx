@@ -4,6 +4,7 @@ import { prisma } from "@1000mm/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { UserActions } from "./_components/UserActions";
+import { AdminChangeEmailForm } from "./_components/AdminChangeEmailForm";
 import { FlagUserForm } from "./_components/FlagUserForm";
 import { MissionaryToggle } from "./_components/MissionaryToggle";
 
@@ -90,12 +91,15 @@ export default async function UserDetailPage({
             <p className="mt-0.5 text-sm text-gray-500">{user.email}</p>
           </div>
           {isSA && (
-            <UserActions
-              userId={user.id}
-              isActive={user.isActive}
-              isSelf={user.id === actor?.id}
-              isLmd={user.role === "LOCAL_DIRECTOR"}
-            />
+            <div className="flex flex-col items-end gap-2">
+              <UserActions
+                userId={user.id}
+                isActive={user.isActive}
+                isSelf={user.id === actor?.id}
+                isLmd={user.role === "LOCAL_DIRECTOR"}
+              />
+              <AdminChangeEmailForm userId={user.id} currentEmail={user.email} />
+            </div>
           )}
         </div>
       </div>

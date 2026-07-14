@@ -4,6 +4,8 @@ import { prisma } from "@1000mm/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PrintButton } from "@/components/PrintButton";
+import { AddEntryForm } from "@/app/dashboard/financial/_components/AddEntryForm";
+import { DeleteEntryButton } from "@/app/dashboard/financial/_components/DeleteEntryButton";
 
 const TYPE_LABELS: Record<string, string> = {
   INCOME: "Income",
@@ -28,19 +30,31 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 export default async function LmdFinancialPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; year?: string; month?: string }>;
+  searchParams: Promise<{ type?: string; year?: string; month?: string; mission?: string }>;
 }) {
-  await requireRole(["LOCAL_DIRECTOR"]);
+  // SA gets a read-only view (with delete) of any mission's ledger.
+  const actor = await requireRole(["LOCAL_DIRECTOR", "SYSTEM_ADMIN"]);
+  const isSa = actor.role === "SYSTEM_ADMIN";
   const session = await auth();
-  const { type, year, month } = await searchParams;
+  const { type, year, month, mission } = await searchParams;
   const yearNum = year ? parseInt(year, 10) : undefined;
   const monthNum = month ? parseInt(month, 10) : undefined;
 
-  const lmdMission = await prisma.localMission.findFirst({
-    where: { directorId: session!.user!.id },
-    select: { id: true, code: true, name: true, director: { select: { fullName: true } } },
-  });
-  if (!lmdMission) redirect("/dashboard/lmd");
+  const allMissions = isSa
+    ? await prisma.localMission.findMany({
+        where: { deletedAt: null },
+        orderBy: { code: "asc" },
+        select: { id: true, code: true, name: true, director: { select: { fullName: true } } },
+      })
+    : [];
+
+  const lmdMission = isSa
+    ? (allMissions.find((m) => m.code === mission) ?? allMissions[0] ?? null)
+    : await prisma.localMission.findFirst({
+        where: { directorId: session!.user!.id },
+        select: { id: true, code: true, name: true, director: { select: { fullName: true } } },
+      });
+  if (!lmdMission) redirect(isSa ? "/dashboard/financial" : "/dashboard/lmd");
 
   const startDate = yearNum && monthNum
     ? new Date(yearNum, monthNum - 1, 1)
@@ -82,12 +96,40 @@ export default async function LmdFinancialPage({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">Financial — {lmdMission.code}</h1>
-          <p className="mt-0.5 text-sm text-gray-500">{lmdMission.name}</p>
+          <p className="mt-0.5 text-sm text-gray-500">
+            {lmdMission.name}
+            {isSa && " · viewing as System Admin"}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <PrintButton label="Print" />
         </div>
       </div>
+
+      {/* SA: pick which mission's ledger to view */}
+      {isSa && (
+        <div className="print:hidden flex flex-wrap gap-1">
+          {allMissions.map((m) => (
+            <Link
+              key={m.code}
+              href={`?${new URLSearchParams({ mission: m.code, ...(type ? { type } : {}), ...(year ? { year } : {}), ...(month ? { month } : {}) })}`}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${lmdMission.code === m.code ? "border-teal-400 bg-teal-50 text-teal-800" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"}`}
+            >
+              {m.code}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* LMD: add entries to own ledger. SA is view + delete only. */}
+      {!isSa && (
+        <div className="print:hidden">
+          <AddEntryForm
+            missions={[{ id: lmdMission.id, code: lmdMission.code, name: lmdMission.name }]}
+            defaultMissionId={lmdMission.id}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
@@ -111,6 +153,7 @@ export default async function LmdFinancialPage({
       </div>
 
       <form method="GET" className="print:hidden flex flex-wrap items-center gap-2">
+        {isSa && <input type="hidden" name="mission" value={lmdMission.code} />}
         <select
           name="type"
           defaultValue={type ?? ""}
@@ -149,7 +192,7 @@ export default async function LmdFinancialPage({
         </button>
         {(type || year || month) && (
           <Link
-            href="/dashboard/lmd/financial"
+            href={isSa ? `?mission=${lmdMission.code}` : "/dashboard/lmd/financial"}
             className="rounded-lg border border-gray-300 px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
           >
             Clear
@@ -173,7 +216,11 @@ export default async function LmdFinancialPage({
 
       {entries.length === 0 ? (
         <div className="print:hidden rounded-xl border border-dashed border-gray-200 bg-white py-16 text-center">
-          <p className="text-sm text-gray-400">No financial entries yet. Use the + Add Entry button above.</p>
+          <p className="text-sm text-gray-400">
+            {isSa
+              ? "No financial entries for this mission yet."
+              : "No financial entries yet. Use the + Add Entry button above."}
+          </p>
         </div>
       ) : (
         <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
@@ -185,6 +232,7 @@ export default async function LmdFinancialPage({
                 <th className="py-3 pr-2 text-left text-[10px] font-semibold uppercase tracking-widest text-gray-400">Type</th>
                 <th className="py-3 pr-2 text-left text-[10px] font-semibold uppercase tracking-widest text-gray-400">Description</th>
                 <th className="py-3 pr-5 text-right text-[10px] font-semibold uppercase tracking-widest text-gray-400">Amount</th>
+                {isSa && <th className="print:hidden py-3 pr-5 text-right text-[10px] font-semibold uppercase tracking-widest text-gray-400"></th>}
               </tr>
             </thead>
             <tbody>
@@ -195,6 +243,11 @@ export default async function LmdFinancialPage({
                   <td className="py-3 pr-2"><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${TYPE_STYLES[e.type]}`}>{TYPE_LABELS[e.type]}</span></td>
                   <td className="py-3 pr-2 text-xs text-gray-700">{e.description}{e.reference && <span className="ml-1 text-gray-400">· {e.reference}</span>}</td>
                   <td className="py-3 pr-5 text-right text-sm font-medium text-gray-900">৳{e.amount.toLocaleString()}</td>
+                  {isSa && (
+                    <td className="print:hidden py-3 pr-5 text-right">
+                      <DeleteEntryButton entryId={e.id} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -202,6 +255,7 @@ export default async function LmdFinancialPage({
               <tr className="border-t-2 border-gray-200">
                 <td colSpan={4} className="py-3 pl-5 pr-2 text-right text-xs font-semibold text-gray-700">Net Balance</td>
                 <td className={`py-3 pr-5 text-right font-bold ${netBalance >= 0 ? "text-teal-700" : "text-red-700"}`}>৳{netBalance.toLocaleString()}</td>
+                {isSa && <td className="print:hidden" />}
               </tr>
             </tfoot>
           </table>

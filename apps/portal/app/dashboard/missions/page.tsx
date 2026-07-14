@@ -4,7 +4,7 @@ import { MissionCard } from "./_components/MissionCard";
 import { AddMissionButton } from "./_components/AddMissionModal";
 
 export default async function MissionsPage() {
-  const user = await requireRole(["MAIN_DIRECTOR", "SYSTEM_ADMIN"]);
+  const user = await requireRole(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
 
   const [missions, lmdUsers] = await Promise.all([
     prisma.localMission.findMany({

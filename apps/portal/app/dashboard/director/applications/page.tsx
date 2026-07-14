@@ -50,6 +50,7 @@ const DIRECTOR_STATUSES: ApplicationStatus[] = [
 type SearchParams = {
   status?: string;
   mission?: string;
+  program?: string;
   search?: string;
   year?: string;
   page?: string;
@@ -70,15 +71,22 @@ export default async function DirectorApplicationsPage({
   searchParams: Promise<SearchParams>;
 }) {
   await requireRole(["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"]);
-  const { status, mission, search, year, page } = await searchParams;
+  const { status, mission, program, search, year, page } = await searchParams;
   const pageNum = Math.max(1, parseInt(page ?? "1", 10));
 
-  // Fetch missions for filter dropdown
-  const missions = await prisma.localMission.findMany({
-    where: { deletedAt: null },
-    orderBy: { code: "asc" },
-    select: { id: true, code: true, name: true },
-  });
+  // Fetch missions and programs for the filter dropdowns
+  const [missions, programs] = await Promise.all([
+    prisma.localMission.findMany({
+      where: { deletedAt: null },
+      orderBy: { code: "asc" },
+      select: { id: true, code: true, name: true },
+    }),
+    prisma.trainingProgram.findMany({
+      where: { deletedAt: null },
+      orderBy: { startDate: "desc" },
+      select: { id: true, code: true, title: true },
+    }),
+  ]);
 
   const missionId = mission
     ? missions.find((m) => m.code === mission)?.id
@@ -94,6 +102,7 @@ export default async function DirectorApplicationsPage({
       ? { equals: status as ApplicationStatus }
       : { in: DIRECTOR_STATUSES },
     ...(missionId ? { submittedFromMissionId: missionId } : {}),
+    ...(program ? { window: { programId: program } } : {}),
     ...(search
       ? {
           applicantFullName: { contains: search, mode: "insensitive" as const },
@@ -142,11 +151,12 @@ export default async function DirectorApplicationsPage({
   const baseParams = {
     ...(status ? { status } : {}),
     ...(mission ? { mission } : {}),
+    ...(program ? { program } : {}),
     ...(search ? { search } : {}),
     ...(year ? { year } : {}),
   };
 
-  const hasActiveFilters = Boolean(status || mission || search || year);
+  const hasActiveFilters = Boolean(status || mission || program || search || year);
 
   // Filters to forward to the export routes so they export exactly what's shown.
   // When no status is chosen, send the joined default set so the export's
@@ -154,9 +164,14 @@ export default async function DirectorApplicationsPage({
   const exportFilters = {
     status: status ?? DIRECTOR_STATUSES.join(","),
     mission,
+    programId: program,
     search,
     year,
   };
+
+  const selectedProgram = program
+    ? programs.find((p) => p.id === program)
+    : undefined;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -184,6 +199,7 @@ export default async function DirectorApplicationsPage({
         1000 Missionary Movement Bangladesh — Applications List
         {status ? ` · ${STATUS_LABELS[status as ApplicationStatus] ?? status}` : " · Recommended & Above"}
         {mission ? ` · ${mission}` : ""}
+        {selectedProgram ? ` · ${selectedProgram.code}` : ""}
         {year ? ` · ${year}` : ""} ·{" "}
         {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
       </div>
@@ -208,6 +224,20 @@ export default async function DirectorApplicationsPage({
           {missions.map((m) => (
             <option key={m.id} value={m.code}>
               {m.code} — {m.name}
+            </option>
+          ))}
+        </select>
+
+        {/* Program filter */}
+        <select
+          name="program"
+          defaultValue={program ?? ""}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
+        >
+          <option value="">All Programs</option>
+          {programs.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.code} — {p.title}
             </option>
           ))}
         </select>

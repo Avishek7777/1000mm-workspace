@@ -101,7 +101,6 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
       {/* Background watermark */}
       <div
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[20vw] font-bold select-none pointer-events-none leading-none opacity-[0.03] text-stone-400"
-        style={{ fontFamily: "Georgia, serif" }}
         aria-hidden="true"
       >
         CONTACT
@@ -112,25 +111,23 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.1 }}
+          viewport={{ once: true, amount: 0.1 }}
           transition={{ duration: 0.6 }}
           className="mb-10"
         >
           <div className="flex items-center gap-3 mb-4">
             <span
               className="h-px w-12"
-              style={{ background: "linear-gradient(90deg, #16a34a, #f97316)" }}
+              style={{ background: "linear-gradient(90deg, #007f98, #f97316)" }}
             />
             <span
               className="text-xs font-semibold tracking-[0.25em] uppercase text-orange-500"
-              style={{ fontFamily: "Georgia, serif" }}
             >
               Get in Touch
             </span>
           </div>
           <h2
             className="text-4xl md:text-5xl font-bold text-stone-800 leading-tight"
-            style={{ fontFamily: "Georgia, serif" }}
           >
             Contact{" "}
             <span
@@ -152,7 +149,7 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
               key={info.title}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.1 }}
+              viewport={{ once: true, amount: 0.1 }}
               transition={{ duration: 0.6, delay: i * 0.12 }}
               className="relative rounded-3xl p-7 bg-white border border-stone-100 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden group"
             >
@@ -168,7 +165,6 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
               </div>
               <h3
                 className="font-bold text-stone-800 text-base mb-3"
-                style={{ fontFamily: "Georgia, serif" }}
               >
                 {info.title}
               </h3>
@@ -179,7 +175,6 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
                     <p
                       key={j}
                       className="text-stone-500 text-sm leading-relaxed"
-                      style={{ fontFamily: "Georgia, serif" }}
                     >
                       {line}
                     </p>
@@ -192,7 +187,6 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
                   {info.programs.length === 0 ? (
                     <p
                       className="text-stone-400 text-sm italic"
-                      style={{ fontFamily: "Georgia, serif" }}
                     >
                       No upcoming programs scheduled.
                     </p>
@@ -210,7 +204,6 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <p
                               className="text-xs font-bold text-stone-700 leading-snug flex-1"
-                              style={{ fontFamily: "Georgia, serif" }}
                             >
                               {p.title}
                             </p>
@@ -224,7 +217,6 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
                           </div>
                           <p
                             className="text-xs text-stone-500 flex items-center gap-1"
-                            style={{ fontFamily: "Georgia, serif" }}
                           >
                             <Calendar className="h-3 w-3 flex-shrink-0" />
                             {formatDateRange(
@@ -238,7 +230,6 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
                               style={{
                                 background: "rgba(0,127,152,0.08)",
                                 color: "#007f98",
-                                fontFamily: "Georgia, serif",
                               }}
                             >
                               {categoryLabel(p.category)}
@@ -246,7 +237,6 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
                             {p.location && (
                               <span
                                 className="text-[10px] text-stone-400 flex items-center gap-0.5"
-                                style={{ fontFamily: "Georgia, serif" }}
                               >
                                 <MapPin className="h-2.5 w-2.5" />
                                 {p.location}
@@ -267,7 +257,7 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.1 }}
+          viewport={{ once: true, amount: 0.1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
           className="flex justify-center"
         >
@@ -276,7 +266,6 @@ export default function ContactUsClient({ programs }: { programs: Program[] }) {
             className="inline-flex items-center gap-3 px-8 py-4 rounded-full font-bold text-white text-sm hover:opacity-90 hover:scale-105 transition-all duration-300 shadow-lg"
             style={{
               background: "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
-              fontFamily: "Georgia, serif",
             }}
           >
             Send us a Message

@@ -2,11 +2,13 @@
 
 import path from "node:path";
 import fs from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
 import bcrypt from "bcryptjs";
+import { sendVerificationEmail } from "@/lib/email";
 
 const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -87,6 +89,60 @@ export async function updateProfileAction(
   });
 
   revalidatePath("/dashboard", "layout");
+  return { ok: true };
+}
+
+/**
+ * Self-service email change. Requires the current password (so a hijacked
+ * session alone can't take over the account) and confirms ownership of the
+ * NEW address: a verification link is emailed to it, and the address only
+ * becomes the login email once that link is opened.
+ */
+export async function requestEmailChangeAction(
+  _prev: { ok: boolean; error?: string },
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+
+  const newEmail = ((formData.get("newEmail") as string | null) ?? "")
+    .trim()
+    .toLowerCase();
+  const password = ((formData.get("password") as string | null) ?? "").trim();
+
+  if (!newEmail || !password)
+    return { ok: false, error: "All fields are required." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail))
+    return { ok: false, error: "Invalid email address." };
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, email: true, fullName: true, passwordHash: true },
+  });
+  if (!user) return { ok: false, error: "User not found." };
+
+  if (newEmail === user.email.toLowerCase())
+    return { ok: false, error: "That is already your email address." };
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+  if (!valid) return { ok: false, error: "Password is incorrect." };
+
+  const taken = await prisma.user.findUnique({ where: { email: newEmail } });
+  if (taken)
+    return { ok: false, error: "That email address is already in use." };
+
+  const token = randomBytes(32).toString("hex");
+  await prisma.emailVerificationToken.create({
+    data: {
+      token,
+      userId: user.id,
+      newEmail,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+    },
+  });
+
+  await sendVerificationEmail(newEmail, user.fullName, token);
+
   return { ok: true };
 }
 

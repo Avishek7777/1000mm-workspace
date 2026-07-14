@@ -26,7 +26,15 @@ export default async function AssignmentDetailPage({
   if (session.user.role !== "TRAINER") redirect("/dashboard");
 
   const assignment = await prisma.assignment.findFirst({
-    where: { id: assignmentId, programId, createdById: session.user.id, deletedAt: null },
+    // Any trainer of this program (via its topics) can view, not just the creator
+    where: {
+      id: assignmentId,
+      programId,
+      program: {
+        topics: { some: { trainerId: session.user.id, deletedAt: null } },
+      },
+      deletedAt: null,
+    },
     include: {
       program: { select: { id: true, title: true, code: true } },
       submissions: {
@@ -42,10 +50,22 @@ export default async function AssignmentDetailPage({
 
   const enrolledTrainees = await prisma.programEnrollment.findMany({
     where: { programId, deletedAt: null },
-    select: { traineeId: true },
+    select: {
+      traineeId: true,
+      trainee: {
+        select: {
+          fullName: true,
+          homeMission: { select: { code: true } },
+        },
+      },
+    },
+    orderBy: { trainee: { fullName: "asc" } },
   });
   const submittedIds = new Set(assignment.submissions.map((s) => s.traineeId));
-  const pendingCount = enrolledTrainees.filter((e) => !submittedIds.has(e.traineeId)).length;
+  const pendingTrainees = enrolledTrainees.filter(
+    (e) => !submittedIds.has(e.traineeId),
+  );
+  const pendingCount = pendingTrainees.length;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -86,6 +106,31 @@ export default async function AssignmentDetailPage({
         </div>
         <TrainerExportButtons kind="submissions" assignmentId={assignmentId} />
       </div>
+
+      {/* Pending trainees — enrolled but not yet submitted */}
+      {pendingCount > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-amber-800">
+            <Clock className="h-3.5 w-3.5" />
+            Pending submission ({pendingCount})
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {pendingTrainees.map((e) => (
+              <span
+                key={e.traineeId}
+                className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-white px-2.5 py-1 text-xs text-gray-700"
+              >
+                {e.trainee.fullName}
+                {e.trainee.homeMission?.code && (
+                  <span className="text-[10px] font-medium text-gray-400">
+                    {e.trainee.homeMission.code}
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {assignment.submissions.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 py-12 text-center">

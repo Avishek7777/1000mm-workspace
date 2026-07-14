@@ -37,7 +37,7 @@ export default function Footer() {
     <footer
       className="relative overflow-hidden pt-4"
       style={{
-        background: "linear-gradient(135deg, #003d4a 0%, #7a2800 100%)",
+        background: "linear-gradient(315deg, #003d4a 0%, #7a2800 100%)",
       }}
     >
       {/* Top gradient border */}
@@ -68,35 +68,32 @@ export default function Footer() {
                 width={36}
                 height={36}
               />
-              <span
-                className="font-bold text-white/90 text-[11px] leading-snug max-w-[240px]"
-                style={{ fontFamily: "Georgia, serif" }}
-              >
+              <span className="font-bold text-white/90 text-[11px] leading-snug max-w-[240px]">
                 Official website · Seventh-day Adventist Church of Bangladesh
               </span>
             </Link>
 
             <div className="flex items-center gap-2">
-              {socialLinks.map((social) => (
-                <Link
-                  key={social.label}
-                  href={social.href}
-                  aria-label={social.label}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center border border-white/10 text-white/35 hover:text-white hover:border-white/30 hover:bg-white/10 transition-all duration-200"
-                  target="_blank"
-                >
-                  <social.icon className="w-3 h-3" />
-                </Link>
-              ))}
+              {/* Icons with a real URL only — placeholders stay hidden until the account launches */}
+              {socialLinks
+                .filter((social) => social.href !== "#")
+                .map((social) => (
+                  <Link
+                    key={social.label}
+                    href={social.href}
+                    aria-label={social.label}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center border border-white/10 text-white/35 hover:text-white hover:border-white/30 hover:bg-white/10 transition-all duration-200"
+                    target="_blank"
+                  >
+                    <social.icon className="w-3 h-3" />
+                  </Link>
+                ))}
             </div>
           </div>
 
           {/* Quick links — 2-column grid, 3 links each */}
           <div className="flex flex-col gap-2">
-            <p
-              className="text-white text-[10px] font-extrabold tracking-widest uppercase"
-              style={{ fontFamily: "Georgia, serif" }}
-            >
+            <p className="text-white text-[10px] font-extrabold tracking-widest uppercase">
               Quick Links
             </p>
             <div
@@ -109,7 +106,6 @@ export default function Footer() {
                   key={link.label}
                   href={link.href}
                   className="text-white/60 text-[11px] font-semibold hover:text-white transition-colors duration-200 flex items-center gap-1.5 group"
-                  style={{ fontFamily: "Georgia, serif" }}
                 >
                   <span
                     className="h-px w-0 group-hover:w-2.5 transition-all duration-300 shrink-0"
@@ -125,10 +121,7 @@ export default function Footer() {
 
           {/* Scripture + CTAs */}
           <div className="flex flex-col gap-2.5">
-            <p
-              className="text-white text-[10px] font-extrabold tracking-widest uppercase"
-              style={{ fontFamily: "Georgia, serif" }}
-            >
+            <p className="text-white text-[10px] font-extrabold tracking-widest uppercase">
               The Great Commission
             </p>
             <div
@@ -143,16 +136,10 @@ export default function Footer() {
                 border: "1px solid rgba(255,255,255,0.06)",
               }}
             >
-              <p
-                className="text-white/90 text-[11px] font-semibold leading-relaxed italic"
-                style={{ fontFamily: "Georgia, serif" }}
-              >
+              <p className="text-white/90 text-[11px] font-semibold leading-relaxed italic">
                 &ldquo;Go therefore and make disciples of all nations.&rdquo;
               </p>
-              <p
-                className="text-white/60 text-[10px] font-semibold mt-1"
-                style={{ fontFamily: "Georgia, serif" }}
-              >
+              <p className="text-white/60 text-[10px] font-semibold mt-1">
                 — Matthew 28:19
               </p>
             </div>
@@ -164,17 +151,12 @@ export default function Footer() {
           className="border-t py-3 flex flex-col md:flex-row items-center justify-between gap-2"
           style={{ borderColor: "rgba(255,255,255,0.06)" }}
         >
-          <p
-            className="text-white/20 text-[10px] font-semibold"
-            style={{ fontFamily: "Georgia, serif" }}
-          >
-            © {new Date().getFullYear()} 1000 Missionary Movement Bangladesh. All Rights Reserved. · A
-            Ministry of the Seventh-day Adventist Church
+          <p className="text-white/20 text-[10px] font-semibold">
+            © {new Date().getFullYear()} 1000 Missionary Movement Bangladesh.
+            All Rights Reserved. · A Ministry of the Seventh-day Adventist
+            Church
           </p>
-          <div
-            className="flex items-center gap-3 text-[10px]"
-            style={{ fontFamily: "Georgia, serif" }}
-          >
+          <div className="flex items-center gap-3 text-[10px]">
             {legalLinks.map((link, i) => (
               <span key={link.label} className="flex items-center gap-3">
                 <Link
@@ -189,10 +171,7 @@ export default function Footer() {
               </span>
             ))}
           </div>
-          <p
-            className="text-white/20 text-[10px] font-semibold italic"
-            style={{ fontFamily: "Georgia, serif" }}
-          >
+          <p className="text-white/20 text-[10px] font-semibold italic">
             Designed for the Glory of God
           </p>
         </div>

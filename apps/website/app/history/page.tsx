@@ -5,6 +5,7 @@ import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/sections/Footer";
 import { ArrowRight } from "lucide-react";
+import { yearsActive } from "@/lib/org";
 
 const SERIF = { fontFamily: "Georgia, serif" };
 
@@ -207,7 +208,7 @@ export default function HistoryPage() {
                 <span className="h-px w-12" style={{ background: "linear-gradient(90deg,#f97316,#007f98)" }} />
               </div>
               <h2 className="text-3xl font-bold text-stone-800 md:text-4xl" style={SERIF}>
-                29 Years of{" "}
+                {yearsActive()} Years of{" "}
                 <span
                   className="bg-clip-text text-transparent"
                   style={{ backgroundImage: "linear-gradient(90deg,#007f98,#f97316)" }}

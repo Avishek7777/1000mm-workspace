@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth/helpers";
 import { getAllSettings, SETTING_KEYS } from "@/lib/settings";
 import { SettingsClient } from "./_components/SettingsClient";
@@ -75,6 +76,34 @@ export default async function SettingsPage() {
         <p className="mt-0.5 text-sm text-gray-500">
           System-wide configuration. Changes take effect immediately.
         </p>
+      </div>
+
+      {/* Sub-pages */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link
+          href="/dashboard/settings/certificate"
+          className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-4 hover:border-teal-300 hover:bg-teal-50/40 transition-colors"
+        >
+          <div>
+            <p className="text-sm font-medium text-gray-900">Certificate Config</p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              Director &amp; president names and signatures
+            </p>
+          </div>
+          <span className="text-gray-300 group-hover:text-teal-500">→</span>
+        </Link>
+        <Link
+          href="/dashboard/settings/testimonials"
+          className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-4 hover:border-teal-300 hover:bg-teal-50/40 transition-colors"
+        >
+          <div>
+            <p className="text-sm font-medium text-gray-900">Testimonials</p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              Manage homepage testimonies
+            </p>
+          </div>
+          <span className="text-gray-300 group-hover:text-teal-500">→</span>
+        </Link>
       </div>
 
       <SettingsClient groups={SETTING_GROUPS} initialSettings={settings} />

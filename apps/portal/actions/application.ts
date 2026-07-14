@@ -135,6 +135,17 @@ const page3Schema = z.object({
 
 const page4Schema = z.object({
   missionaryDesire: z.string().trim().min(10, "Please describe your desire."),
+  districtPastorName: z
+    .string()
+    .trim()
+    .min(2, "District pastor's name is required.")
+    .max(70),
+  districtPastorMobile: z
+    .string()
+    .trim()
+    .min(6, "District pastor's mobile number is required.")
+    .max(15),
+  districtPastorEmail: z.string().trim().email("Invalid email address.").optional().or(z.literal("")),
   courtRecord: z.string().transform((v) => v === "true"),
   healthCondition: z.string().transform((v) => v === "true"),
   badHabits: z.string().transform((v) => v === "true"),
@@ -455,6 +466,9 @@ export async function submitApplicationAction(
   const mergedFormData = {
     ...currentFormData,
     missionaryDesire: d.missionaryDesire,
+    districtPastorName: d.districtPastorName,
+    districtPastorMobile: d.districtPastorMobile,
+    districtPastorEmail: d.districtPastorEmail || null,
     courtRecord: d.courtRecord,
     healthCondition: d.healthCondition,
     badHabits: d.badHabits,

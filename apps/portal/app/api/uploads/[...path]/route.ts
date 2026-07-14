@@ -7,10 +7,25 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path: segments } = await params;
+
+  // Reject any segment that could escape the uploads roots (e.g. "..").
+  if (
+    segments.some(
+      (s) => s === ".." || s === "." || s.includes("/") || s.includes("\\"),
+    )
+  ) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const filePath = path.join(process.cwd(), "public", "uploads", ...segments);
+  // Legacy location: the website's trainer-application route used to write to
+  // <monorepo-root>/uploads before both apps standardized on public/uploads.
+  const legacyPath = path.join(process.cwd(), "..", "..", "uploads", ...segments);
 
   try {
-    const buffer = await fs.readFile(filePath);
+    const buffer = await fs
+      .readFile(filePath)
+      .catch(() => fs.readFile(legacyPath));
     const ext = segments[segments.length - 1].split(".").pop()?.toLowerCase();
 
     const mimeTypes: Record<string, string> = {
@@ -35,6 +50,10 @@ export async function GET(
         "Content-Type": contentType,
         // inline = open in browser, attachment = force download
         "Content-Disposition": "inline",
+        // Short-lived cache: several upload flows reuse deterministic file
+        // names (project extras, profile photos), so replacements must
+        // propagate quickly to the website image optimizer and browsers.
+        "Cache-Control": "public, max-age=60, must-revalidate",
       },
     });
   } catch {

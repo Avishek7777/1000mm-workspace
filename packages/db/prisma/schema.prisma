@@ -320,6 +320,9 @@ model EmailVerificationToken {
   id        String    @id @default(cuid())
   token     String    @unique
   userId    String
+  // When set, confirming this token CHANGES the user's email to this address
+  // (email-change flow); when null it just verifies the current email.
+  newEmail  String?
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
@@ -974,6 +977,9 @@ model ContactMessage {
   isHandled   Boolean   @default(false)
   handledAt   DateTime?
   handledById String?
+  replyBody   String?
+  repliedAt   DateTime?
+  repliedById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
@@ -1223,6 +1229,7 @@ enum AuditAction {
   USER_MISSION_CHANGED
   USER_DEACTIVATED
   USER_REACTIVATED
+  USER_EMAIL_CHANGED
   APPLICATION_SUBMITTED
   APPLICATION_REVIEW_STARTED
   APPLICATION_RETURNED_TO_APPLICANT
@@ -1258,6 +1265,12 @@ enum AuditAction {
   TRAINEE_ENROLLED
   SALARY_REQUEST_REVIEWED
   SALARY_INVOICE_GENERATED
+  CONTACT_MESSAGE_HANDLED
+  CONTACT_MESSAGE_REOPENED
+  CONTACT_MESSAGE_MARKED_SPAM
+  CONTACT_MESSAGE_UNMARKED_SPAM
+  CONTACT_MESSAGE_REPLIED
+  CONTACT_MESSAGE_DELETED
 }
 
 enum TrainerApplicationStatus {

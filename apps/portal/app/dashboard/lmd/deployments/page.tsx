@@ -31,8 +31,9 @@ export default async function LmdDeploymentsPage({
     ? (sp.status as DeploymentStatus)
     : undefined;
   const yearFilter = sp.year ?? undefined;
+  const programFilter = sp.program ?? undefined;
 
-  const [lmdMission, deployments, allYears] = await Promise.all([
+  const [lmdMission, deployments, allYears, programs] = await Promise.all([
     prisma.localMission.findFirst({ where: { directorId: user.id } }),
     prisma.missionaryDeployment.findMany({
       where: {
@@ -44,6 +45,16 @@ export default async function LmdDeploymentsPage({
               startDate: {
                 gte: new Date(parseInt(yearFilter), 0, 1),
                 lt: new Date(parseInt(yearFilter) + 1, 0, 1),
+              },
+            }
+          : {}),
+        // Program: missionaries enrolled in the selected training program
+        ...(programFilter
+          ? {
+              missionary: {
+                enrollmentsAsTrainee: {
+                  some: { programId: programFilter, deletedAt: null },
+                },
               },
             }
           : {}),
@@ -59,6 +70,20 @@ export default async function LmdDeploymentsPage({
       where: { requestedById: user.id, deletedAt: null },
       select: { startDate: true },
       distinct: ["startDate"],
+    }),
+    // Programs with enrollments from this LMD's mission — for the filter
+    prisma.trainingProgram.findMany({
+      where: {
+        deletedAt: null,
+        enrollments: {
+          some: {
+            deletedAt: null,
+            trainee: { homeMission: { directorId: user.id } },
+          },
+        },
+      },
+      orderBy: { startDate: "desc" },
+      select: { id: true, code: true, title: true },
     }),
   ]);
 
@@ -84,7 +109,7 @@ export default async function LmdDeploymentsPage({
   const active    = deployments.filter((d) => d.status === "ACTIVE");
   const history   = deployments.filter((d) => d.status === "COMPLETED" || d.status === "REJECTED");
 
-  const current = { status: sp.status ?? "", year: sp.year ?? "" };
+  const current = { status: sp.status ?? "", year: sp.year ?? "", program: sp.program ?? "" };
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-6">
@@ -124,6 +149,15 @@ export default async function LmdDeploymentsPage({
               allLabel: "All Years",
               options: yearOptions,
             },
+            {
+              name: "program",
+              label: "Program",
+              allLabel: "All Programs",
+              options: programs.map((p) => ({
+                value: p.id,
+                label: `${p.code} — ${p.title}`,
+              })),
+            },
           ]}
           current={current}
           basePath="/dashboard/lmd/deployments"
@@ -131,6 +165,7 @@ export default async function LmdDeploymentsPage({
         <MissionaryExportButtons
           status={sp.status}
           year={sp.year}
+          program={sp.program}
         />
       </div>
 

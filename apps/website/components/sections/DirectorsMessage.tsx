@@ -19,7 +19,7 @@ export default function DirectorsMessage() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.1 }}
+          viewport={{ once: true, amount: 0.1 }}
           transition={{ duration: 0.6 }}
           className="flex items-center justify-center gap-3 mb-8"
         >
@@ -29,7 +29,6 @@ export default function DirectorsMessage() {
           />
           <span
             className="text-xs font-semibold tracking-[0.25em] uppercase text-orange-500"
-            style={{ fontFamily: "Georgia, serif" }}
           >
             A Word from Leadership
           </span>
@@ -43,13 +42,12 @@ export default function DirectorsMessage() {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.1 }}
+          viewport={{ once: true, amount: 0.1 }}
           transition={{ duration: 0.7, delay: 0.1 }}
           className="flex flex-col items-center text-center"
         >
           <h2
             className="text-4xl md:text-5xl font-semibold text-stone-700 leading-tight mb-8"
-            style={{ fontFamily: "Georgia, serif" }}
           >
             Message from&nbsp;
             <span
@@ -65,7 +63,6 @@ export default function DirectorsMessage() {
 
           <div
             className="text-stone-600 text-base md:text-lg leading-relaxed space-y-5 max-w-4xl text-justify"
-            style={{ fontFamily: "Georgia, serif" }}
           >
             <p>
               Dear Brothers and Sisters in Christ, It is a great joy to serve
@@ -101,7 +98,6 @@ export default function DirectorsMessage() {
             />
             <p
               className="font-bold text-stone-700 text-sm tracking-wide"
-              style={{ fontFamily: "Georgia, serif" }}
             >
               Pr. Krysthyann Zeferino
             </p>
@@ -118,7 +114,6 @@ export default function DirectorsMessage() {
               style={{
                 borderColor: "#007f98",
                 color: "#007f98",
-                fontFamily: "Georgia, serif",
               }}
             >
               Learn Our History →

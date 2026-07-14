@@ -8,7 +8,7 @@ import path from "path";
 import { readFileSync } from "fs";
 
 const TEAL = "#0d7a6e";
-const ALLOWED_ROLES = ["MAIN_DIRECTOR", "SYSTEM_ADMIN", "LOCAL_DIRECTOR", "TRAINER"] as const;
+const ALLOWED_ROLES = ["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN", "LOCAL_DIRECTOR", "TRAINER"] as const;
 
 const styles = StyleSheet.create({
   page:     { padding: 26, fontSize: 7.5, fontFamily: "Helvetica", color: "#1a1a1a" },
@@ -42,9 +42,11 @@ export async function GET(req: NextRequest) {
   if (!user || !ALLOWED_ROLES.includes(user.role as typeof ALLOWED_ROLES[number]))
     return new NextResponse("Forbidden", { status: 403 });
 
-  const isStaff = ["MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
+  const isStaff = ["MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role);
+  const isLmd = user.role === "LOCAL_DIRECTOR";
+  const isTrainer = user.role === "TRAINER";
 
-  const lmdMission = !isStaff
+  const lmdMission = isLmd
     ? await prisma.localMission.findFirst({ where: { directorId: user.id } })
     : null;
 
@@ -59,9 +61,13 @@ export async function GET(req: NextRequest) {
       deletedAt: null,
       status: "ENROLLED",
       ...(programParam ? { programId: programParam } : {}),
+      // Trainer: only trainees of programs they teach (via their topics)
+      ...(isTrainer
+        ? { program: { topics: { some: { trainerId: user.id, deletedAt: null } } } }
+        : {}),
       ...(genderParam ? { application: { applicantGender: genderParam as "MALE" | "FEMALE" } } : {}),
       trainee: {
-        ...(!isStaff ? { homeMissionId: lmdMission?.id ?? user.homeMissionId } : {}),
+        ...(isLmd ? { homeMissionId: lmdMission?.id ?? user.homeMissionId } : {}),
         ...(isStaff && missionParam ? { homeMission: { code: missionParam } } : {}),
         ...(qParam ? { fullName: { contains: qParam, mode: "insensitive" as const } } : {}),
       },
@@ -102,8 +108,17 @@ export async function GET(req: NextRequest) {
     day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
+  const programCode = programParam
+    ? ((
+        await prisma.trainingProgram.findUnique({
+          where: { id: programParam },
+          select: { code: true },
+        })
+      )?.code ?? programParam)
+    : null;
+
   const filterParts = [
-    programParam ?? null,
+    programCode,
     missionParam ?? (!isStaff && lmdMission ? lmdMission.name : null),
     genderParam === "MALE" ? "Male" : genderParam === "FEMALE" ? "Female" : null,
     qParam ? `"${qParam}"` : null,
@@ -130,18 +145,22 @@ export async function GET(req: NextRequest) {
         ),
         sdaSrc ? createElement(Image, { src: sdaSrc, style: styles.logo }) : createElement(View, { style: styles.logo }),
       ),
-      // Table head
+      // Table head — trainers only get the roster basics
       createElement(View, { style: styles.thead },
         createElement(Text, { style: { ...styles.thText, flex: 0.35 } }, "#"),
         createElement(Text, { style: { ...styles.thText, flex: 2.5 } }, "Name"),
         createElement(Text, { style: { ...styles.thText, flex: 1.2 } }, "Ref No"),
         ...(isStaff ? [createElement(Text, { style: { ...styles.thText, flex: 0.7 } }, "Mission")] : []),
         createElement(Text, { style: { ...styles.thText, flex: 0.8 } }, "Program"),
-        createElement(Text, { style: { ...styles.thText, flex: 1.2 } }, "Enrolled"),
-        createElement(Text, { style: { ...styles.thText, flex: 1.5 } }, "Deployment"),
-        createElement(Text, { style: { ...styles.thCenter, flex: 0.7 } }, "Reports"),
-        createElement(Text, { style: { ...styles.thCenter, flex: 0.8 } }, "Attend."),
-        createElement(Text, { style: { ...styles.thCenter, flex: 0.8 } }, "Cert."),
+        ...(isTrainer
+          ? []
+          : [
+              createElement(Text, { style: { ...styles.thText, flex: 1.2 } }, "Enrolled"),
+              createElement(Text, { style: { ...styles.thText, flex: 1.5 } }, "Deployment"),
+              createElement(Text, { style: { ...styles.thCenter, flex: 0.7 } }, "Reports"),
+              createElement(Text, { style: { ...styles.thCenter, flex: 0.8 } }, "Attend."),
+              createElement(Text, { style: { ...styles.thCenter, flex: 0.8 } }, "Cert."),
+            ]),
       ),
       // Rows
       ...enrollments.map((e, i) => {
@@ -153,11 +172,15 @@ export async function GET(req: NextRequest) {
           createElement(Text, { style: { ...styles.cell, flex: 1.2 } }, e.application?.referenceNumber ?? "—"),
           ...(isStaff ? [createElement(Text, { style: { ...styles.cell, flex: 0.7 } }, e.trainee.homeMission?.code ?? "—")] : []),
           createElement(Text, { style: { ...styles.cell, flex: 0.8 } }, e.program.code),
-          createElement(Text, { style: { ...styles.cell, flex: 1.2 } }, fmt(e.enrolledAt)),
-          createElement(Text, { style: { ...styles.cell, flex: 1.5 } }, e.deploymentLocation ?? "—"),
-          createElement(Text, { style: { ...styles.cellCtr, flex: 0.7 } }, String(reports)),
-          createElement(Text, { style: { ...styles.cellCtr, flex: 0.8 } }, e.attendanceConfirmed ? "Yes" : "No"),
-          createElement(Text, { style: { ...styles.cellCtr, flex: 0.8 } }, e.certificateIssued ? "Yes" : "No"),
+          ...(isTrainer
+            ? []
+            : [
+                createElement(Text, { style: { ...styles.cell, flex: 1.2 } }, fmt(e.enrolledAt)),
+                createElement(Text, { style: { ...styles.cell, flex: 1.5 } }, e.deploymentLocation ?? "—"),
+                createElement(Text, { style: { ...styles.cellCtr, flex: 0.7 } }, String(reports)),
+                createElement(Text, { style: { ...styles.cellCtr, flex: 0.8 } }, e.attendanceConfirmed ? "Yes" : "No"),
+                createElement(Text, { style: { ...styles.cellCtr, flex: 0.8 } }, e.certificateIssued ? "Yes" : "No"),
+              ]),
         );
       }),
       // Footer

@@ -4,8 +4,9 @@ import { ArrowRight } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/sections/Footer";
 import { PROJECTS as FALLBACK_PROJECTS } from "@/lib/projects";
-import ProjectsGrid from "./_components/ProjectsGrid";
+import ProjectsEditorial from "./_components/ProjectsEditorial";
 import type { Project } from "@/components/sections/CurrentProjectsSection";
+import { resolveProjectImages } from "@/lib/portal";
 
 async function fetchProjects(): Promise<Project[]> {
   const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL;
@@ -15,7 +16,8 @@ async function fetchProjects(): Promise<Project[]> {
       cache: "no-store",
     });
     if (!res.ok) throw new Error();
-    return res.json();
+    const projects: Project[] = await res.json();
+    return projects.map(resolveProjectImages);
   } catch {
     return FALLBACK_PROJECTS.map((p) => ({ ...p, id: p.slug }));
   }
@@ -56,10 +58,7 @@ export default async function CurrentProjectsPage() {
         <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
           <div className="inline-flex items-center gap-2 mb-5">
             <span className="h-px w-10 bg-orange-400" />
-            <span
-              className="text-orange-500 text-sm font-semibold tracking-[0.2em] uppercase"
-              style={{ fontFamily: "Georgia, serif" }}
-            >
+            <span className="text-orange-500 text-sm font-semibold tracking-[0.2em] uppercase">
               Active Initiatives
             </span>
             <span className="h-px w-10 bg-orange-400" />
@@ -67,7 +66,7 @@ export default async function CurrentProjectsPage() {
 
           <h1
             className="text-4xl md:text-6xl font-bold leading-tight mb-5"
-            style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}
+            style={{ color: "#3b1f08" }}
           >
             Current
             <br />
@@ -84,25 +83,22 @@ export default async function CurrentProjectsPage() {
 
           <p
             className="text-base md:text-lg leading-relaxed"
-            style={{ fontFamily: "Georgia, serif", color: "#92400e" }}
+            style={{ color: "#92400e" }}
           >
             These are the active projects your donations are building right now.
             Every gift moves the mission forward.
           </p>
 
-          <p
-            className="mt-4 text-xs font-semibold tracking-widest uppercase text-amber-600/70"
-            style={{ fontFamily: "Georgia, serif" }}
-          >
+          <p className="mt-4 text-xs font-semibold tracking-widest uppercase text-amber-600/70">
             {projects.length} project{projects.length !== 1 ? "s" : ""}
           </p>
         </div>
       </section>
 
-      {/* ── Project cards ────────────────────────────────────────────────── */}
+      {/* ── Editorial project rows ───────────────────────────────────────── */}
       <section className="bg-white py-20 border-y border-amber-100">
         <div className="max-w-5xl mx-auto px-6">
-          <ProjectsGrid projects={projects} />
+          <ProjectsEditorial projects={projects} />
         </div>
       </section>
 
@@ -110,8 +106,7 @@ export default async function CurrentProjectsPage() {
       <section className="py-16" style={warmBg}>
         <div className="max-w-2xl mx-auto px-6 text-center">
           <p
-            className="text-base leading-relaxed mb-6"
-            style={{ fontFamily: "Georgia, serif", color: "#92400e" }}
+            className="text-base leading-relaxed mb-6" style={{ color: "#92400e" }}
           >
             Want to support one of these projects directly?
           </p>
@@ -120,7 +115,6 @@ export default async function CurrentProjectsPage() {
             className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold text-white text-sm hover:opacity-90 hover:scale-105 transition-all duration-300 shadow-lg"
             style={{
               background: "linear-gradient(90deg, #007f98 0%, #f97316 100%)",
-              fontFamily: "Georgia, serif",
             }}
           >
             Donate Now

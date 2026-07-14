@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/frontend-design
+/.claude
 
 # next.js
 /.next/

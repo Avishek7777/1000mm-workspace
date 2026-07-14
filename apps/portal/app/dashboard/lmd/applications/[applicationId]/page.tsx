@@ -5,7 +5,6 @@ import Link from "next/link";
 import { startReviewAction } from "@/actions/lmd";
 import { ActionPanel } from "./_components/ActionPanel";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
 
 function formatDate(d?: Date | string | null) {
   if (!d) return "—";
@@ -151,7 +150,7 @@ export default async function LmdApplicationDetailPage({
 
   const profilePhoto = app.documents.find((d) => d.kind === "PROFILE_PHOTO");
   const profilePhotoUrl = profilePhoto
-    ? `${appUrl}/uploads/${profilePhoto.storageKey}`
+    ? `/api/uploads/${profilePhoto.storageKey}`
     : null;
 
   const isRecommended = app.status === "RECOMMENDED";

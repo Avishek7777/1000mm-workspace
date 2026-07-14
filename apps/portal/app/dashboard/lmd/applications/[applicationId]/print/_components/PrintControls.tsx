@@ -9,8 +9,29 @@ export function PrintControls({ backHref }: { backHref: string }) {
   useEffect(() => {
     if (fired.current) return;
     fired.current = true;
-    const t = setTimeout(() => window.print(), 500);
-    return () => clearTimeout(t);
+    let cancelled = false;
+
+    // Wait for every image on the page (profile photo, logos) to finish
+    // loading before opening the print dialog, capped at 4s so a broken
+    // image can't block printing forever.
+    const pending = Array.from(document.images)
+      .filter((img) => !img.complete)
+      .map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            img.addEventListener("load", () => resolve(), { once: true });
+            img.addEventListener("error", () => resolve(), { once: true });
+          }),
+      );
+    const timeout = new Promise<void>((resolve) => setTimeout(resolve, 4000));
+
+    Promise.race([Promise.all(pending), timeout]).then(() => {
+      if (!cancelled) window.print();
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

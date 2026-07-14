@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { createAssignment } from "@/actions/assignments";
 import { FileUploadInput } from "@/app/dashboard/_components/FileUploadInput";
 import { Plus, X } from "lucide-react";
@@ -11,17 +11,18 @@ type Props = { programId: string; topics: Topic[] };
 export function CreateAssignmentForm({ programId, topics }: Props) {
   const [open, setOpen] = useState(false);
   const [state, dispatch, pending] = useActionState(createAssignment, null);
-  const isFirstRender = useRef(true);
   const [fileKey, setFileKey] = useState("");
   const [fileName, setFileName] = useState("");
 
-  if (state?.ok && !isFirstRender.current) {
-    setOpen(false);
-    setFileKey("");
-    setFileName("");
-    isFirstRender.current = true;
-  }
-  if (state !== null) isFirstRender.current = false;
+  // Close and reset the form after a successful submission. Must run in an
+  // effect — setting state during render causes an infinite render loop.
+  useEffect(() => {
+    if (state?.ok) {
+      setOpen(false);
+      setFileKey("");
+      setFileName("");
+    }
+  }, [state]);
 
   const singleTopic = topics.length === 1 ? topics[0] : null;
 

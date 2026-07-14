@@ -3,7 +3,6 @@ import { prisma } from "@1000mm/db";
 import { redirect } from "next/navigation";
 import { PrintControls } from "./_components/PrintControls";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
 
 function formatDate(d?: Date | string | null) {
   if (!d) return "—";
@@ -70,7 +69,7 @@ export default async function LmdApplicationPrintPage({
     : [app.permanentAddressVillage, app.permanentAddressPostOffice, app.permanentAddressUpazila, app.permanentAddressDistrict].filter(Boolean).join(", ");
 
   const profilePhoto = app.documents.find((d) => d.kind === "PROFILE_PHOTO");
-  const profilePhotoUrl = profilePhoto ? `${appUrl}/uploads/${profilePhoto.storageKey}` : null;
+  const profilePhotoUrl = profilePhoto ? `/api/uploads/${profilePhoto.storageKey}` : null;
   const yesNo = (v: unknown) => (v === true ? "Yes" : v === false ? "No" : "—");
   const generatedAt = new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
@@ -173,6 +172,11 @@ export default async function LmdApplicationPrintPage({
           <div className="border-b border-gray-200 py-1.5">
             <p className="text-[9px] uppercase tracking-wider text-gray-500">Missionary Desire</p>
             <p className="whitespace-pre-wrap text-[12px] text-gray-900">{(fd.missionaryDesire as string) || "—"}</p>
+          </div>
+          <div className="grid grid-cols-3 gap-x-6">
+            <Cell label="District Pastor's Name" value={(fd.districtPastorName as string) || "—"} />
+            <Cell label="Pastor's Mobile No" value={(fd.districtPastorMobile as string) || "—"} />
+            <Cell label="Pastor's Email" value={(fd.districtPastorEmail as string) || "—"} />
           </div>
           <div className="grid grid-cols-3 gap-x-6">
             <Cell label="Criminal / Court Record" value={yesNo(fd.courtRecord)} />

@@ -63,6 +63,9 @@ export type ExistingDraft = {
   }> | null;
   // Page 4
   missionaryDesire: string;
+  districtPastorName: string;
+  districtPastorMobile: string;
+  districtPastorEmail: string;
   courtRecord: string; // "true" | "false" | ""
   healthCondition: string;
   badHabits: string;

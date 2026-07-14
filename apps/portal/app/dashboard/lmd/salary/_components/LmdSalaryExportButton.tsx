@@ -7,9 +7,10 @@ type Props = {
   month?: string;
   gender?: string;
   district?: string;
+  program?: string;
 };
 
-export function LmdSalaryExportButton({ year, month, gender, district }: Props) {
+export function LmdSalaryExportButton({ year, month, gender, district, program }: Props) {
   const [open, setOpen] = useState(false);
 
   function buildUrl(format: "pdf" | "xlsx") {
@@ -18,6 +19,7 @@ export function LmdSalaryExportButton({ year, month, gender, district }: Props) 
     if (month)    params.set("month",    month);
     if (gender)   params.set("gender",   gender);
     if (district) params.set("district", district);
+    if (program)  params.set("program",  program);
     const base = format === "pdf"
       ? "/api/export/lmd-salary/pdf"
       : "/api/export/lmd-salary/xlsx";

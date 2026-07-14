@@ -9,21 +9,26 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 export default async function LmdFieldReportImmersionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string; month?: string; district?: string }>;
+  searchParams: Promise<{
+    year?: string;
+    month?: string;
+    district?: string;
+    program?: string;
+  }>;
 }) {
   await requireRole(["LOCAL_DIRECTOR"]);
   const session = await auth();
-  const { year, month, district } = await searchParams;
+  const { year, month, district, program } = await searchParams;
   const yearNum  = year  ? parseInt(year,  10) : undefined;
   const monthNum = month ? parseInt(month, 10) : undefined;
-  const hasFilter = !!(year || month || district);
+  const hasFilter = !!(year || month || district || program);
 
   const lmdMission = await prisma.localMission.findFirst({
     where: { directorId: session!.user!.id },
   });
   if (!lmdMission) return <p className="text-sm text-gray-500">No mission assigned.</p>;
 
-  const [reports, yearRows, districtRows] = await Promise.all([
+  const [reports, yearRows, districtRows, programs] = await Promise.all([
     prisma.fieldReport.findMany({
       where: {
         trainee: {
@@ -32,6 +37,7 @@ export default async function LmdFieldReportImmersionPage({
             applications: { some: { status: "ACCEPTED", presentAddressDistrict: district } },
           } : {}),
         },
+        ...(program  ? { programId: program } : {}),
         ...(yearNum  ? { reportYear:  yearNum  } : {}),
         ...(monthNum ? { reportMonth: monthNum } : {}),
       },
@@ -57,10 +63,22 @@ export default async function LmdFieldReportImmersionPage({
       distinct: ["presentAddressDistrict"],
       orderBy: { presentAddressDistrict: "asc" },
     }),
+    // Programs that have field reports from this mission — for the filter
+    prisma.trainingProgram.findMany({
+      where: {
+        deletedAt: null,
+        fieldReports: { some: { trainee: { homeMissionId: lmdMission.id } } },
+      },
+      orderBy: { startDate: "desc" },
+      select: { id: true, code: true, title: true },
+    }),
   ]);
 
   const years = yearRows.map((r) => r.reportYear);
   const districts = districtRows.map((d) => d.presentAddressDistrict!).filter(Boolean);
+  const selectedProgram = program
+    ? programs.find((p) => p.id === program)
+    : undefined;
 
   type Row = {
     name: string; program: string;
@@ -95,6 +113,7 @@ export default async function LmdFieldReportImmersionPage({
     yearNum  ? String(yearNum)         : "All years",
     monthNum ? MONTHS[monthNum - 1]    : null,
     district ?? null,
+    selectedProgram?.code ?? null,
   ].filter(Boolean).join(" · ");
 
   return (
@@ -137,6 +156,18 @@ export default async function LmdFieldReportImmersionPage({
         >
           <option value="">All districts</option>
           {districts.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select
+          name="program"
+          defaultValue={program ?? ""}
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+        >
+          <option value="">All programs</option>
+          {programs.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.code} — {p.title}
+            </option>
+          ))}
         </select>
         <button
           type="submit"

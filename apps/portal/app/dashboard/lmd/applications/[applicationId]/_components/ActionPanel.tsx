@@ -10,8 +10,6 @@ import {
 } from "@/actions/lmd";
 import type { ApplicationStatus } from "@1000mm/db";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
-
 type LmdDoc = {
   kind: string;
   fileName: string;

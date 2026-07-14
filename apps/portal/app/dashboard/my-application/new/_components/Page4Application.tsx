@@ -5,6 +5,7 @@ import Link from "next/link";
 import { submitApplicationAction } from "@/actions/application";
 import {
   Field,
+  Input,
   Textarea,
   FileInput,
   SectionHeading,
@@ -294,6 +295,15 @@ export function Page4Application({
   const [missionaryDesire, setMissionaryDesire] = useState(
     d?.missionaryDesire ?? "",
   );
+  const [districtPastorName, setDistrictPastorName] = useState(
+    d?.districtPastorName ?? "",
+  );
+  const [districtPastorMobile, setDistrictPastorMobile] = useState(
+    d?.districtPastorMobile ?? "",
+  );
+  const [districtPastorEmail, setDistrictPastorEmail] = useState(
+    d?.districtPastorEmail ?? "",
+  );
   const [submitted, setSubmitted] = useState<{
     referenceNumber: string;
     applicationId: string;
@@ -377,6 +387,42 @@ export function Page4Application({
               submission.
             </li>
           </ul>
+        </div>
+
+        {/* District Pastor Details */}
+        <SectionHeading
+          title="District Pastor Details"
+          description="Contact details of the district pastor who recommends you — used to verify your recommendation."
+        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Field label="Pastor's Name" required error={errors.districtPastorName}>
+            <Input
+              name="districtPastorName"
+              placeholder="Full name"
+              value={districtPastorName}
+              onChange={(e) => setDistrictPastorName(e.target.value)}
+              error={errors.districtPastorName}
+            />
+          </Field>
+          <Field label="Mobile No" required error={errors.districtPastorMobile}>
+            <Input
+              name="districtPastorMobile"
+              placeholder="01XXXXXXXXX"
+              value={districtPastorMobile}
+              onChange={(e) => setDistrictPastorMobile(e.target.value)}
+              error={errors.districtPastorMobile}
+            />
+          </Field>
+          <Field label="Email" error={errors.districtPastorEmail}>
+            <Input
+              name="districtPastorEmail"
+              type="email"
+              placeholder="pastor@example.com"
+              value={districtPastorEmail}
+              onChange={(e) => setDistrictPastorEmail(e.target.value)}
+              error={errors.districtPastorEmail}
+            />
+          </Field>
         </div>
 
         {/* Missionary Desire */}
