@@ -3,6 +3,10 @@ import next from "next";
 
 const port = process.env.PORT || 3001;
 const dev = process.env.NODE_ENV !== "production";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const app = next({ dev, dir: __dirname });
 const handle = app.getRequestHandler();
 
