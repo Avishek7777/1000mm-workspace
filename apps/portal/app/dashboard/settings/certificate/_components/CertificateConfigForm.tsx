@@ -110,12 +110,14 @@ export function CertificateConfigForm({
   directorSignature,
   presidentName,
   presidentSignature,
+  batchLabel,
   defaults,
 }: {
   directorName: string;
   directorSignature: string;
   presidentName: string;
   presidentSignature: string;
+  batchLabel: string;
   defaults: Defaults;
 }) {
   const [dirSig, setDirSig] = useState(directorSignature);
@@ -138,6 +140,28 @@ export function CertificateConfigForm({
     <form action={action} className="space-y-6 rounded-xl border border-gray-200 bg-white p-6">
       <input type="hidden" name="directorSignature" value={dirSig} />
       <input type="hidden" name="presidentSignature" value={presSig} />
+
+      {/* Batch */}
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-gray-900">Batch Number</p>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-700">
+            Printed as &ldquo;… BATCH&rdquo; on the certificate
+          </label>
+          <input
+            name="batchLabel"
+            defaultValue={batchLabel}
+            placeholder="e.g. 28 or 28th"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+          />
+          <p className="mt-1 text-[11px] text-gray-400">
+            Set this before issuing certificates for a deployment. Leave blank
+            to use each program&apos;s own batch number.
+          </p>
+        </div>
+      </div>
+
+      <div className="border-t border-gray-100" />
 
       {/* Director */}
       <div className="space-y-3">

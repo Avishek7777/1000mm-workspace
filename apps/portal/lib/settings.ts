@@ -24,6 +24,9 @@ export const SETTING_KEYS = {
   CERT_DIRECTOR_SIGNATURE: "cert.director_signature",
   CERT_PRESIDENT_NAME: "cert.president_name",
   CERT_PRESIDENT_SIGNATURE: "cert.president_signature",
+  // Batch label printed on certificates ("28th" → "28th BATCH"); overrides
+  // the program's batch number when set.
+  CERT_BATCH_LABEL: "cert.batch_label",
 } as const;
 
 // Default signatory names/titles shown on the certificate.

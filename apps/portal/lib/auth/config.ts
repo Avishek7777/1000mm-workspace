@@ -24,7 +24,7 @@
 import "server-only";
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@1000mm/db";
 import { edgeAuthConfig } from "./edge.config";

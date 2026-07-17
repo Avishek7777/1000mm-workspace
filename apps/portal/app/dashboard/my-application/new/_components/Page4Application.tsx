@@ -63,6 +63,12 @@ const BASE_DOCUMENTS: DocField[] = [
     label: "Parent's Passport-size Photo",
     hint: "Passport-sized photo of one parent. JPG or PNG, max 400 KB.",
   },
+  {
+    name: "letterOfIntent",
+    kind: "LETTER_OF_INTENT",
+    label: "Letter of Intent",
+    hint: "Optional — a signed letter stating your intent to serve. PDF or image, max 400 KB.",
+  },
 ];
 
 function calcAge(dobStr: string): number {

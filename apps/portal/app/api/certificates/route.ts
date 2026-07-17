@@ -107,7 +107,9 @@ export async function GET(req: NextRequest) {
       .catch(() => {});
   }
 
-  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://portal.1000mmbd.org"}/verify/${refNum}`;
+  // /verify lives on the portal itself; NEXT_PUBLIC_APP_URL points to the
+  // public website, so it must not be used here.
+  const verifyUrl = `${process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://portal.1000mm.org.bd"}/verify/${refNum}`;
 
   let logoUrl: string | undefined;
   let sdaLogoUrl: string | undefined;
@@ -144,14 +146,25 @@ export async function GET(req: NextRequest) {
     verifyUrl,
   };
 
-  // ── Certificate signatories (configured by SA) ──────────────────────────
-  const [directorName, presidentName, directorSigKey, presidentSigKey] =
+  // ── Certificate signatories + batch label (configured by SA) ────────────
+  const [directorName, presidentName, directorSigKey, presidentSigKey, batchSetting] =
     await Promise.all([
       getStringSetting(SETTINGS.CERT_DIRECTOR_NAME),
       getStringSetting(SETTINGS.CERT_PRESIDENT_NAME),
       getStringSetting(SETTINGS.CERT_DIRECTOR_SIGNATURE),
       getStringSetting(SETTINGS.CERT_PRESIDENT_SIGNATURE),
+      getStringSetting(SETTINGS.CERT_BATCH_LABEL),
     ]);
+
+  // SA-configured batch wins; a bare number ("28") is ordinalized to "28th".
+  // Fallback: the program's own batch number, then the program code.
+  const batchLabel = batchSetting
+    ? /^\d+$/.test(batchSetting)
+      ? ordinal(Number(batchSetting))
+      : batchSetting
+    : enrollment.program.batch
+      ? ordinal(enrollment.program.batch)
+      : enrollment.program.code;
 
   function readSignature(storageKey: string | null): Uint8Array | undefined {
     if (!storageKey) return undefined;
@@ -178,9 +191,7 @@ export async function GET(req: NextRequest) {
       color: { dark: "#1a1208", light: "#00000000" }, // transparent background
     });
     output = await overlayCertificate(new Uint8Array(templateBytes), {
-      batchLabel: enrollment.program.batch
-        ? ordinal(enrollment.program.batch)
-        : enrollment.program.code,
+      batchLabel,
       traineeName: enrollment.trainee.fullName,
       programPeriod: formatProgramPeriod(
         new Date(enrollment.program.startDate),

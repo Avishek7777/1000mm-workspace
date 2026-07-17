@@ -280,7 +280,7 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
 
 // ─── CREATE LMD ACCOUNT (SA only) ────────────────────────────────────────────
 
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 const createLmdSchema = z.object({
   fullName: z.string().trim().min(2, "Full name is required.").max(100),

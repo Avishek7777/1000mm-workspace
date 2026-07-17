@@ -82,6 +82,7 @@ export async function saveCertificateConfigAction(
     [SETTING_KEYS.CERT_PRESIDENT_NAME, String(formData.get("presidentName") ?? "").trim()],
     [SETTING_KEYS.CERT_DIRECTOR_SIGNATURE, String(formData.get("directorSignature") ?? "").trim()],
     [SETTING_KEYS.CERT_PRESIDENT_SIGNATURE, String(formData.get("presidentSignature") ?? "").trim()],
+    [SETTING_KEYS.CERT_BATCH_LABEL, String(formData.get("batchLabel") ?? "").trim()],
   ];
 
   await prisma.$transaction(

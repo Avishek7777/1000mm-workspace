@@ -104,7 +104,10 @@ export async function GET(req: NextRequest) {
   });
 
   const logoUrl = loadLogoDataUrl();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://portal.1000mmbd.org";
+  // /verify lives on the portal itself; NEXT_PUBLIC_APP_URL points to the
+  // public website, so it must not be used here.
+  const appUrl =
+    process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://portal.1000mm.org.bd";
 
   const cards = await Promise.all(
     enrollments.map(async (e) => {

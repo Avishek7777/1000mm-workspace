@@ -21,6 +21,7 @@ export default async function CertificateConfigPage() {
           SETTING_KEYS.CERT_DIRECTOR_SIGNATURE,
           SETTING_KEYS.CERT_PRESIDENT_NAME,
           SETTING_KEYS.CERT_PRESIDENT_SIGNATURE,
+          SETTING_KEYS.CERT_BATCH_LABEL,
         ],
       },
     },
@@ -40,7 +41,8 @@ export default async function CertificateConfigPage() {
           Certificate Config
         </h1>
         <p className="mt-0.5 text-sm text-gray-500">
-          Signatory names and signature images printed on issued certificates.
+          Signatory names, signature images, and the batch number printed on
+          issued certificates.
         </p>
       </div>
 
@@ -55,6 +57,7 @@ export default async function CertificateConfigPage() {
         directorSignature={map.get(SETTING_KEYS.CERT_DIRECTOR_SIGNATURE) || ""}
         presidentName={map.get(SETTING_KEYS.CERT_PRESIDENT_NAME) || ""}
         presidentSignature={map.get(SETTING_KEYS.CERT_PRESIDENT_SIGNATURE) || ""}
+        batchLabel={map.get(SETTING_KEYS.CERT_BATCH_LABEL) || ""}
         defaults={{
           directorName: CERT_DEFAULTS.directorName,
           directorTitle: CERT_DEFAULTS.directorTitle,

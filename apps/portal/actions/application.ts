@@ -486,6 +486,8 @@ export async function submitApplicationAction(
     ["parentPassportPhoto", DocumentKind.PARENT_PASSPORT_PHOTO],
     ["baptismCertificate", DocumentKind.BAPTISM_CERTIFICATE],
     ["parentsConsent", DocumentKind.PARENTS_CONSENT],
+    // Optional — applicants may attach a signed letter of intent
+    ["letterOfIntent", DocumentKind.LETTER_OF_INTENT],
   ];
   for (const [fieldName, kind] of docKinds) {
     const file = formData.get(fieldName) as File | null;
