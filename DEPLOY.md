@@ -29,6 +29,13 @@ prepares everything — then zip the **contents** of
 folder, select all, add to archive), so `apps/` and `node_modules/` sit at the
 root of the archive. The server's extractor only accepts `.zip`.
 
+> **Do not remove `nodeLinker: hoisted` from `pnpm-workspace.yaml`.** With
+> pnpm's default linker, `node_modules` is built from Windows junctions that
+> zip archives cannot carry — the deployed app then crashes with
+> `Cannot find module '@swc/helpers/...'`. The hoisted layout uses real
+> folders, and the packaging script additionally dereferences the few
+> junctions Turbopack itself emits (e.g. `.next/node_modules/@prisma/client-<hash>`).
+
 The packaging script also:
 
 - copies `public/` and `.next/static/` into each bundle (Next leaves them out);

@@ -1,3 +1,7 @@
+# Real directories instead of junctions/symlinks in node_modules — required so
+# the standalone deploy bundle survives zipping (see DEPLOY.md).
+nodeLinker: hoisted
+
 allowBuilds:
   "@parcel/watcher": true
   "@prisma/client": true

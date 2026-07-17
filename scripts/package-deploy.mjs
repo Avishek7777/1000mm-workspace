@@ -20,7 +20,16 @@
  * Usage:  node scripts/package-deploy.mjs [portal|website] [--zip]   (default: both apps, no zip)
  */
 
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -95,6 +104,33 @@ function ensureLinuxSharp(standaloneRoot) {
     force: true,
   });
   console.log("  sharp: linux-x64 binaries added at node_modules/@img");
+}
+
+/**
+ * Replace every symlink/junction inside the bundle with a real copy of its
+ * target. Zip archives can't carry Windows junctions — WinRAR/zip either drops
+ * them or dereferences them in ways that break Node's module resolution —
+ * and Turbopack emits e.g. `.next/node_modules/@prisma/client-<hash>` as a
+ * junction that compiled chunks require() at runtime.
+ */
+function dereferenceLinks(dir) {
+  let replaced = 0;
+  const walk = (d) => {
+    for (const entry of readdirSync(d, { withFileTypes: true })) {
+      const full = path.join(d, entry.name);
+      if (lstatSync(full).isSymbolicLink()) {
+        const target = realpathSync(full);
+        rmSync(full, { recursive: true, force: true });
+        cpSync(target, full, { recursive: true, dereference: true });
+        replaced++;
+      } else if (entry.isDirectory()) {
+        walk(full);
+      }
+    }
+  };
+  walk(dir);
+  if (replaced > 0) console.log(`  dereferenced ${replaced} junction(s)/symlink(s) into real copies`);
+  return replaced;
 }
 
 /**
@@ -186,6 +222,9 @@ function packageApp(app) {
     cpSync(envFile, path.join(appInBundle, ".env.production"));
     console.log("  copied .env.production (fallback; set real env in cPanel UI)");
   }
+
+  // Repeat until clean: a dereferenced copy may itself contain links.
+  for (let pass = 0; pass < 5 && dereferenceLinks(standalone) > 0; pass++);
 
   ensureLinuxSharp(standalone);
   ensurePrismaEngine(standalone);
