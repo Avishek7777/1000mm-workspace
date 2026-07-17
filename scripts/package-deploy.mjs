@@ -37,7 +37,12 @@ import os from "node:os";
 
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const deployDir = path.join(repoRoot, "deploy");
-const PRISMA_ENGINE = "libquery_engine-rhel-openssl-3.0.x.so.node";
+// Engines to ship: the host (Hosting Bangladesh) runs Debian with OpenSSL
+// 1.0.x — pruning that engine broke the first deploy. rhel kept as spare.
+const KEEP_ENGINES = [
+  "libquery_engine-debian-openssl-1.0.x.so.node",
+  "libquery_engine-rhel-openssl-3.0.x.so.node",
+];
 
 const args = process.argv.slice(2);
 const makeZip = args.includes("--zip");
@@ -144,7 +149,7 @@ function prunePlatformCruft(standaloneRoot) {
 
   const junkEngines = findFiles(standaloneRoot, (name) => {
     if (name.includes(".dll.node")) return true; // windows engines + .tmp leftovers
-    if (name.startsWith("libquery_engine-") && name !== PRISMA_ENGINE) return true;
+    if (name.startsWith("libquery_engine-") && !KEEP_ENGINES.includes(name)) return true;
     return false;
   });
   for (const f of junkEngines) {
@@ -164,14 +169,8 @@ function prunePlatformCruft(standaloneRoot) {
   );
 }
 
-/** Make sure the CloudLinux Prisma query engine is inside every generated client dir. */
+/** Make sure the Linux Prisma query engines are inside every generated client dir. */
 function ensurePrismaEngine(standaloneRoot) {
-  const present = findFiles(standaloneRoot, (name) => name === PRISMA_ENGINE);
-  if (present.length > 0) {
-    console.log(`  prisma: ${PRISMA_ENGINE} already in bundle`);
-    return;
-  }
-
   const clientDirs = findDirs(standaloneRoot, (name, full) =>
     name === "client" && full.replace(/\\/g, "/").endsWith(".prisma/client"),
   );
@@ -180,16 +179,24 @@ function ensurePrismaEngine(standaloneRoot) {
     return;
   }
 
-  const sources = findFiles(path.join(repoRoot, "node_modules", ".pnpm"), (name) => name === PRISMA_ENGINE);
-  if (sources.length === 0) {
-    throw new Error(
-      `${PRISMA_ENGINE} not found in the workspace. Run: pnpm --filter @1000mm/db exec prisma generate`,
-    );
-  }
+  for (const engine of KEEP_ENGINES) {
+    const present = findFiles(standaloneRoot, (name) => name === engine);
+    if (present.length > 0) {
+      console.log(`  prisma: ${engine} already in bundle`);
+      continue;
+    }
 
-  for (const dir of clientDirs) {
-    cpSync(sources[0], path.join(dir, PRISMA_ENGINE));
-    console.log(`  prisma: copied engine into ${path.relative(standaloneRoot, dir)}`);
+    const source = path.join(repoRoot, "node_modules", ".prisma", "client", engine);
+    if (!existsSync(source)) {
+      throw new Error(
+        `${engine} not found at ${source}. Run: pnpm --filter @1000mm/db exec prisma generate`,
+      );
+    }
+
+    for (const dir of clientDirs) {
+      cpSync(source, path.join(dir, engine));
+      console.log(`  prisma: copied ${engine} into ${path.relative(standaloneRoot, dir)}`);
+    }
   }
 }
 
