@@ -132,6 +132,16 @@ pnpm --filter @1000mm/db exec prisma db push      # current workflow (schema dri
 
 ## Troubleshooting
 
+- **Both domains serve the same app** — the portal subdomain must have its
+  **own document root** (`portal_html`), not share `public_html`. The Node
+  selector routes via `.htaccess` in the docroot; a shared docroot means one
+  app captures both domains. Fix the docroot in cPanel → Domains, restart the
+  portal app, and remove the stale `nodeapps/portal` block from
+  `public_html/.htaccess`.
+- **Hosting process limit (500) exhausted** — almost always a crash-looping
+  app (each request spawns a dying process). Fix the crash cause; don't just
+  restart. Healthy idle is ~110 processes.
+
 - **503 / "Passenger could not spawn"** — open the app's log (path shown in the
   Node.js App screen, or `~/nodeapps/<app>/stderr.log`). Most common causes:
   wrong startup file path, or Node version below 20.9.
