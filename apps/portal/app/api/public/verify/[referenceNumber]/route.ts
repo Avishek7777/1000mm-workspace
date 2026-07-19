@@ -16,6 +16,7 @@ export async function GET(
     },
     select: {
       certificateIssuedAt: true,
+      certificateRevokedAt: true,
       deploymentLocation: true,
       trainee: {
         select: {
@@ -35,6 +36,21 @@ export async function GET(
       {
         status: 404,
         headers: { "Access-Control-Allow-Origin": "*" },
+      },
+    );
+  }
+
+  if (enrollment.certificateRevokedAt) {
+    return NextResponse.json(
+      {
+        valid: false,
+        revoked: true,
+        message: "This certificate has been revoked by 1000MMBD.",
+        revokedAt: enrollment.certificateRevokedAt,
+      },
+      {
+        status: 410,
+        headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" },
       },
     );
   }

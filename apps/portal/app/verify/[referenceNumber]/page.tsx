@@ -17,6 +17,7 @@ export default async function VerifyPage({
     },
     select: {
       certificateIssuedAt: true,
+      certificateRevokedAt: true,
       deploymentLocation: true,
       trainee: {
         select: {
@@ -30,7 +31,8 @@ export default async function VerifyPage({
     },
   });
 
-  const isValid = !!enrollment;
+  const isRevoked = !!enrollment?.certificateRevokedAt;
+  const isValid = !!enrollment && !isRevoked;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
@@ -88,6 +90,38 @@ export default async function VerifyPage({
                   <p className="mt-0.5 text-sm font-medium text-gray-900">{item.value}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        ) : isRevoked ? (
+          <div className="rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
+            <div className="bg-red-600 px-6 py-4 text-white">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-bold">Certificate Revoked</p>
+                  <p className="text-[11px] text-red-200">
+                    The certificate for reference number <strong>{ref}</strong> has been revoked by 1000MMBD.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-5 text-sm text-gray-500">
+              <p>
+                This certificate was issued but is no longer valid
+                {enrollment?.certificateRevokedAt && (
+                  <>
+                    {" "}as of{" "}
+                    {new Date(enrollment.certificateRevokedAt).toLocaleDateString("en-GB", {
+                      day: "numeric", month: "long", year: "numeric",
+                    })}
+                  </>
+                )}
+                . Contact the 1000MM Bangladesh office for details.
+              </p>
             </div>
           </div>
         ) : (

@@ -178,6 +178,8 @@ export default async function TraineeDetailPage({
               <CertificateButton
                 enrollmentId={enrollment.id}
                 issued={enrollment.certificateIssued}
+                revoked={!!enrollment.certificateRevokedAt}
+                canRevoke={isStaff}
               />
             )}
           </div>
@@ -212,7 +214,11 @@ export default async function TraineeDetailPage({
               },
               {
                 label: "Certificate",
-                value: enrollment.certificateIssued ? "Issued" : "Not issued",
+                value: enrollment.certificateRevokedAt
+                  ? "Revoked"
+                  : enrollment.certificateIssued
+                    ? "Issued"
+                    : "Not issued",
               },
             ].map((item) => (
               <div key={item.label}>

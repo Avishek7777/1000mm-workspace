@@ -558,6 +558,8 @@ model ProgramEnrollment {
   attendanceConfirmed    Boolean         @default(false)
   certificateIssued      Boolean         @default(false)
   certificateIssuedAt    DateTime?
+  certificateRevokedAt   DateTime?
+  certificateRevokeReason String?
   deploymentLocation     String?
   deploymentLatitude     Float?
   deploymentLongitude    Float?
@@ -1250,6 +1252,8 @@ enum AuditAction {
   COMPLAINT_SUBMITTED
   ID_CARDS_GENERATED
   CERTIFICATE_GENERATED
+  CERTIFICATE_REVOKED
+  CERTIFICATE_RESTORED
   DONATION_INITIATED
   DONATION_COMPLETED
   DONATION_REFUNDED

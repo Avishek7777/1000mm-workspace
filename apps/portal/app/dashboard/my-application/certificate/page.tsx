@@ -17,6 +17,7 @@ export default async function MyCertificatePage() {
       id: true,
       certificateIssued: true,
       certificateIssuedAt: true,
+      certificateRevokedAt: true,
       program: { select: { code: true, title: true, endDate: true } },
       application: { select: { referenceNumber: true } },
     },
@@ -37,6 +38,20 @@ export default async function MyCertificatePage() {
       {!enrollment ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
           <p className="text-sm text-gray-400">No active enrollment found.</p>
+        </div>
+      ) : enrollment.certificateRevokedAt ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center space-y-3">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+            </svg>
+          </div>
+          <h2 className="text-sm font-semibold text-red-800">Certificate Revoked</h2>
+          <p className="text-xs text-red-700">
+            Your certificate for <strong>{enrollment.program.title}</strong> ({enrollment.program.code}) has
+            been revoked and can no longer be downloaded or verified. Please contact
+            the 1000MM Bangladesh office if you believe this is a mistake.
+          </p>
         </div>
       ) : !enrollment.certificateIssued ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-8 text-center space-y-3">
@@ -92,7 +107,7 @@ export default async function MyCertificatePage() {
         </div>
       )}
 
-      {refNum && enrollment?.certificateIssued && (
+      {refNum && enrollment?.certificateIssued && !enrollment?.certificateRevokedAt && (
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <p className="mb-2 text-xs font-semibold text-gray-500">Verify Certificate</p>
           <p className="text-xs text-gray-500">

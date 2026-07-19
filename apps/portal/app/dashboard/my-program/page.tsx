@@ -363,11 +363,13 @@ export default async function MyProgramPage() {
           <div>
             <p className="text-[11px] text-gray-400">Certificate</p>
             <p
-              className={`font-medium ${enrollment.certificateIssued ? "text-teal-700" : "text-gray-500"}`}
+              className={`font-medium ${enrollment.certificateRevokedAt ? "text-red-600" : enrollment.certificateIssued ? "text-teal-700" : "text-gray-500"}`}
             >
-              {enrollment.certificateIssued
-                ? `Issued ${formatDate(enrollment.certificateIssuedAt)}`
-                : "Not yet issued"}
+              {enrollment.certificateRevokedAt
+                ? "Revoked"
+                : enrollment.certificateIssued
+                  ? `Issued ${formatDate(enrollment.certificateIssuedAt)}`
+                  : "Not yet issued"}
             </p>
           </div>
         </div>

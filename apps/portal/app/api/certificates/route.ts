@@ -52,6 +52,13 @@ export async function GET(req: NextRequest) {
 
   if (!enrollment) return new NextResponse("Enrollment not found", { status: 404 });
 
+  if (enrollment.certificateRevokedAt) {
+    return new NextResponse(
+      "This certificate has been revoked and can no longer be downloaded. A System Admin or the Union Director can restore it from the trainee's page.",
+      { status: 403 },
+    );
+  }
+
   const mainDirector = await prisma.user.findFirst({
     where: { role: "MAIN_DIRECTOR", deletedAt: null },
     select: { fullName: true },
