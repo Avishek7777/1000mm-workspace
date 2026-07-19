@@ -200,8 +200,19 @@ export async function uploadLmdDocumentAction(
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0)
     return { ok: false, error: "No file provided." };
-  if (file.size > 5 * 1024 * 1024)
-    return { ok: false, error: "File must be under 5 MB." };
+  if (file.size > 2 * 1024 * 1024)
+    return { ok: false, error: "File must be under 2 MB." };
+  const lmdAllowed: Record<string, string[]> = {
+    "application/pdf": ["pdf"],
+    "image/jpeg": ["jpg", "jpeg"],
+    "image/png": ["png"],
+  };
+  const lmdExts = lmdAllowed[file.type];
+  if (!lmdExts)
+    return { ok: false, error: "Only PDF, JPG, or PNG files are allowed." };
+  const lmdExt = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!lmdExts.includes(lmdExt))
+    return { ok: false, error: "File extension does not match its type." };
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const prefix = r2Prefix[kind] ?? "lmd-docs";

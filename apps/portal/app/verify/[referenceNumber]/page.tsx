@@ -9,13 +9,16 @@ export default async function VerifyPage({
   const { referenceNumber } = await params;
   const ref = referenceNumber.trim().toUpperCase();
 
+  // No certificateIssued filter: the same QR/reference is printed on ID cards,
+  // which exist before any certificate is issued. An enrollment without a
+  // certificate verifies as a trainee ID instead of "not found".
   const enrollment = await prisma.programEnrollment.findFirst({
     where: {
       deletedAt: null,
-      certificateIssued: true,
       application: { referenceNumber: ref },
     },
     select: {
+      certificateIssued: true,
       certificateIssuedAt: true,
       certificateRevokedAt: true,
       deploymentLocation: true,
@@ -32,7 +35,8 @@ export default async function VerifyPage({
   });
 
   const isRevoked = !!enrollment?.certificateRevokedAt;
-  const isValid = !!enrollment && !isRevoked;
+  const isValid = !!enrollment?.certificateIssued && !isRevoked;
+  const isIdOnly = !!enrollment && !enrollment.certificateIssued && !isRevoked;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
@@ -83,6 +87,42 @@ export default async function VerifyPage({
                         day: "numeric", month: "long", year: "numeric",
                       })
                     : "—",
+                },
+              ].map((item) => (
+                <div key={item.label} className="py-3">
+                  <p className="text-[11px] text-gray-400">{item.label}</p>
+                  <p className="mt-0.5 text-sm font-medium text-gray-900">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : isIdOnly ? (
+          <div className="rounded-2xl border border-blue-200 bg-white shadow-sm overflow-hidden">
+            {/* Trainee ID banner — same reference is printed on ID cards before any certificate exists */}
+            <div className="bg-blue-700 px-6 py-4 text-white">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/20">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-bold">Trainee ID Verified</p>
+                  <p className="text-[11px] text-blue-200">
+                    This ID belongs to a registered 1000MMBD trainee. No certificate has been issued yet.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="divide-y divide-gray-100 px-6">
+              {[
+                { label: "Reference Number", value: ref },
+                { label: "Name", value: enrollment!.trainee.fullName },
+                { label: "Mission", value: enrollment!.trainee.homeMission?.name ?? "—" },
+                { label: "Program", value: `${enrollment!.program.code} — ${enrollment!.program.title}` },
+                {
+                  label: "Training Period",
+                  value: `${new Date(enrollment!.program.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} – ${new Date(enrollment!.program.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`,
                 },
               ].map((item) => (
                 <div key={item.label} className="py-3">

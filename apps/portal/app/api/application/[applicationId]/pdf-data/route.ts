@@ -73,8 +73,11 @@ export async function GET(
   }>;
 
   const photoDoc = app.documents.find((d) => d.kind === "PROFILE_PHOTO");
+  // Relative URL: the PDF is rendered in the browser, which resolves it against
+  // the page origin. Building an absolute URL from req.url breaks behind the
+  // reverse proxy (internal host / http scheme → blocked as mixed content).
   const profilePhotoUrl = photoDoc
-    ? new URL(`/api/uploads/${photoDoc.storageKey}`, req.url).toString()
+    ? `/api/uploads/${photoDoc.storageKey}`
     : undefined;
 
   const formatAddress = (

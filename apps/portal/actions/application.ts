@@ -34,6 +34,38 @@ async function getClientIp(): Promise<string | null> {
 
 // ─── File upload helper ───────────────────────────────────────────────────────
 
+const UPLOAD_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+const DOC_TYPES: Record<string, string[]> = {
+  "application/pdf": ["pdf"],
+  "image/jpeg": ["jpg", "jpeg"],
+  "image/png": ["png"],
+};
+const IMAGE_TYPES: Record<string, string[]> = {
+  "image/jpeg": ["jpg", "jpeg"],
+  "image/png": ["png"],
+};
+
+/**
+ * Server-side guard for applicant uploads: size cap, MIME whitelist, and a
+ * MIME↔extension cross-check (so malware.exe renamed to .png is rejected).
+ * Returns an error message, or null if the file is acceptable.
+ */
+function validateUpload(
+  file: File,
+  opts?: { imageOnly?: boolean },
+): string | null {
+  if (file.size > UPLOAD_MAX_BYTES) return "File must be under 2 MB.";
+  const allowed = opts?.imageOnly ? IMAGE_TYPES : DOC_TYPES;
+  const exts = allowed[file.type];
+  if (!exts)
+    return opts?.imageOnly
+      ? "Only JPG or PNG images are allowed."
+      : "Only PDF, JPG, or PNG files are allowed.";
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!exts.includes(ext)) return "File extension does not match its type.";
+  return null;
+}
+
 async function uploadFormFile(
   file: File | null,
   kind: DocumentKind,
@@ -292,6 +324,9 @@ export async function saveDraftAction(
 
     const photoFile = formData.get("profilePhoto") as File | null;
     if (photoFile && photoFile.size > 0) {
+      const uploadError = validateUpload(photoFile, { imageOnly: true });
+      if (uploadError)
+        return { ok: false, fieldErrors: { profilePhoto: uploadError } };
       const doc = await uploadFormFile(
         photoFile,
         DocumentKind.PROFILE_PHOTO,
@@ -374,6 +409,15 @@ export async function saveDraftAction(
       gpa: number;
       passingYear: number;
     }>;
+
+    for (const entry of entries) {
+      const certFile = formData.get(`cert_${entry.id}`) as File | null;
+      if (certFile && certFile.size > 0) {
+        const uploadError = validateUpload(certFile);
+        if (uploadError)
+          return { ok: false, fieldErrors: { [`cert_${entry.id}`]: uploadError } };
+      }
+    }
 
     const savedEntries = await Promise.all(
       entries.map(async (entry, idx) => {
@@ -462,6 +506,29 @@ export async function submitApplicationAction(
     }
   }
 
+  // Required documents: accept either a fresh upload or one saved earlier.
+  const requiredDocs: Array<[string, DocumentKind, string]> = [
+    [
+      "districtPastorRecommendation",
+      DocumentKind.DISTRICT_PASTOR_RECOMMENDATION,
+      "District Pastor's Recommendation Letter",
+    ],
+    ["baptismCertificate", DocumentKind.BAPTISM_CERTIFICATE, "Baptism Certificate"],
+    ["birthCertificate", DocumentKind.BIRTH_CERTIFICATE, "Birth Certificate"],
+  ];
+  for (const [fieldName, kind, label] of requiredDocs) {
+    const file = formData.get(fieldName) as File | null;
+    if (file && file.size > 0) continue;
+    const existing = await prisma.applicationDocument.findFirst({
+      where: { applicationId, kind, deletedAt: null },
+    });
+    if (!existing)
+      return {
+        ok: false,
+        fieldErrors: { [fieldName]: `${label} is required.` },
+      };
+  }
+
   const currentFormData = (app.formData as Record<string, unknown>) ?? {};
   const mergedFormData = {
     ...currentFormData,
@@ -491,6 +558,11 @@ export async function submitApplicationAction(
   ];
   for (const [fieldName, kind] of docKinds) {
     const file = formData.get(fieldName) as File | null;
+    if (file && file.size > 0) {
+      const uploadError = validateUpload(file);
+      if (uploadError)
+        return { ok: false, fieldErrors: { [fieldName]: uploadError } };
+    }
     await uploadFormFile(file, kind, applicationId, userId);
   }
 

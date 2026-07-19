@@ -36,38 +36,40 @@ const BASE_DOCUMENTS: DocField[] = [
     name: "districtPastorRecommendation",
     kind: "DISTRICT_PASTOR_RECOMMENDATION",
     label: "District Pastor's Recommendation Letter",
-    hint: "Letter from your district pastor. PDF or image, max 1 MB.",
+    hint: "Letter from your district pastor. PDF, JPG, or PNG, max 2 MB.",
     required: true,
   },
   {
     name: "baptismCertificate",
     kind: "BAPTISM_CERTIFICATE",
     label: "Baptism Certificate",
-    hint: "Your official baptism certificate. PDF or image, max 400 KB.",
+    hint: "Your official baptism certificate. PDF, JPG, or PNG, max 2 MB.",
+    required: true,
   },
   {
     name: "nid",
     kind: "NID",
     label: "National ID Card (NID)",
-    hint: "Your NID scan. PDF or image, max 400 KB.",
+    hint: "Your NID scan. PDF, JPG, or PNG, max 2 MB.",
   },
   {
     name: "birthCertificate",
     kind: "BIRTH_CERTIFICATE",
     label: "Birth Certificate",
-    hint: "Your birth certificate. PDF or image, max 400 KB.",
+    hint: "Your birth certificate. PDF, JPG, or PNG, max 2 MB.",
+    required: true,
   },
   {
     name: "parentPassportPhoto",
     kind: "PARENT_PASSPORT_PHOTO",
     label: "Parent's Passport-size Photo",
-    hint: "Passport-sized photo of one parent. JPG or PNG, max 400 KB.",
+    hint: "Passport-sized photo of one parent. JPG or PNG, max 2 MB.",
   },
   {
     name: "letterOfIntent",
     kind: "LETTER_OF_INTENT",
     label: "Letter of Intent",
-    hint: "Optional — a signed letter stating your intent to serve. PDF or image, max 400 KB.",
+    hint: "Optional — a signed letter stating your intent to serve. PDF, JPG, or PNG, max 2 MB.",
   },
 ];
 
@@ -289,8 +291,8 @@ export function Page4Application({
       label: "Parent's Consent Form",
       required: isUnder21,
       hint: isUnder21
-        ? "Required — applicant is under 21. PDF or image, max 400 KB."
-        : "Optional. PDF or image, max 400 KB.",
+        ? "Required — applicant is under 21. PDF, JPG, or PNG, max 2 MB."
+        : "Optional. PDF, JPG, or PNG, max 2 MB.",
     },
   ];
 

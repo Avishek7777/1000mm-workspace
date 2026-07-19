@@ -14,8 +14,21 @@ export async function GET(req: NextRequest) {
   if (!allowed.includes(actor.role))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const ref = new URL(req.url).searchParams.get("ref")?.trim();
+  let ref = new URL(req.url).searchParams.get("ref")?.trim();
   if (!ref) return NextResponse.json({ error: "ref is required" }, { status: 400 });
+
+  // ID-card QR codes encode a full verify URL (https://…/verify/REF) so that
+  // phone scanners open the verification page. When such a URL is scanned by
+  // the attendance scanner, extract the reference number from it.
+  if (/^https?:\/\//i.test(ref)) {
+    try {
+      const segments = new URL(ref).pathname.split("/").filter(Boolean);
+      ref = decodeURIComponent(segments[segments.length - 1] ?? "").trim();
+    } catch {
+      ref = "";
+    }
+    if (!ref) return NextResponse.json({ error: "Invalid QR code" }, { status: 400 });
+  }
 
   let enrollment = await prisma.programEnrollment.findFirst({
     where: {

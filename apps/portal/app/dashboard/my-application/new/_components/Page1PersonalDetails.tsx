@@ -182,7 +182,7 @@ export function Page1PersonalDetails({
               <input
                 type="file"
                 name="profilePhoto"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png"
                 className="file-input-hidden"
                 onChange={handlePhotoChange}
               />
