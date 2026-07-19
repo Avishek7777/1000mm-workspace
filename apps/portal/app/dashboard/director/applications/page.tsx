@@ -47,6 +47,11 @@ const DIRECTOR_STATUSES: ApplicationStatus[] = [
   "REJECTED",
 ];
 
+// "All" filter option: every status except unsubmitted drafts.
+const ALL_STATUSES = (Object.keys(STATUS_LABELS) as ApplicationStatus[]).filter(
+  (s) => s !== "DRAFT",
+);
+
 type SearchParams = {
   status?: string;
   mission?: string;
@@ -97,10 +102,14 @@ export default async function DirectorApplicationsPage({
 
   const where = {
     deletedAt: null as null,
-    // Default: show all post-LMD statuses; override with specific filter
-    status: status
-      ? { equals: status as ApplicationStatus }
-      : { in: DIRECTOR_STATUSES },
+    // Default: show all post-LMD statuses; override with specific filter.
+    // "ALL" shows every status except unsubmitted drafts.
+    status:
+      status === "ALL"
+        ? { in: ALL_STATUSES }
+        : status
+          ? { equals: status as ApplicationStatus }
+          : { in: DIRECTOR_STATUSES },
     ...(missionId ? { submittedFromMissionId: missionId } : {}),
     ...(program ? { window: { programId: program } } : {}),
     ...(search
@@ -162,7 +171,10 @@ export default async function DirectorApplicationsPage({
   // When no status is chosen, send the joined default set so the export's
   // `{ in: [...] }` matches the page's `{ in: DIRECTOR_STATUSES }`.
   const exportFilters = {
-    status: status ?? DIRECTOR_STATUSES.join(","),
+    status:
+      status === "ALL"
+        ? ALL_STATUSES.join(",")
+        : (status ?? DIRECTOR_STATUSES.join(",")),
     mission,
     programId: program,
     search,
@@ -197,7 +209,11 @@ export default async function DirectorApplicationsPage({
       {/* Print-only org/date header */}
       <div className="hidden print:block text-xs text-gray-500 -mt-4">
         1000 Missionary Movement Bangladesh — Applications List
-        {status ? ` · ${STATUS_LABELS[status as ApplicationStatus] ?? status}` : " · Recommended & Above"}
+        {status === "ALL"
+          ? " · All Statuses"
+          : status
+            ? ` · ${STATUS_LABELS[status as ApplicationStatus] ?? status}`
+            : " · Recommended & Above"}
         {mission ? ` · ${mission}` : ""}
         {selectedProgram ? ` · ${selectedProgram.code}` : ""}
         {year ? ` · ${year}` : ""} ·{" "}
@@ -249,6 +265,7 @@ export default async function DirectorApplicationsPage({
           className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
         >
           <option value="">Recommended & Above</option>
+          <option value="ALL">All Statuses</option>
           {(
             [
               "RECOMMENDED",
