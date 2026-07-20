@@ -11,8 +11,8 @@ needed and not used.
 | portal  | https://portal.1000mm.org.bd | `deploy/portal.zip`  |
 
 Requirements on the server: Node **20.9+** (pick 20 or 22 in the cPanel Node.js
-selector). The database is Supabase Postgres (external), so nothing DB-related
-runs on this host.
+selector). The database is PostgreSQL running on the host itself (`localhost`
+from the apps' point of view) — see the Database section below.
 
 ---
 
@@ -25,20 +25,31 @@ node scripts/package-deploy.mjs --zip     # → deploy/portal.zip, deploy/websit
 
 Prefer zipping manually (WinRAR)? Run the script **without** `--zip` — it still
 prepares everything — then zip the **contents** of
-`apps/portal/.next/standalone` and `apps/website/.next/standalone` (open the
-folder, select all, add to archive), so `apps/` and `node_modules/` sit at the
-root of the archive. The server's extractor only accepts `.zip`.
+`apps/portal/.next-build/standalone` and `apps/website/.next-build/standalone`
+(open the folder, select all, add to archive), so `apps/` and `node_modules/`
+sit at the root of the archive. The server's extractor only accepts `.zip`.
+
+> **Production builds use `.next-build/`, not `.next/`.** `next build` and
+> `next dev` both default to the same output directory; sharing it means a
+> deploy build silently corrupts the dev server's on-disk route manifests —
+> routes start 404ing or 500ing, and restarting the dev server does **not**
+> fix it (the corruption is on disk, not just in the running process). The
+> fix, already wired up in `next.config.ts` for both apps: production builds
+> (`phase === PHASE_PRODUCTION_BUILD`) get `distDir: ".next-build"`, dev
+> keeps plain `.next/`. If you ever see routes randomly 404ing in dev after
+> running a deploy build, delete `apps/<app>/.next` (safe — it's just a
+> cache) and restart the dev server.
 
 > **Do not remove `nodeLinker: hoisted` from `pnpm-workspace.yaml`.** With
 > pnpm's default linker, `node_modules` is built from Windows junctions that
 > zip archives cannot carry — the deployed app then crashes with
 > `Cannot find module '@swc/helpers/...'`. The hoisted layout uses real
 > folders, and the packaging script additionally dereferences the few
-> junctions Turbopack itself emits (e.g. `.next/node_modules/@prisma/client-<hash>`).
+> junctions Turbopack itself emits (e.g. `.next-build/node_modules/@prisma/client-<hash>`).
 
 The packaging script also:
 
-- copies `public/` and `.next/static/` into each bundle (Next leaves them out);
+- copies `public/` and `.next-build/static/` into each bundle (Next leaves them out);
 - injects **Linux x64 sharp** binaries (we build on Windows, the server is Linux —
   without these, `next/image` optimization crashes);
 - verifies the Prisma engine for **rhel-openssl-3.0.x** (CloudLinux) is in the

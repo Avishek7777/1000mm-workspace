@@ -3,8 +3,14 @@
  *
  * Prerequisite: `pnpm --filter <app> build` (next.config has `output: "standalone"`).
  *
+ * Production builds land in `.next-build/`, NOT the `.next/` the dev server
+ * uses — `next build` and `next dev` both default to the same output dir,
+ * and sharing it lets a deploy build corrupt the dev server's route
+ * manifests on disk (a dev-server restart alone won't fix that; see
+ * next.config.ts). Never point this script at plain `.next/`.
+ *
  * What it does, per app:
- *   1. Copies `public/` and `.next/static/` into the standalone output
+ *   1. Copies `public/` and `.next-build/static/` into the standalone output
  *      (Next intentionally leaves them out — see docs on `output`).
  *   2. Copies `.env.production` next to the app's server.js as a fallback;
  *      the authoritative runtime env is what you set in cPanel's Node.js app UI.
@@ -203,7 +209,7 @@ function ensurePrismaEngine(standaloneRoot) {
 function packageApp(app) {
   console.log(`\n── Packaging ${app} ──`);
   const appDir = path.join(repoRoot, "apps", app);
-  const standalone = path.join(appDir, ".next", "standalone");
+  const standalone = path.join(appDir, ".next-build", "standalone");
   const appInBundle = path.join(standalone, "apps", app);
 
   if (!existsSync(path.join(appInBundle, "server.js"))) {
@@ -218,11 +224,14 @@ function packageApp(app) {
   });
   console.log("  copied public/");
 
-  cpSync(path.join(appDir, ".next", "static"), path.join(appInBundle, ".next", "static"), {
+  // The standalone output preserves the custom distDir name internally too
+  // (apps/<app>/.next-build/, not apps/<app>/.next/) — verified by inspecting
+  // a real build rather than assuming.
+  cpSync(path.join(appDir, ".next-build", "static"), path.join(appInBundle, ".next-build", "static"), {
     recursive: true,
     force: true,
   });
-  console.log("  copied .next/static/");
+  console.log("  copied .next-build/static/");
 
   const envFile = path.join(appDir, ".env.production");
   if (existsSync(envFile)) {

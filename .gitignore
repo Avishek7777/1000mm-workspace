@@ -19,6 +19,8 @@ node_modules/
 /.next/
 /out/
 .next
+# Deploy-build output (kept separate from dev's .next/ — see next.config.ts)
+.next-build
 
 .next.zip
 
