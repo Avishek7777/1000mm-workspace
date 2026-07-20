@@ -72,6 +72,22 @@ function renderNotification(
           ? `Your completion certificate for ${data.programTitle as string} has been issued. Download it from My Certificate.`
           : "Your completion certificate has been issued. Download it from your dashboard.",
       };
+    case "salary.request_submitted":
+      return {
+        icon: "application",
+        title: "Salary Request Submitted",
+        body: (data.period as string)
+          ? `Your Local Mission Director submitted your salary request for ${data.period as string}.`
+          : "Your Local Mission Director submitted a salary request on your behalf.",
+      };
+    case "salary.request_reviewed":
+      return {
+        icon: "application",
+        title: data.status === "APPROVED" ? "Salary Request Approved" : "Salary Request Rejected",
+        body: (data.period as string)
+          ? `Your salary request for ${data.period as string} was ${((data.status as string) ?? "").toLowerCase()}.`
+          : `Your salary request was ${((data.status as string) ?? "").toLowerCase()}.`,
+      };
     default:
       return {
         icon: "announcement",

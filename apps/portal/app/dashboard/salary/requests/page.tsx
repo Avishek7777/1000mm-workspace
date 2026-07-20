@@ -26,6 +26,13 @@ const STATUS_STYLES: Record<string, string> = {
   REJECTED: "bg-red-100 text-red-700",
 };
 
+const REVIEWER_ROLE_LABELS: Record<string, string> = {
+  MAIN_DIRECTOR: "Union Director",
+  SECRETARY: "Secretary",
+  ASSOCIATE_DIRECTOR: "Associate Director",
+  SYSTEM_ADMIN: "System Administrator",
+};
+
 export default async function SalaryRequestsPage({
   searchParams,
 }: {
@@ -289,7 +296,7 @@ export default async function SalaryRequestsPage({
                   )}
                   {r.reviewedBy && (
                     <p className="mt-0.5 text-[11px] text-gray-400">
-                      Reviewed By: {r.reviewedBy.role === "SYSTEM_ADMIN" ? "System Administrator" : "Union Director"} — {r.reviewedBy.fullName}
+                      Reviewed By: {REVIEWER_ROLE_LABELS[r.reviewedBy.role] ?? r.reviewedBy.role} — {r.reviewedBy.fullName}
                     </p>
                   )}
                 </div>

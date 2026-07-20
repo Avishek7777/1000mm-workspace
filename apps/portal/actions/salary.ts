@@ -5,12 +5,18 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@1000mm/db";
 import { requireDbUser } from "@/lib/auth/helpers";
 import { SETTINGS } from "@/lib/settings";
+import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 
 export type ActionResult = {
   ok: boolean;
   error?: string;
   fieldErrors?: Record<string, string>;
 };
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -267,6 +273,13 @@ export async function submitSalaryRequestAction(
     throw err;
   }
 
+  await createNotification({
+    userId: missionaryId,
+    templateKey: NOTIFICATION_TEMPLATES.SALARY_REQUEST_SUBMITTED,
+    templateData: { period: `${MONTH_NAMES[month - 1]} ${year}` },
+    actionUrl: "/dashboard/salary-request",
+  }).catch(() => {});
+
   revalidatePath("/dashboard/lmd/salary");
   revalidatePath("/dashboard/salary-request");
   return { ok: true };
@@ -284,7 +297,7 @@ export async function reviewSalaryRequestAction(
 
   const notes = formData.get("notes")?.toString().trim() || null;
 
-  await prisma.salaryRequest.update({
+  const updated = await prisma.salaryRequest.update({
     where: { id: requestId },
     data: {
       status,
@@ -293,6 +306,16 @@ export async function reviewSalaryRequestAction(
       notes,
     },
   });
+
+  await createNotification({
+    userId: updated.missionaryId,
+    templateKey: NOTIFICATION_TEMPLATES.SALARY_REQUEST_REVIEWED,
+    templateData: {
+      status,
+      period: `${MONTH_NAMES[updated.month - 1]} ${updated.year}`,
+    },
+    actionUrl: "/dashboard/salary-request",
+  }).catch(() => {});
 
   revalidatePath("/dashboard/salary/requests");
   return { ok: true };

@@ -16,7 +16,13 @@ export async function GET(
     return new NextResponse("Unauthorized", { status: 401 });
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user || !["SYSTEM_ADMIN", "MAIN_DIRECTOR"].includes(user.role))
+  // Match who can review requests (reviewSalaryRequestAction / the requests
+  // list page) — Secretary and Associate Director can approve a request and
+  // must be able to download the invoice for the one they just approved.
+  if (
+    !user ||
+    !["SYSTEM_ADMIN", "MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR"].includes(user.role)
+  )
     return new NextResponse("Forbidden", { status: 403 });
 
   const { requestId } = await params;
@@ -48,12 +54,17 @@ export async function GET(
     minute: "2-digit",
   });
 
-  const mainDirector = await prisma.user.findFirst({
-    where: { role: "MAIN_DIRECTOR", deletedAt: null },
-    select: { fullName: true },
-  });
-  const reviewerName = mainDirector?.fullName ?? request.reviewedBy?.fullName ?? user.fullName;
-  const reviewerRole = "Union Director";
+  const REVIEWER_ROLE_LABELS: Record<string, string> = {
+    MAIN_DIRECTOR: "Union Director",
+    SECRETARY: "Secretary",
+    ASSOCIATE_DIRECTOR: "Associate Director",
+    SYSTEM_ADMIN: "System Administrator",
+  };
+  // Credit whoever actually clicked Approve — not just any Main Director.
+  const reviewerName = request.reviewedBy?.fullName ?? user.fullName;
+  const reviewerRole = request.reviewedBy
+    ? (REVIEWER_ROLE_LABELS[request.reviewedBy.role] ?? request.reviewedBy.role)
+    : (REVIEWER_ROLE_LABELS[user.role] ?? user.role);
 
   let logoSrc: string | undefined;
   try {

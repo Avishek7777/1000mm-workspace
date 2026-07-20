@@ -97,6 +97,8 @@ export const NOTIFICATION_TEMPLATES = {
   COMPLAINT_SUBMITTED: "complaint.submitted",
   COMPLAINT_RESPONSE: "complaint.response",
   CERTIFICATE_ISSUED: "certificate.issued",
+  SALARY_REQUEST_SUBMITTED: "salary.request_submitted",
+  SALARY_REQUEST_REVIEWED: "salary.request_reviewed",
 } as const;
 
 export type NotificationTemplateKey =
