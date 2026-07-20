@@ -2,10 +2,9 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { prisma } from "@1000mm/db";
-import { requireDbUser, requireAuthenticatedDbUser } from "@/lib/auth/helpers";
-import { isSettingEnabled, SETTINGS, getSettings } from "@/lib/settings";
+import { requireDbUser } from "@/lib/auth/helpers";
+import { SETTINGS } from "@/lib/settings";
 
 export type ActionResult = {
   ok: boolean;
@@ -25,11 +24,6 @@ async function requireLmd() {
   return { ...user, directedMission: mission };
 }
 
-async function requireMissionary() {
-  const user = await requireAuthenticatedDbUser();
-  if (!user.isMissionary) redirect("/dashboard");
-  return user;
-}
 
 // ─── SET SALARY RANGE (SA / UD) ───────────────────────────────────────────────
 
@@ -187,19 +181,30 @@ export async function removeSalaryAssignmentAction(
 
 // ─── SUBMIT SALARY REQUEST (MISSIONARY) ──────────────────────────────────────
 
+// Requests are submitted by the LMD on behalf of a missionary in their
+// mission — missionaries no longer self-submit (they can still view their
+// own status/history on /dashboard/salary-request, read-only).
 export async function submitSalaryRequestAction(
+  missionaryId: string,
   _prev: ActionResult,
   _formData: FormData,
 ): Promise<ActionResult> {
-  const user = await requireMissionary();
+  const user = await requireLmd();
+  if (!user.directedMission)
+    return { ok: false, error: "No mission assigned to your account." };
+
+  const missionary = await prisma.user.findFirst({
+    where: {
+      id: missionaryId,
+      homeMissionId: user.directedMission.id,
+      isMissionary: true,
+      deletedAt: null,
+    },
+  });
+  if (!missionary)
+    return { ok: false, error: "Missionary not found in your mission." };
 
   // Check request window
-  const settings = await getSettings([
-    SETTINGS.SALARY_WINDOW_START,
-    SETTINGS.SALARY_WINDOW_END,
-  ]);
-
-  // Get window start/end from settings (stored as numbers)
   const settingStart = await prisma.systemSetting.findUnique({
     where: { key: SETTINGS.SALARY_WINDOW_START },
   });
@@ -224,29 +229,29 @@ export async function submitSalaryRequestAction(
 
   // Check for duplicate
   const existing = await prisma.salaryRequest.findUnique({
-    where: { missionaryId_month_year: { missionaryId: user.id, month, year } },
+    where: { missionaryId_month_year: { missionaryId, month, year } },
   });
   if (existing)
     return {
       ok: false,
-      error: "You already submitted a request for this month.",
+      error: "A request has already been submitted for this missionary this month.",
     };
 
   // Get salary assignment
   const cycle = year;
   const assignment = await prisma.salaryAssignment.findUnique({
-    where: { missionaryId_cycle: { missionaryId: user.id, cycle } },
+    where: { missionaryId_cycle: { missionaryId, cycle } },
   });
   if (!assignment)
     return {
       ok: false,
-      error: "No salary assigned to you yet. Contact your Local Director.",
+      error: "No salary assigned to this missionary yet.",
     };
 
   try {
     await prisma.salaryRequest.create({
       data: {
-        missionaryId: user.id,
+        missionaryId,
         missionId: assignment.missionId,
         amount: assignment.amount,
         month,
@@ -257,11 +262,12 @@ export async function submitSalaryRequestAction(
   } catch (err: unknown) {
     // Unique constraint violation means a concurrent submission already won
     if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "P2002") {
-      return { ok: false, error: "You already submitted a request for this month." };
+      return { ok: false, error: "A request has already been submitted for this missionary this month." };
     }
     throw err;
   }
 
+  revalidatePath("/dashboard/lmd/salary");
   revalidatePath("/dashboard/salary-request");
   return { ok: true };
 }

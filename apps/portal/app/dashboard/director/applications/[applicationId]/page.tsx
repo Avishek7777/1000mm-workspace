@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { startDirectorReviewAction } from "@/actions/director";
 import { DirectorActionPanel } from "./_components/DirectorActionPanel";
+import { PdfDownloadButton } from "../../../my-application/_components/PdfDownloadButton";
 
 function formatDate(d?: Date | string | null) {
   if (!d) return "—";
@@ -196,6 +197,14 @@ export default async function DirectorApplicationDetailPage({
           </div>
         </div>
         <div className="flex flex-col items-end gap-3">
+          {app.status === "ACCEPTED" && (
+            <PdfDownloadButton
+              applicationId={applicationId}
+              referenceNumber={app.referenceNumber ?? applicationId.slice(-8).toUpperCase()}
+              missionName={app.submittedFromMission.name}
+              programTitle={app.window.program.title}
+            />
+          )}
           <Link
             href={`/dashboard/director/applications/${applicationId}/print`}
             target="_blank"

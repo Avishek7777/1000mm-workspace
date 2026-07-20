@@ -45,7 +45,7 @@ export default function VerifyEmail({ name, url }: Props) {
             </Section>
 
             <Text style={small}>
-              This link expires in <strong>24 hours</strong>. If you did not
+              This link expires in <strong>1 hour</strong>. If you did not
               create an account, you can safely ignore this email.
             </Text>
 

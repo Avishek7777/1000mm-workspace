@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import { prisma } from "@1000mm/db";
-import { SalaryRequestButton } from "./_components/SalaryRequestButton";
 
 const MONTHS = [
   "January",
@@ -76,7 +75,7 @@ export default async function SalaryRequestPage() {
       <div>
         <h1 className="text-lg font-semibold text-gray-900">Salary Request</h1>
         <p className="mt-0.5 text-sm text-gray-500">
-          Submit your monthly stipend request
+          Your monthly stipend requests — submitted by your Local Mission Director
         </p>
       </div>
 
@@ -117,7 +116,7 @@ export default async function SalaryRequestPage() {
         </div>
       )}
 
-      {/* Request window status + button */}
+      {/* Request window status — read-only; the LMD submits the request */}
       {assignment && (
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <div className="mb-3 flex items-center justify-between">
@@ -148,10 +147,10 @@ export default async function SalaryRequestPage() {
               </span>
             </div>
           ) : (
-            <SalaryRequestButton
-              isWindowOpen={isWindowOpen}
-              amount={assignment.amount}
-            />
+            <p className="text-sm text-gray-500">
+              Not yet submitted. Your Local Mission Director submits this
+              request on your behalf{isWindowOpen ? " during the window above" : " once the window opens"}.
+            </p>
           )}
         </div>
       )}

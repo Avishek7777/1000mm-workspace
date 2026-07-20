@@ -155,7 +155,9 @@ export async function GET(
     submittedAt: app.submittedAt?.toISOString() ?? new Date().toISOString(),
     ipAddress: submitLog?.ipAddress ?? undefined,
     lmdReviewerName: app.lmdReviewer?.fullName ?? undefined,
+    lmdReviewedAt: app.lmdReviewCompletedAt?.toISOString() ?? undefined,
     directorReviewerName: app.directorReviewer?.fullName ?? undefined,
+    directorReviewedAt: app.directorReviewCompletedAt?.toISOString() ?? undefined,
   };
   return NextResponse.json(data);
 }

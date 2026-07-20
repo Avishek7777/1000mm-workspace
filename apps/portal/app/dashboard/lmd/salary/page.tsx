@@ -4,7 +4,9 @@ import { prisma } from "@1000mm/db";
 import { LmdSalaryAssignForm } from "./_components/LmdSalaryAssignForm";
 import { RemoveSalaryAssignmentButton } from "./_components/RemoveSalaryAssignmentButton";
 import { LmdSalaryExportButton } from "./_components/LmdSalaryExportButton";
+import { SubmitSalaryRequestButton } from "./_components/SubmitSalaryRequestButton";
 import { PrintButton } from "@/components/PrintButton";
+import { SETTINGS } from "@/lib/settings";
 import Link from "next/link";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -119,6 +121,31 @@ export default async function LmdSalaryPage({
   const districts = districtRows.map((d) => d.presentAddressDistrict!).filter(Boolean);
   const years = availableYears.map((r) => r.cycle);
   if (!years.includes(thisYear)) years.unshift(thisYear);
+
+  // ── This month's salary requests (LMD submits on the missionary's behalf) ──
+  // Only relevant while viewing the current cycle year — a request is always
+  // for the real current month, regardless of which year the list is filtered to.
+  const today = new Date();
+  const currentMonth = today.getMonth() + 1;
+  const currentDay = today.getDate();
+  const [windowStartSetting, windowEndSetting, currentMonthRequests] = await Promise.all([
+    prisma.systemSetting.findUnique({ where: { key: SETTINGS.SALARY_WINDOW_START } }),
+    prisma.systemSetting.findUnique({ where: { key: SETTINGS.SALARY_WINDOW_END } }),
+    yearNum === thisYear
+      ? prisma.salaryRequest.findMany({
+          where: { missionId: mission.id, month: currentMonth, year: thisYear },
+        })
+      : Promise.resolve([]),
+  ]);
+  const windowStart = (windowStartSetting?.value as number) ?? 8;
+  const windowEnd = (windowEndSetting?.value as number) ?? 14;
+  const isSalaryWindowOpen = currentDay >= windowStart && currentDay <= windowEnd;
+  const requestMap = new Map(currentMonthRequests.map((r) => [r.missionaryId, r]));
+  const REQUEST_STATUS_STYLES: Record<string, string> = {
+    PENDING: "bg-amber-100 text-amber-700",
+    APPROVED: "bg-teal-100 text-teal-700",
+    REJECTED: "bg-red-100 text-red-700",
+  };
 
 
   return (
@@ -319,6 +346,35 @@ export default async function LmdSalaryPage({
                     />
                   ) : (
                     <p className="text-xs text-gray-400 italic">Set a salary range first to assign salary.</p>
+                  )}
+
+                  {/* This month's salary request — LMD submits on the missionary's behalf */}
+                  {yearNum === thisYear && existing && (
+                    <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                      <p className="text-xs text-gray-500">
+                        {MONTHS[currentMonth - 1]} {thisYear} salary request
+                      </p>
+                      {(() => {
+                        const req = requestMap.get(m.id);
+                        if (req) {
+                          return (
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${REQUEST_STATUS_STYLES[req.status]}`}
+                            >
+                              {req.status}
+                            </span>
+                          );
+                        }
+                        return (
+                          <SubmitSalaryRequestButton
+                            missionaryId={m.id}
+                            isWindowOpen={isSalaryWindowOpen}
+                            windowStart={windowStart}
+                            windowEnd={windowEnd}
+                          />
+                        );
+                      })()}
+                    </div>
                   )}
                 </div>
               );

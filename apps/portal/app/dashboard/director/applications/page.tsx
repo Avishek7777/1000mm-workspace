@@ -102,6 +102,10 @@ export default async function DirectorApplicationsPage({
 
   const where = {
     deletedAt: null as null,
+    // Applicant's account may have been deleted after they applied — don't
+    // surface those in the active list (their application record itself
+    // still exists for audit purposes; it's just excluded here).
+    applicant: { deletedAt: null },
     // Default: show all post-LMD statuses; override with specific filter.
     // "ALL" shows every status except unsubmitted drafts.
     status:

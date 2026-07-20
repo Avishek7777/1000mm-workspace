@@ -67,7 +67,7 @@ export async function registerAction(
         data: {
           token,
           userId: existing.id,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
         },
       });
       await sendVerificationEmail(email, existing.fullName, token);
@@ -101,13 +101,13 @@ export async function registerAction(
     },
   });
 
-  // Generate verification token (24 hours)
+  // Generate verification token (1 hour)
   const token = randomBytes(32).toString("hex");
   await prisma.emailVerificationToken.create({
     data: {
       token,
       userId: user.id,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     },
   });
   await sendVerificationEmail(email, fullName, token);

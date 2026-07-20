@@ -40,8 +40,9 @@ const styles = StyleSheet.create({
   page: {
     fontFamily: "Helvetica",
     fontSize: 9,
-    paddingTop: 32,
-    paddingBottom: 72, // extra bottom padding for footer
+    paddingTop: 22,
+    paddingBottom: 48, // reserved for the (much shorter, since footerLabel's
+    // bottom margin was fixed) footer below
     paddingHorizontal: 36,
     backgroundColor: "#ffffff",
   },
@@ -52,8 +53,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderBottomWidth: 1.5,
     borderBottomColor: "#1a5276",
-    paddingBottom: 10,
-    marginBottom: 14,
+    paddingBottom: 6,
+    marginBottom: 8,
   },
   headerLogo: { width: 52, height: 52, objectFit: "contain" },
   headerCenter: { flex: 1, alignItems: "center", paddingHorizontal: 8 },
@@ -74,9 +75,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#1a5276",
     borderRadius: 4,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 3,
     alignSelf: "center",
-    marginBottom: 14,
+    marginBottom: 8,
   },
   refText: {
     color: "#ffffff",
@@ -93,20 +94,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   // ── Sections ──
-  section: { marginBottom: 10 },
+  section: { marginBottom: 4 },
   sectionTitle: {
     fontSize: 9,
     fontFamily: "Helvetica-Bold",
     color: "#1a5276",
     backgroundColor: "#eaf2f8",
     paddingHorizontal: 6,
-    paddingVertical: 3,
-    marginBottom: 5,
+    paddingVertical: 2,
+    marginBottom: 3,
     borderLeftWidth: 3,
     borderLeftColor: "#1a5276",
   },
   // ── Grid rows ──
-  row: { flexDirection: "row", marginBottom: 3 },
+  row: { flexDirection: "row", marginBottom: 1 },
   col2: { flex: 1 },
   col3: { flex: 1 },
   label: { fontSize: 7.5, color: "#888", marginBottom: 1 },
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   divider: {
     borderBottomWidth: 0.5,
     borderBottomColor: "#ddd",
-    marginVertical: 6,
+    marginVertical: 3,
   },
   // ── Photo box ──
   photoBox: {
@@ -148,14 +149,14 @@ const styles = StyleSheet.create({
   footerSignatures: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 6,
   },
   footerCol: { flex: 1, alignItems: "center", justifyContent: "flex-end" },
-  footerLabel: { fontSize: 7.5, color: "#555", marginBottom: 20 },
+  footerLabel: { fontSize: 7.5, color: "#555" },
   footerMeta: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginTop: 4,
+    marginTop: 3,
   },
   footerMetaText: {
     fontSize: 6.5,
@@ -225,9 +226,11 @@ export type BioDataPDFProps = {
   // Mission
   missionName?: string;
   programTitle?: string;
-  // Reviewer names (populated after approval)
+  // Reviewer names + dates (populated once each review step completes)
   lmdReviewerName?: string;
+  lmdReviewedAt?: string;
   directorReviewerName?: string;
+  directorReviewedAt?: string;
 };
 
 function LabelValue({
@@ -240,7 +243,7 @@ function LabelValue({
   bangla?: boolean;
 }) {
   return (
-    <View style={{ marginBottom: 4 }}>
+    <View style={{ marginBottom: 1 }}>
       <Text style={styles.label}>{label}</Text>
       {/* Bengali font only when there is a real value — the "—" fallback
           stays on Helvetica, which is guaranteed to have that glyph. */}
@@ -283,8 +286,67 @@ function Row3({
   );
 }
 
+function Row4({
+  items,
+}: {
+  items: Array<{ label: string; value?: string; flex?: number }>;
+}) {
+  return (
+    <View style={styles.row}>
+      {items.map((item, i) => (
+        <View key={i} style={{ flex: item.flex ?? 1 }}>
+          <LabelValue label={item.label} value={item.value} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function SectionTitle({ title }: { title: string }) {
   return <Text style={styles.sectionTitle}>{title}</Text>;
+}
+
+/**
+ * A signature block that fills itself in automatically once the system has
+ * recorded the corresponding step (submission / LMD review / director
+ * review) — there's no physical signing, so the name + date stand in for it.
+ * Blank (just the line + label) until that step has actually happened.
+ */
+function SignatureBlock({
+  name,
+  date,
+  label,
+}: {
+  name?: string;
+  date?: string;
+  label: string;
+}) {
+  return (
+    <View style={styles.footerCol}>
+      {name && (
+        <Text
+          style={{
+            fontSize: 9,
+            fontFamily: "Helvetica-Oblique",
+            color: "#111",
+            marginBottom: 4,
+          }}
+        >
+          {name}
+          {date ? `  ·  ${date}` : ""}
+        </Text>
+      )}
+      <View
+        style={{
+          borderTopWidth: 0.5,
+          borderTopColor: "#333",
+          width: "70%",
+          marginBottom: 4,
+        }}
+      />
+      <Text style={styles.footerLabel}>{label}</Text>
+    </View>
+  );
 }
 
 export function BioDataPDF({
@@ -332,7 +394,9 @@ export function BioDataPDF({
   missionName,
   programTitle,
   lmdReviewerName,
+  lmdReviewedAt,
   directorReviewerName,
+  directorReviewedAt,
 }: BioDataPDFProps) {
   const formatDate = (d?: string) =>
     d
@@ -342,6 +406,18 @@ export function BioDataPDF({
           year: "numeric",
         })
       : "—";
+
+  // Short form for the signature blocks — auto-filled from the recorded
+  // submission/review timestamps, since these are system-issued signatures
+  // rather than pen-and-paper ones.
+  const formatSigDate = (d?: string) =>
+    d
+      ? new Date(d).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : undefined;
 
   const formatEnum = (v?: string) =>
     v ? v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
@@ -575,24 +651,15 @@ export function BioDataPDF({
           <SectionTitle title="3. EDUCATIONAL BACKGROUND" />
           {Array.isArray(educationEntries) && educationEntries.length > 0 ? (
             educationEntries.map((e, i) => (
-              <View key={i} style={{ marginBottom: 4 }}>
-                <Row3
-                  items={[
-                    { label: "Degree", value: e.degree },
-                    { label: "Institution", value: e.institutionName },
-                    { label: "GPA", value: e.gpa },
-                  ]}
-                />
-                <Row2
-                  items={[
-                    { label: "Passing Year", value: e.passingYear },
-                    { label: "", value: "" },
-                  ]}
-                />
-                {i < educationEntries.length - 1 && (
-                  <View style={styles.divider} />
-                )}
-              </View>
+              <Row4
+                key={i}
+                items={[
+                  { label: "Degree", value: e.degree, flex: 1.3 },
+                  { label: "Institution", value: e.institutionName, flex: 1.6 },
+                  { label: "GPA", value: e.gpa, flex: 0.7 },
+                  { label: "Year", value: e.passingYear, flex: 0.7 },
+                ]}
+              />
             ))
           ) : (
             <Text style={styles.valueNormal}>
@@ -625,73 +692,21 @@ export function BioDataPDF({
         <View style={styles.footer}>
           {/* Signature row */}
           <View style={styles.footerSignatures}>
-            <View style={styles.footerCol}>
-              <Text
-                style={{
-                  fontSize: 9,
-                  fontFamily: "Helvetica-Oblique",
-                  color: "#111",
-                  marginBottom: 4,
-                }}
-              >
-                {applicantFullName}
-              </Text>
-              <View
-                style={{
-                  borderTopWidth: 0.5,
-                  borderTopColor: "#333",
-                  width: "70%",
-                  marginBottom: 4,
-                }}
-              />
-              <Text style={styles.footerLabel}>Applicant Signature & Date</Text>
-            </View>
-            <View style={styles.footerCol}>
-              {lmdReviewerName && (
-                <Text
-                  style={{
-                    fontSize: 9,
-                    fontFamily: "Helvetica-Oblique",
-                    color: "#111",
-                    marginBottom: 4,
-                  }}
-                >
-                  {lmdReviewerName}
-                </Text>
-              )}
-              <View
-                style={{
-                  borderTopWidth: 0.5,
-                  borderTopColor: "#333",
-                  width: "70%",
-                  marginBottom: 4,
-                }}
-              />
-              <Text style={styles.footerLabel}>LMD Signature & Date</Text>
-            </View>
-            <View style={styles.footerCol}>
-              {directorReviewerName && (
-                <Text
-                  style={{
-                    fontSize: 9,
-                    fontFamily: "Helvetica-Oblique",
-                    color: "#111",
-                    marginBottom: 4,
-                  }}
-                >
-                  {directorReviewerName}
-                </Text>
-              )}
-              <View
-                style={{
-                  borderTopWidth: 0.5,
-                  borderTopColor: "#333",
-                  width: "70%",
-                  marginBottom: 4,
-                }}
-              />
-              <Text style={styles.footerLabel}>UD Signature & Date</Text>
-            </View>
+            <SignatureBlock
+              name={applicantFullName}
+              date={formatSigDate(submittedAt)}
+              label="Applicant Signature & Date"
+            />
+            <SignatureBlock
+              name={lmdReviewerName}
+              date={formatSigDate(lmdReviewedAt)}
+              label="LMD Signature & Date"
+            />
+            <SignatureBlock
+              name={directorReviewerName}
+              date={formatSigDate(directorReviewedAt)}
+              label="UD Signature & Date"
+            />
             <View style={styles.footerCol}>
               <View
                 style={{

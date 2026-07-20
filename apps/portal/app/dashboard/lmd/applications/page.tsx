@@ -70,6 +70,9 @@ export default async function LmdApplicationsPage({
   const where = {
     submittedFromMissionId: missionId,
     deletedAt: null as null,
+    // Applicant's account may have been deleted after they applied — don't
+    // surface those in the active list.
+    applicant: { deletedAt: null },
     status: status
       ? { equals: status as ApplicationStatus }
       : { not: "DRAFT" as ApplicationStatus },

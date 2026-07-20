@@ -79,8 +79,8 @@ Do **not** run "NPM Install" — the bundle already contains everything.
 
 ```
 NODE_ENV=production
-DATABASE_URL=…          (Supabase pooler URL, pgbouncer)
-DIRECT_URL=…            (Supabase direct URL)
+DATABASE_URL=…          (host PostgreSQL, localhost)
+DIRECT_URL=…            (same as DATABASE_URL)
 AUTH_SECRET=…
 AUTH_URL=https://portal.1000mm.org.bd
 AUTH_TRUST_HOST=true    (required behind Passenger's proxy)
@@ -88,6 +88,7 @@ RESEND_API_KEY=…
 RESEND_FROM_EMAIL=noreply@1000mm.org.bd
 NEXT_PUBLIC_APP_URL=https://1000mm.org.bd
 NEXT_PUBLIC_PORTAL_URL=https://portal.1000mm.org.bd
+INTERNAL_UPLOAD_SECRET=…   (must match the website's value exactly)
 ```
 
 **website**:
@@ -96,7 +97,18 @@ NEXT_PUBLIC_PORTAL_URL=https://portal.1000mm.org.bd
 NODE_ENV=production
 NEXT_PUBLIC_PORTAL_URL=https://portal.1000mm.org.bd
 NEXT_PUBLIC_SITE_URL=https://1000mm.org.bd
+DATABASE_URL=…             (same value as the portal's)
+DIRECT_URL=…                (same value as the portal's)
+INTERNAL_UPLOAD_SECRET=…   (must match the portal's value exactly)
 ```
+
+> The website needs `DATABASE_URL`/`DIRECT_URL` too — its own routes
+> (`/api/contact`, `/api/trainer-application`) write to the same database
+> directly. `INTERNAL_UPLOAD_SECRET` authenticates the website's
+> server-to-server calls to the portal's `/api/internal/upload` (there is no
+> logged-in portal session in that flow) — the two apps deploy as separate
+> bundles with no shared filesystem, so the website cannot write into the
+> portal's `public/uploads/` directly.
 
 Click **Restart** after saving. Passenger auto-starts the app on first request
 and restarts it if it crashes.

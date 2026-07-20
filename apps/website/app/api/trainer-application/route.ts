@@ -1,19 +1,14 @@
 // apps/website/app/api/trainer-application/route.ts
 //
-// Saves uploaded files to the LOCAL filesystem under the shared uploads folder.
-// The portal's /api/uploads/[...path]/route.ts already serves files from this
-// same folder, so no extra serving logic is needed.
-//
-// Storage path (matches portal convention):
-//   <monorepo-root>/uploads/trainer-applications/<slug>-<timestamp>-<kind>.<ext>
-//
-// When R2 is wired up later, replace the writeFileToUploads() helper here and
-// in apps/portal/lib/r2.ts at the same time.
+// The website and portal deploy as two SEPARATE standalone apps with no
+// shared filesystem (see DEPLOY.md) — this route can't write directly into
+// the portal's public/uploads/ the way a single-server checkout could.
+// Files are instead uploaded to the portal over HTTP via its internal,
+// shared-secret-authenticated endpoint (apps/portal/app/api/internal/upload),
+// which is what actually serves them afterwards through /api/uploads/[...path].
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@1000mm/db";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { headers } from "next/headers";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -25,43 +20,36 @@ const ALLOWED_CV_TYPES = [
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 
 // ── File storage helper ───────────────────────────────────────────────────────
-// Mirrors the saveFile() behaviour in apps/portal/lib/r2.ts.
-// Writes into the PORTAL's public/uploads folder — the portal's
-// /api/uploads/[...path] route serves from there, so files uploaded via the
-// website become downloadable in the portal dashboards.
+// Uploads to the portal's /api/internal/upload endpoint and returns the
+// storageKey it reports back (relative to the portal's public/uploads/).
 async function saveUploadedFile(
   file: File,
-  storageKey: string,
+  folder: string,
+  fileName: string,
 ): Promise<string> {
-  // process.cwd() is the app root (apps/website); the portal app is a sibling.
-  const uploadsRoot = path.resolve(
-    process.cwd(),
-    "../portal/public/uploads",
-  );
-  const fullPath = path.join(uploadsRoot, storageKey);
-  const dir = path.dirname(fullPath);
+  const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL;
+  const secret = process.env.INTERNAL_UPLOAD_SECRET;
+  if (!portalUrl || !secret) {
+    throw new Error(
+      "NEXT_PUBLIC_PORTAL_URL and INTERNAL_UPLOAD_SECRET must both be set for the website to upload trainer-application documents.",
+    );
+  }
 
-  await mkdir(dir, { recursive: true });
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("folder", folder);
+  fd.append("fileName", fileName);
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(fullPath, buffer);
-
-  return storageKey;
-}
-
-function fileExtension(file: File): string {
-  // Prefer the original filename extension; fall back to mime-type mapping
-  const fromName = file.name.includes(".") ? file.name.split(".").pop()! : "";
-  if (fromName) return fromName.toLowerCase();
-  const mimeMap: Record<string, string> = {
-    "application/pdf": "pdf",
-    "application/msword": "doc",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-      "docx",
-    "image/jpeg": "jpg",
-    "image/png": "png",
-  };
-  return mimeMap[file.type] ?? "bin";
+  const res = await fetch(`${portalUrl}/api/internal/upload`, {
+    method: "POST",
+    headers: { "x-internal-secret": secret },
+    body: fd,
+  });
+  const data = await res.json();
+  if (!res.ok || !data.storageKey) {
+    throw new Error(data.error ?? "Upload to portal failed");
+  }
+  return data.storageKey as string;
 }
 
 // ── Route handler ─────────────────────────────────────────────────────────────
@@ -148,9 +136,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Save files ───────────────────────────────────────────────────────────
-    // Storage keys are relative paths inside the uploads/ folder.
-    // e.g. "trainer-applications/john-doe-1234567890-cv.pdf"
+    // ── Save files (uploaded to the portal — see saveUploadedFile above) ─────
+    // The portal's internal upload endpoint appends the extension itself
+    // based on the file's MIME type, so fileName is passed without one.
     const slug = email
       .split("@")[0]
       .replace(/[^a-z0-9]/gi, "-")
@@ -158,14 +146,10 @@ export async function POST(req: NextRequest) {
       .slice(0, 30);
     const ts = Date.now();
 
-    const cvKey = `trainer-applications/${slug}-${ts}-cv.${fileExtension(cvFile)}`;
-    const passportKey = `trainer-applications/${slug}-${ts}-passport.${fileExtension(passportFile)}`;
-    const photoKey = `trainer-applications/${slug}-${ts}-photo.${fileExtension(photoFile)}`;
-
-    await Promise.all([
-      saveUploadedFile(cvFile, cvKey),
-      saveUploadedFile(passportFile, passportKey),
-      saveUploadedFile(photoFile, photoKey),
+    const [cvKey, passportKey, photoKey] = await Promise.all([
+      saveUploadedFile(cvFile, "trainer-applications", `${slug}-${ts}-cv`),
+      saveUploadedFile(passportFile, "trainer-applications", `${slug}-${ts}-passport`),
+      saveUploadedFile(photoFile, "trainer-applications", `${slug}-${ts}-photo`),
     ]);
 
     // ── IP address ───────────────────────────────────────────────────────────
