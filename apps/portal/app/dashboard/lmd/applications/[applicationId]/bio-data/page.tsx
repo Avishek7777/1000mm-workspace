@@ -64,6 +64,22 @@ export default async function LmdApplicationBioDataPage({
   const bloodType = app.applicantBloodType?.replace("_", " ").replace("POS", "+").replace("NEG", "-");
   const generatedAt = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
+  const yesNo = (v: unknown) => (v === true ? "Yes" : v === false ? "No" : "—");
+
+  const APPLICANT_DOC_KINDS: Array<[string, string]> = [
+    ["DISTRICT_PASTOR_RECOMMENDATION", "District Pastor's Recommendation"],
+    ["NID", "National ID (NID)"],
+    ["BIRTH_CERTIFICATE", "Birth Certificate"],
+    ["BAPTISM_CERTIFICATE", "Baptism Certificate"],
+    ["PARENT_PASSPORT_PHOTO", "Parent's Passport Photo"],
+    ["PARENTS_CONSENT", "Parent's Consent Form"],
+    ["FATHER_NID", "Father's NID"],
+    ["MOTHER_NID", "Mother's NID"],
+    ["EDUCATION_CERTIFICATE", "Education Certificate(s)"],
+    ["LETTER_OF_INTENT", "Letter of Intent"],
+  ];
+  const uploadedKinds = new Set<string>(app.documents.map((d) => d.kind));
+
   return (
     <div className="mx-auto max-w-3xl">
       <style dangerouslySetInnerHTML={{ __html: `
@@ -217,6 +233,52 @@ export default async function LmdApplicationBioDataPage({
               </tbody>
             </table>
           )}
+        </section>
+
+        {/* Application Details */}
+        <section className="mb-4 break-inside-avoid">
+          <h2 className="text-[12px] font-bold uppercase tracking-wide text-gray-700 border-b border-gray-300 pb-1 mb-2">Application Details</h2>
+          <table className="w-full">
+            <tbody>
+              <Row label="Missionary Desire" value={(fd.missionaryDesire as string) || null} />
+              <Row label="District Pastor's Name" value={(fd.districtPastorName as string) || null} />
+              <Row label="Pastor's Mobile No" value={(fd.districtPastorMobile as string) || null} />
+              <Row label="Pastor's Email" value={(fd.districtPastorEmail as string) || null} />
+              <Row label="Criminal / Court Record" value={yesNo(fd.courtRecord)} />
+              <Row label="Health Condition" value={yesNo(fd.healthCondition)} />
+              <Row label="Harmful Habits" value={yesNo(fd.badHabits)} />
+            </tbody>
+          </table>
+        </section>
+
+        {/* Applicant Documents */}
+        <section className="mb-4 break-inside-avoid">
+          <h2 className="text-[12px] font-bold uppercase tracking-wide text-gray-700 border-b border-gray-300 pb-1 mb-2">Applicant Documents</h2>
+          <table className="w-full text-[11px]">
+            <tbody>
+              {APPLICANT_DOC_KINDS.map(([kind, label]) => (
+                <tr key={kind} className="border-b border-gray-100">
+                  <td className="py-1 pr-3 text-gray-700">{label}</td>
+                  <td className={`py-1 text-right font-semibold ${uploadedKinds.has(kind) ? "text-teal-700" : "text-gray-400"}`}>
+                    {uploadedKinds.has(kind) ? "✓ Attached" : "Not provided"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        {/* Commitments / Declaration */}
+        <section className="mb-4 break-inside-avoid">
+          <h2 className="text-[12px] font-bold uppercase tracking-wide text-gray-700 border-b border-gray-300 pb-1 mb-2">Commitments &amp; Declaration</h2>
+          <p className="text-[11px] leading-relaxed text-gray-700">
+            <span className={`mr-1.5 font-semibold ${fd.declarationAccepted ? "text-teal-700" : "text-red-600"}`}>
+              [{fd.declarationAccepted ? "✓" : " "}]
+            </span>
+            I declare that all the information I have provided in this application is true and
+            accurate to the best of my knowledge. I understand that providing false information
+            may result in disqualification or removal from the programme.
+          </p>
         </section>
 
         {/* Signature + declaration */}
