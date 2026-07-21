@@ -99,6 +99,8 @@ export const NOTIFICATION_TEMPLATES = {
   CERTIFICATE_ISSUED: "certificate.issued",
   SALARY_REQUEST_SUBMITTED: "salary.request_submitted",
   SALARY_REQUEST_REVIEWED: "salary.request_reviewed",
+  APPLICATION_SUBMITTED_TO_LMD: "application.submitted_to_lmd",
+  APPLICATION_RECOMMENDED_TO_UD: "application.recommended_to_ud",
 } as const;
 
 export type NotificationTemplateKey =

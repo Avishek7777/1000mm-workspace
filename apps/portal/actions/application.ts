@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
 import { uploadToR2, r2Prefix } from "@/lib/r2";
 import { headers } from "next/headers";
+import { notifyLmdOfSubmission } from "@/lib/applicationNotifications";
 import {
   Gender,
   BloodType,
@@ -608,6 +609,13 @@ export async function submitApplicationAction(
       },
     }),
   ]);
+
+  await notifyLmdOfSubmission({
+    missionId: app.submittedFromMissionId,
+    applicationId,
+    applicantName: app.applicantFullName,
+    referenceNumber,
+  });
 
   return { ok: true, applicationId, referenceNumber };
 }

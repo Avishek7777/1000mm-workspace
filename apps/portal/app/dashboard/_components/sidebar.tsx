@@ -2,7 +2,15 @@ import Link from "next/link";
 import SignOutButton from "./sign-out-button";
 import { UserRole } from "@1000mm/db";
 import Image from "next/image";
-import { AlertTriangle } from "lucide-react";
+
+// Matches every other nav icon's convention (16x16 inline SVG) rather than a
+// bare lucide component at its default 24x24 — that mismatch was why this
+// one item looked oversized next to its neighbors.
+const UrgentReportIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" />
+  </svg>
+);
 
 type NavItem = {
   label: string;
@@ -419,7 +427,7 @@ const NAV_SECTIONS: { section: string; labelColor: string; iconColor: string; ho
         label: "Urgent Reports",
         href: "/dashboard/system-admin/urgent-reports",
         roles: ["SYSTEM_ADMIN"],
-        icon: <AlertTriangle />,
+        icon: UrgentReportIcon,
       },
       {
         label: "Salary",
@@ -625,7 +633,19 @@ export default function Sidebar({
           </div>
         )}
         {user.isMissionary && user.role === "TRAINEE" && (
-          <Link href="/dashboard/urgent-reports" style={{ color: "var(--dash-sb-text)" }}>Urgent Reports</Link>
+          <div className="mb-1">
+            <p className="mb-1 mt-4 px-2 text-[10px] font-medium uppercase tracking-widest text-rose-400">
+              Alerts
+            </p>
+            <Link
+              href="/dashboard/urgent-reports"
+              className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors hover:bg-rose-50 hover:text-rose-700"
+              style={{ color: "var(--dash-sb-text)" }}
+            >
+              <span className="text-rose-500">{UrgentReportIcon}</span>
+              <span className="flex-1">Urgent Reports</span>
+            </Link>
+          </div>
         )}
       </nav>
 

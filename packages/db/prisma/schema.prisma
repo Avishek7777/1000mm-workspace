@@ -188,6 +188,13 @@ model UrgentReportSubmission {
   userId   String
   response String?   // optional text from missionary
   submittedAt DateTime @default(now())
+  // Up to 3 optional attachment storage keys (local filesystem / R2)
+  attachment1     String?
+  attachment1Name String?
+  attachment2     String?
+  attachment2Name String?
+  attachment3     String?
+  attachment3Name String?
 
   report UrgentReport @relation(fields: [reportId], references: [id])
   user   User         @relation("UrgentReportSubmissions", fields: [userId], references: [id])

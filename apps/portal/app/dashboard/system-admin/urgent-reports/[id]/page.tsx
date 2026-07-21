@@ -196,6 +196,25 @@ export default async function UrgentReportDetailPage({
                     "{sub.response}"
                   </p>
                 )}
+                {[1, 2, 3]
+                  .map((i) => ({
+                    key: sub[`attachment${i}` as keyof typeof sub] as string | null,
+                    name: sub[`attachment${i}Name` as keyof typeof sub] as string | null,
+                  }))
+                  .filter((a) => a.key)
+                  .map((a, i) => (
+                    <a
+                      key={i}
+                      href={`/api/uploads/${a.key}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 flex items-center gap-2 rounded-lg border border-green-200 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Paperclip className="h-3.5 w-3.5 text-gray-400" />
+                      <span className="flex-1 truncate">{a.name ?? `Attachment ${i + 1}`}</span>
+                      <ExternalLink className="h-3 w-3 text-gray-400" />
+                    </a>
+                  ))}
               </div>
             ))}
           </div>

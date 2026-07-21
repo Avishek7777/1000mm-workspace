@@ -8,6 +8,7 @@ import { prisma } from "@1000mm/db";
 import { uploadToR2, r2Prefix } from "@/lib/r2";
 import { DocumentKind } from "@1000mm/db";
 import { headers } from "next/headers";
+import { notifyUdOfRecommendation, notifyApplicantOfRejection } from "@/lib/applicationNotifications";
 
 export type ActionResult = {
   ok: boolean;
@@ -331,6 +332,13 @@ export async function recommendAction(
   revalidatePath(`/dashboard/lmd/applications/${applicationId}`);
   revalidatePath(`/dashboard/lmd/applications`);
   revalidatePath(`/dashboard/lmd`);
+
+  await notifyUdOfRecommendation({
+    applicationId,
+    applicantName: app.applicantFullName,
+    referenceNumber: app.referenceNumber ?? applicationId.slice(-8).toUpperCase(),
+  });
+
   return { ok: true };
 }
 
@@ -400,5 +408,10 @@ export async function rejectApplicationAction(
   revalidatePath(`/dashboard/lmd/applications/${applicationId}`);
   revalidatePath(`/dashboard/lmd/applications`);
   revalidatePath(`/dashboard/lmd`);
+
+  // No `reason` passed — the LMD's rejection reason is staff-only (see
+  // lmdRejectionReason above) and must not reach the applicant.
+  await notifyApplicantOfRejection({ applicantId: app.applicant.id });
+
   return { ok: true };
 }

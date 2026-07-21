@@ -31,8 +31,29 @@ function renderNotification(
     case "application.status_changed":
       return {
         icon: "application",
-        title: "Application Status Updated",
-        body: `Your application status changed to ${(data.status as string)?.replace(/_/g, " ").toLowerCase() ?? "a new status"}.`,
+        title: data.status === "REJECTED" ? "Application Not Approved" : "Application Status Updated",
+        body:
+          data.status === "REJECTED"
+            ? (data.reason as string)
+              ? `Your application was not approved. Reason: ${data.reason as string}`
+              : "Your application was not approved this time. Contact your Local Mission Director for details."
+            : `Your application status changed to ${(data.status as string)?.replace(/_/g, " ").toLowerCase() ?? "a new status"}.`,
+      };
+    case "application.submitted_to_lmd":
+      return {
+        icon: "application",
+        title: "New Application Submitted",
+        body: (data.applicantName as string)
+          ? `${data.applicantName as string} submitted a new application${data.referenceNumber ? ` (${data.referenceNumber as string})` : ""}. It's waiting in your review queue.`
+          : "A new application was submitted to your mission and is waiting for review.",
+      };
+    case "application.recommended_to_ud":
+      return {
+        icon: "application",
+        title: "Application Awaiting Your Review",
+        body: (data.applicantName as string)
+          ? `${data.applicantName as string}'s application was recommended by the Local Mission Director and now needs your final review.`
+          : "An application was recommended and now needs your final review.",
       };
     case "complaint.submitted":
       return {

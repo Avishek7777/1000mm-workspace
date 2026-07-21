@@ -138,11 +138,28 @@ export async function submitUrgentReportResponseAction(formData: FormData) {
   const response = String(formData.get("response") ?? "").trim() || null;
   if (!reportId) throw new Error("Missing report ID.");
 
+  // Up to 3 optional attachments (e.g. proof of compliance, a photo, etc.)
+  const attachmentData: Record<string, string | undefined> = {};
+  for (let i = 1; i <= 3; i++) {
+    const file = formData.get(`attachment${i}`) as File | null;
+    if (file && file.size > 0) {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        throw new Error(`Attachment ${i}: unsupported file type.`);
+      }
+      if (file.size > MAX_FILE_BYTES) {
+        throw new Error(`Attachment ${i}: exceeds 10 MB limit.`);
+      }
+      const key = await saveAttachment(file, i, `sub-${reportId}-${session.user.id}`);
+      attachmentData[`attachment${i}`] = key;
+      attachmentData[`attachment${i}Name`] = file.name;
+    }
+  }
+
   // Upsert — idempotent if they re-submit
   await db.urgentReportSubmission.upsert({
     where: { reportId_userId: { reportId, userId: session.user.id } },
-    create: { reportId, userId: session.user.id, response },
-    update: { response, submittedAt: new Date() },
+    create: { reportId, userId: session.user.id, response, ...attachmentData },
+    update: { response, submittedAt: new Date(), ...attachmentData },
   });
 
   await db.auditLog.create({

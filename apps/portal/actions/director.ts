@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@1000mm/db";
 import { requireDbUser } from "@/lib/auth/helpers";
 import { headers } from "next/headers";
+import { notifyApplicantOfRejection } from "@/lib/applicationNotifications";
 
 export type ActionResult = {
   ok: boolean;
@@ -216,6 +217,11 @@ export async function rejectApplicationAction(
   revalidatePath(`/dashboard/director/applications/${applicationId}`);
   revalidatePath(`/dashboard/director/applications`);
   revalidatePath(`/dashboard/director`);
+
+  // `reason` IS shown to the applicant here (unlike the LMD's rejection,
+  // which stays staff-only) — see the field comment above.
+  await notifyApplicantOfRejection({ applicantId: app.applicantId, reason });
+
   return { ok: true };
 }
 

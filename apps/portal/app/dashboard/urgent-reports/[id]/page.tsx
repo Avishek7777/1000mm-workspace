@@ -86,6 +86,29 @@ export default async function MissionaryUrgentReportDetailPage({
                 "{submission.response}"
               </p>
             )}
+            {submission && (
+              <div className="mt-2 space-y-1.5">
+                {[1, 2, 3]
+                  .map((i) => ({
+                    key: submission[`attachment${i}` as keyof typeof submission] as string | null,
+                    name: submission[`attachment${i}Name` as keyof typeof submission] as string | null,
+                  }))
+                  .filter((a) => a.key)
+                  .map((a, i) => (
+                    <a
+                      key={i}
+                      href={`/api/uploads/${a.key}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-lg border border-green-100 bg-white px-3 py-2 text-xs text-green-700 hover:bg-green-50 transition-colors"
+                    >
+                      <Paperclip className="h-3.5 w-3.5 text-green-500" />
+                      <span className="flex-1 truncate">{a.name ?? `Attachment ${i + 1}`}</span>
+                      <ExternalLink className="h-3 w-3 text-green-400" />
+                    </a>
+                  ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -155,6 +178,23 @@ export default async function MissionaryUrgentReportDetailPage({
               placeholder="Optional: add a note or response (e.g. 'Understood and will comply.')"
               className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-200 resize-none"
             />
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-gray-500">
+                Attachments{" "}
+                <span className="font-normal text-gray-400">(optional, up to 3, max 10 MB each)</span>
+              </p>
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <input
+                    key={i}
+                    type="file"
+                    name={`attachment${i}`}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                    className="block w-full text-xs text-gray-500 file:mr-3 file:rounded-lg file:border file:border-gray-200 file:bg-gray-50 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-gray-600 hover:file:bg-gray-100"
+                  />
+                ))}
+              </div>
+            </div>
             <button
               type="submit"
               className="flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 transition-colors"

@@ -4,6 +4,7 @@ import VerifyEmail from "./templates/VerifyEmail";
 import PasswordReset from "./templates/PasswordReset";
 import TrainerSetup from "./templates/TrainerSetup";
 import ContactReply from "./templates/ContactReply";
+import ApplicationEvent from "./templates/ApplicationEvent";
 
 const FROM = process.env.RESEND_FROM_EMAIL ?? "noreply@1000mm.org.bd";
 // Contact-form replies always come from the public info address so
@@ -84,6 +85,41 @@ export async function sendContactReplyEmail(
   });
   if (error) {
     throw new Error(`Resend rejected the email: ${error.message}`);
+  }
+}
+
+/**
+ * Shared sender for the application-pipeline emails (new submission → LMD,
+ * recommendation → Union Director, rejection → applicant). Fire-and-forget
+ * like the other non-critical senders — a failed email should never break
+ * the underlying application-status change.
+ */
+export async function sendApplicationEventEmail(params: {
+  to: string;
+  recipientName: string;
+  subject: string;
+  heading: string;
+  message: string;
+  actionUrl: string;
+  actionLabel: string;
+}) {
+  try {
+    await getResend().emails.send({
+      from: FROM,
+      to: params.to,
+      subject: params.subject,
+      react: (
+        <ApplicationEvent
+          recipientName={params.recipientName}
+          heading={params.heading}
+          message={params.message}
+          actionUrl={params.actionUrl}
+          actionLabel={params.actionLabel}
+        />
+      ),
+    });
+  } catch (err) {
+    console.error("[EMAIL] Failed to send application event email to", params.to, err);
   }
 }
 
