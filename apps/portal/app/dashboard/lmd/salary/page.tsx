@@ -117,6 +117,15 @@ export default async function LmdSalaryPage({
     }),
   ]);
 
+  // Active deployment per missionary — the single source of truth for
+  // "where is this person deployed," mirrored automatically into
+  // SalaryAssignment.deploymentLocation on assignment (see deploymentSync.ts).
+  const activeDeployments = await prisma.missionaryDeployment.findMany({
+    where: { missionaryId: { in: missionaries.map((m) => m.id) }, status: "ACTIVE", deletedAt: null },
+    select: { missionaryId: true, location: true },
+  });
+  const deploymentLocationMap = new Map(activeDeployments.map((d) => [d.missionaryId, d.location]));
+
   const assignmentMap = new Map(assignments.map((a) => [a.missionaryId, a]));
   const districts = districtRows.map((d) => d.presentAddressDistrict!).filter(Boolean);
   const years = availableYears.map((r) => r.cycle);
@@ -316,6 +325,7 @@ export default async function LmdSalaryPage({
             {missionaries.map((m) => {
               const existing = assignmentMap.get(m.id);
               const app = m.applications[0];
+              const deploymentLocation = deploymentLocationMap.get(m.id) ?? null;
               return (
                 <div key={m.id} className="rounded-xl border border-gray-200 bg-white p-5">
                   <div className="mb-4 flex items-center justify-between">
@@ -336,13 +346,20 @@ export default async function LmdSalaryPage({
                       </div>
                     )}
                   </div>
-                  {range ? (
+                  {!deploymentLocation ? (
+                    <p className="text-xs text-amber-600 italic">
+                      No active field deployment on record —{" "}
+                      <a href="/dashboard/lmd/deployments" className="underline">assign one in Deployments</a>{" "}
+                      before setting salary.
+                    </p>
+                  ) : range ? (
                     <LmdSalaryAssignForm
                       missionaryId={m.id}
                       cycle={yearNum}
                       minAmount={range.minAmount}
                       maxAmount={range.maxAmount}
-                      existing={existing ? { amount: existing.amount, deploymentLocation: existing.deploymentLocation ?? "" } : null}
+                      deploymentLocation={deploymentLocation}
+                      existing={existing ? { amount: existing.amount } : null}
                     />
                   ) : (
                     <p className="text-xs text-gray-400 italic">Set a salary range first to assign salary.</p>

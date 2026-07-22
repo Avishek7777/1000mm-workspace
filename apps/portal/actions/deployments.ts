@@ -3,6 +3,7 @@
 import { requireRole } from "@/lib/auth/helpers";
 import { prisma } from "@1000mm/db";
 import { revalidatePath } from "next/cache";
+import { syncMissionaryDeploymentLocation } from "@/lib/deploymentSync";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -119,8 +120,15 @@ export async function reviewDeploymentAction(
     }
   });
 
+  // Push the (now-active, or no longer active if rejected) location out to
+  // every place that mirrors it — Trainees pages, exports, ID cards, the
+  // missionary's own My Program page.
+  await syncMissionaryDeploymentLocation(deployment.missionaryId);
+
   revalidatePath("/dashboard/director/deployments");
   revalidatePath("/dashboard/lmd/deployments");
+  revalidatePath("/dashboard/trainees");
+  revalidatePath("/dashboard/my-program");
   return { ok: true };
 }
 
@@ -157,8 +165,12 @@ export async function endDeploymentAction(
     },
   });
 
+  await syncMissionaryDeploymentLocation(deployment.missionaryId);
+
   revalidatePath("/dashboard/director/deployments");
   revalidatePath("/dashboard/lmd/deployments");
+  revalidatePath("/dashboard/trainees");
+  revalidatePath("/dashboard/my-program");
   return { ok: true };
 }
 

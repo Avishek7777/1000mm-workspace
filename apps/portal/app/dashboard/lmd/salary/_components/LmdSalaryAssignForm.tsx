@@ -8,13 +8,16 @@ export function LmdSalaryAssignForm({
   cycle,
   minAmount,
   maxAmount,
+  deploymentLocation,
   existing,
 }: {
   missionaryId: string;
   cycle: number;
   minAmount: number;
   maxAmount: number;
-  existing: { amount: number; deploymentLocation: string } | null;
+  /** Read-only — sourced from the missionary's active MissionaryDeployment. */
+  deploymentLocation: string;
+  existing: { amount: number } | null;
 }) {
   const [state, action, pending] = useActionState(assignSalaryAction, {
     ok: false,
@@ -38,20 +41,11 @@ export function LmdSalaryAssignForm({
 
       <div>
         <label className="mb-1 block text-xs font-medium text-gray-600">
-          Deployment Location <span className="text-red-500">*</span>
+          Deployment Location
         </label>
-        <input
-          type="text"
-          name="deploymentLocation"
-          defaultValue={existing?.deploymentLocation ?? ""}
-          placeholder="e.g. Sylhet, Moulvibazar"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
-        />
-        {state.fieldErrors?.deploymentLocation && (
-          <p className="mt-0.5 text-xs text-red-500">
-            {state.fieldErrors.deploymentLocation}
-          </p>
-        )}
+        <p className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+          {deploymentLocation}
+        </p>
       </div>
 
       <div>

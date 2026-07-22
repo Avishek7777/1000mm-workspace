@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@1000mm/db";
 import { requireDbUser } from "@/lib/auth/helpers";
 import { SETTINGS } from "@/lib/settings";
+import { resolveMissionaryDeploymentLocation } from "@/lib/deploymentSync";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
 
 export type ActionResult = {
@@ -76,7 +77,6 @@ export async function setSalaryRangeAction(
 const assignSchema = z.object({
   missionaryId: z.string().min(1),
   amount: z.coerce.number().int().min(0),
-  deploymentLocation: z.string().trim().min(1, "Deployment location required."),
   cycle: z.coerce.number().int().min(2020).max(2100),
 });
 
@@ -96,7 +96,7 @@ export async function assignSalaryAction(
     return { ok: false, fieldErrors };
   }
 
-  const { missionaryId, amount, deploymentLocation, cycle } = parsed.data;
+  const { missionaryId, amount, cycle } = parsed.data;
 
   // Get LMD's mission
   const mission = await prisma.localMission.findFirst({
@@ -127,6 +127,16 @@ export async function assignSalaryAction(
   });
   if (!missionary)
     return { ok: false, error: "Missionary not found in your mission." };
+
+  // Deployment location is derived, not typed — MissionaryDeployment is the
+  // single source of truth (see lib/deploymentSync.ts).
+  const deploymentLocation = await resolveMissionaryDeploymentLocation(missionaryId);
+  if (!deploymentLocation) {
+    return {
+      ok: false,
+      error: "This missionary has no field deployment on record yet. Assign one in Deployments first.",
+    };
+  }
 
   await prisma.salaryAssignment.upsert({
     where: { missionaryId_cycle: { missionaryId, cycle } },

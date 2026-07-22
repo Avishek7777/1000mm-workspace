@@ -8,55 +8,10 @@ import { isSettingEnabled, SETTINGS } from "@/lib/settings";
 
 export type ActionResult = { ok: boolean; error?: string };
 
-// ─── ASSIGN DEPLOYMENT LOCATION ───────────────────────────────────────────────
-// LOCAL_DIRECTOR: can assign trainees in their own mission.
-// MAIN_DIRECTOR / SYSTEM_ADMIN: can assign any trainee.
-
-export async function assignDeploymentAction(
-  enrollmentId: string,
-  location: string,
-): Promise<ActionResult> {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  const allowedRoles = ["LOCAL_DIRECTOR", "MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"];
-  if (!user || !allowedRoles.includes(user.role)) {
-    return { ok: false, error: "Not permitted to assign deployment locations." };
-  }
-
-  const enrollment = await prisma.programEnrollment.findFirst({
-    where: { id: enrollmentId, deletedAt: null },
-    include: { trainee: { select: { homeMissionId: true } } },
-  });
-  if (!enrollment) return { ok: false, error: "Enrollment not found." };
-
-  // LMD: trainee must belong to their mission
-  if (user.role === "LOCAL_DIRECTOR") {
-    const lmdMission = await prisma.localMission.findFirst({
-      where: { directorId: user.id },
-    });
-    if (!lmdMission) return { ok: false, error: "No mission assigned to your account." };
-    if (enrollment.trainee.homeMissionId !== lmdMission.id) {
-      return { ok: false, error: "This trainee is not in your mission." };
-    }
-  }
-
-  if (!location.trim()) return { ok: false, error: "Location is required." };
-
-  await prisma.programEnrollment.update({
-    where: { id: enrollmentId },
-    data: {
-      deploymentLocation: location.trim(),
-      deploymentAssignedAt: new Date(),
-      deploymentAssignedById: user.id,
-    },
-  });
-
-  revalidatePath("/dashboard/trainees");
-  revalidatePath(`/dashboard/trainees/${enrollment.traineeId}`);
-  return { ok: true };
-}
+// Deployment location is no longer editable directly here — it's set once
+// via the deployment request/approval workflow (see actions/deployments.ts)
+// and mirrored onto ProgramEnrollment.deploymentLocation from there, so
+// there's exactly one place it can be changed. See lib/deploymentSync.ts.
 
 // ─── UPDATE ATTENDANCE ────────────────────────────────────────────────────────
 // UD/SA can confirm attendance.

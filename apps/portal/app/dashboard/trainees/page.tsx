@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/auth/helpers";
 import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
-import { AssignDeploymentButton } from "./_components/AssignDeploymentButton";
+import { DeploymentManageLink } from "./_components/DeploymentManageLink";
 import { ProgramFilter } from "./_components/ProgramFilter";
 import { PrintRosterButton } from "./_components/PrintRosterButton";
 import { NameSheetButton } from "./_components/NameSheetButton";
@@ -453,11 +453,7 @@ export default async function TraineesPage({
                           )}
                           {canAssignDeployment && (
                             <div className="mt-1">
-                              <AssignDeploymentButton
-                                enrollmentId={e.id}
-                                traineeName={e.trainee.fullName}
-                                currentLocation={e.deploymentLocation}
-                              />
+                              <DeploymentManageLink isLmd={isLmd} />
                             </div>
                           )}
                         </div>
@@ -467,10 +463,7 @@ export default async function TraineesPage({
                             Not assigned
                           </span>
                           {canAssignDeployment && (
-                            <AssignDeploymentButton
-                              enrollmentId={e.id}
-                              traineeName={e.trainee.fullName}
-                            />
+                            <DeploymentManageLink isLmd={isLmd} />
                           )}
                         </div>
                       )}

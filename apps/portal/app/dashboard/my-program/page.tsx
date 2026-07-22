@@ -252,6 +252,24 @@ export default async function MyProgramPage() {
   const progress = progressPercent(program.startDate, program.endDate);
   const lmd = user.homeMission?.director;
 
+  // The live deployment record (source of truth) — not just the mirrored
+  // snapshot on the enrollment — so the missionary sees the full status,
+  // including a pending request awaiting approval.
+  const deployment = user.isMissionary
+    ? await prisma.missionaryDeployment.findFirst({
+        where: { missionaryId: user.id, deletedAt: null },
+        orderBy: { createdAt: "desc" },
+        include: { reviewedBy: { select: { fullName: true } } },
+      })
+    : null;
+
+  const DEPLOYMENT_STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
+    PENDING: { label: "Awaiting Approval", color: "text-amber-700", bg: "bg-amber-100" },
+    ACTIVE: { label: "Active", color: "text-teal-700", bg: "bg-teal-100" },
+    COMPLETED: { label: "Completed", color: "text-gray-600", bg: "bg-gray-100" },
+    REJECTED: { label: "Rejected", color: "text-red-600", bg: "bg-red-100" },
+  };
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* Header */}
@@ -377,28 +395,51 @@ export default async function MyProgramPage() {
 
       {/* Deployment info */}
       <div className="rounded-xl border border-gray-200 bg-white p-5">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-          Deployment
-        </p>
-        {enrollment.deploymentLocation ? (
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Deployment
+          </p>
+          {deployment && (
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${DEPLOYMENT_STATUS_LABEL[deployment.status]?.bg} ${DEPLOYMENT_STATUS_LABEL[deployment.status]?.color}`}
+            >
+              {DEPLOYMENT_STATUS_LABEL[deployment.status]?.label ?? deployment.status}
+            </span>
+          )}
+        </div>
+        {deployment ? (
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-[11px] text-gray-400">Assigned Location</p>
+              <p className="text-[11px] text-gray-400">Field Location</p>
               <p className="font-medium text-gray-900">
-                {enrollment.deploymentLocation}
+                {deployment.location ?? "—"}
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-gray-400">Assigned On</p>
+              <p className="text-[11px] text-gray-400">Start Date</p>
               <p className="font-medium text-gray-900">
-                {formatDate(enrollment.deploymentAssignedAt)}
+                {formatDate(deployment.startDate)}
               </p>
             </div>
-            {enrollment.deploymentAssignedBy && (
+            {deployment.status === "ACTIVE" && (
               <div>
-                <p className="text-[11px] text-gray-400">Assigned By</p>
+                <p className="text-[11px] text-gray-400">Approved By</p>
                 <p className="font-medium text-gray-900">
-                  {enrollment.deploymentAssignedBy.fullName}
+                  {deployment.reviewedBy?.fullName ?? "—"}
+                </p>
+              </div>
+            )}
+            {deployment.status === "REJECTED" && deployment.reviewNote && (
+              <div className="col-span-2">
+                <p className="text-[11px] text-gray-400">Reason</p>
+                <p className="font-medium text-gray-900">{deployment.reviewNote}</p>
+              </div>
+            )}
+            {deployment.status === "COMPLETED" && (
+              <div>
+                <p className="text-[11px] text-gray-400">End Date</p>
+                <p className="font-medium text-gray-900">
+                  {formatDate(deployment.endDate)}
                 </p>
               </div>
             )}
@@ -411,8 +452,9 @@ export default async function MyProgramPage() {
           </div>
         ) : (
           <div className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-700">
-            Your deployment location has not been assigned yet. Your Local
-            Mission Director will assign it soon.
+            {user.isMissionary
+              ? "No deployment on record yet. Your Local Mission Director will request one soon."
+              : "Deployment is assigned once you become an active missionary."}
           </div>
         )}
       </div>
