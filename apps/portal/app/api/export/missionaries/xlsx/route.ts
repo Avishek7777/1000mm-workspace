@@ -17,9 +17,10 @@ export async function GET(req: NextRequest) {
     where: { id: session.user.id },
     include: { homeMission: true },
   });
+  // Matches who can view /dashboard/director/deployments and /dashboard/lmd/deployments.
   if (
     !user ||
-    !["LOCAL_DIRECTOR", "MAIN_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role)
+    !["LOCAL_DIRECTOR", "MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"].includes(user.role)
   ) {
     return new NextResponse("Forbidden", { status: 403 });
   }

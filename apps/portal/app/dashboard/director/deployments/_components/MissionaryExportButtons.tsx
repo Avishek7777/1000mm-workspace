@@ -8,12 +8,16 @@ export function MissionaryExportButtons({
   year,
   search,
   program,
+  gender,
+  district,
 }: {
   status?: string;
   mission?: string;
   year?: string;
   search?: string;
   program?: string;
+  gender?: string;
+  district?: string;
 }) {
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [loadingXlsx, setLoadingXlsx] = useState(false);
@@ -25,6 +29,8 @@ export function MissionaryExportButtons({
     if (year) p.set("year", year);
     if (search) p.set("search", search);
     if (program) p.set("program", program);
+    if (gender) p.set("gender", gender);
+    if (district) p.set("district", district);
     return `/api/export/missionaries/${format}?${p.toString()}`;
   }
 

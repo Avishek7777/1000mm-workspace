@@ -11,6 +11,10 @@ export type MissionariesExportFilters = {
   search?: string;
   /** Training program id — missionaries enrolled in this program. */
   program?: string;
+  /** MALE | FEMALE, from the missionary's accepted application. */
+  gender?: string;
+  /** District, from the missionary's accepted application's present address. */
+  district?: string;
 };
 
 export function parseMissionariesExportFilters(
@@ -22,6 +26,8 @@ export function parseMissionariesExportFilters(
     year: searchParams.get("year") ?? undefined,
     search: searchParams.get("search") ?? undefined,
     program: searchParams.get("program") ?? undefined,
+    gender: searchParams.get("gender") ?? undefined,
+    district: searchParams.get("district") ?? undefined,
   };
 }
 
@@ -29,7 +35,7 @@ export function buildMissionariesExportWhere(
   filters: MissionariesExportFilters,
   opts: { lmdMissionId?: string | null },
 ): Prisma.MissionaryDeploymentWhereInput {
-  const { status, mission, year, search, program } = filters;
+  const { status, mission, year, search, program, gender, district } = filters;
   const { lmdMissionId } = opts;
 
   const yearNum = year ? parseInt(year, 10) : NaN;
@@ -51,7 +57,7 @@ export function buildMissionariesExportWhere(
           },
         }
       : {}),
-    ...(search || program
+    ...(search || program || gender || district
       ? {
           missionary: {
             ...(search
@@ -61,6 +67,17 @@ export function buildMissionariesExportWhere(
               ? {
                   enrollmentsAsTrainee: {
                     some: { programId: program, deletedAt: null },
+                  },
+                }
+              : {}),
+            ...(gender || district
+              ? {
+                  applications: {
+                    some: {
+                      status: "ACCEPTED",
+                      ...(gender ? { applicantGender: gender as "MALE" | "FEMALE" } : {}),
+                      ...(district ? { presentAddressDistrict: district } : {}),
+                    },
                   },
                 }
               : {}),
@@ -79,6 +96,8 @@ export function describeMissionariesFilters(
   else if (filters.mission) parts.push(`Mission: ${filters.mission}`);
   if (filters.status) parts.push(`Status: ${filters.status}`);
   if (filters.year) parts.push(`Year: ${filters.year}`);
+  if (filters.gender) parts.push(`Gender: ${filters.gender === "MALE" ? "Male" : "Female"}`);
+  if (filters.district) parts.push(`District: ${filters.district}`);
   if (filters.search) parts.push(`Search: "${filters.search}"`);
   return parts.length ? parts.join(" · ") : "All Missions";
 }

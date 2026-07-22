@@ -33,6 +33,8 @@ export default async function DirectorDeploymentsPage({
   const missionFilter = sp.mission || undefined;
   const yearFilter = sp.year ? parseInt(sp.year) : undefined;
   const programFilter = sp.program || undefined;
+  const genderFilter = sp.gender || undefined;
+  const districtFilter = sp.district || undefined;
 
   const baseWhere = {
     deletedAt: null,
@@ -45,19 +47,34 @@ export default async function DirectorDeploymentsPage({
           },
         }
       : {}),
-    // Program: missionaries enrolled in the selected training program
-    ...(programFilter
+    ...(programFilter || genderFilter || districtFilter
       ? {
           missionary: {
-            enrollmentsAsTrainee: {
-              some: { programId: programFilter, deletedAt: null },
-            },
+            // Program: missionaries enrolled in the selected training program
+            ...(programFilter
+              ? {
+                  enrollmentsAsTrainee: {
+                    some: { programId: programFilter, deletedAt: null },
+                  },
+                }
+              : {}),
+            ...(genderFilter || districtFilter
+              ? {
+                  applications: {
+                    some: {
+                      status: "ACCEPTED" as const,
+                      ...(genderFilter ? { applicantGender: genderFilter as "MALE" | "FEMALE" } : {}),
+                      ...(districtFilter ? { presentAddressDistrict: districtFilter } : {}),
+                    },
+                  },
+                }
+              : {}),
           },
         }
       : {}),
   };
 
-  const [pending, active, history, allYears, allMissions, allPrograms] = await Promise.all([
+  const [pending, active, history, allYears, allMissions, allPrograms, districtRows] = await Promise.all([
     prisma.missionaryDeployment.findMany({
       where: { ...baseWhere, status: "PENDING" },
       include: {
@@ -102,6 +119,16 @@ export default async function DirectorDeploymentsPage({
       orderBy: { startDate: "desc" },
       select: { id: true, code: true, title: true },
     }),
+    prisma.application.findMany({
+      where: {
+        status: "ACCEPTED",
+        presentAddressDistrict: { not: null },
+        applicant: { missionaryDeployments: { some: { deletedAt: null } } },
+      },
+      select: { presentAddressDistrict: true },
+      distinct: ["presentAddressDistrict"],
+      orderBy: { presentAddressDistrict: "asc" },
+    }),
   ]);
 
   // Apply status filter to section visibility
@@ -114,12 +141,15 @@ export default async function DirectorDeploymentsPage({
     .map((y) => ({ value: String(y), label: String(y) }));
 
   const missionOptions = allMissions.map((m) => ({ value: m.code, label: m.code }));
+  const districts = districtRows.map((d) => d.presentAddressDistrict!).filter(Boolean);
 
   const current = {
     status: sp.status ?? "",
     mission: sp.mission ?? "",
     year: sp.year ?? "",
     program: sp.program ?? "",
+    gender: sp.gender ?? "",
+    district: sp.district ?? "",
   };
 
   return (
@@ -134,6 +164,8 @@ export default async function DirectorDeploymentsPage({
           mission={sp.mission}
           year={sp.year}
           program={sp.program}
+          gender={sp.gender}
+          district={sp.district}
         />
       </div>
 
@@ -156,6 +188,21 @@ export default async function DirectorDeploymentsPage({
               { value: "COMPLETED", label: "Completed" },
               { value: "REJECTED",  label: "Rejected" },
             ],
+          },
+          {
+            name: "gender",
+            label: "Gender",
+            allLabel: "All Genders",
+            options: [
+              { value: "MALE",   label: "Male" },
+              { value: "FEMALE", label: "Female" },
+            ],
+          },
+          {
+            name: "district",
+            label: "District",
+            allLabel: "All Districts",
+            options: districts.map((d) => ({ value: d, label: d })),
           },
           {
             name: "year",
