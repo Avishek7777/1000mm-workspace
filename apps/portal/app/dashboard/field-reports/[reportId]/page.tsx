@@ -2,8 +2,13 @@ import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
+import { Paperclip, ExternalLink } from "lucide-react";
 import { CommentForm } from "./_components/CommentForm";
 import { PrintButton } from "@/components/PrintButton";
+import {
+  formatFileSize,
+  type FieldReportAttachment,
+} from "@/lib/fieldReportAttachments";
 
 const MONTHS = [
   "January",
@@ -95,6 +100,12 @@ export default async function FieldReportDetailPage({
     : isStaff
       ? `/dashboard/director/field-reports`
       : `/dashboard/field-reports`;
+
+  const attachments = (
+    Array.isArray(report.attachments)
+      ? (report.attachments as unknown as FieldReportAttachment[])
+      : []
+  ).filter((a) => a?.storageKey);
 
   const roleLabel = (role: string) => {
     const map: Record<string, string> = {
@@ -244,6 +255,35 @@ export default async function FieldReportDetailPage({
             </p>
           </div>
         ))}
+
+      {/* Attachments */}
+      {attachments.length > 0 && (
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Attachments ({attachments.length})
+          </p>
+          <div className="space-y-2">
+            {attachments.map((a, i) => (
+              <a
+                key={a.storageKey}
+                href={`/api/uploads/${a.storageKey}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-lg border border-gray-100 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <Paperclip className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                <span className="flex-1 truncate">
+                  {a.fileName || `Attachment ${i + 1}`}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {formatFileSize(a.fileSizeBytes ?? 0)}
+                </span>
+                <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 text-gray-400 print:hidden" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Comments */}
       <div className="rounded-xl border border-gray-200 bg-white p-5">

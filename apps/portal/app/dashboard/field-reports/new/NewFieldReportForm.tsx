@@ -4,6 +4,18 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { submitFieldReportAction } from "@/actions/fieldReports";
+import {
+  ALLOWED_REPORT_ATTACHMENT_TYPES,
+  MAX_REPORT_ATTACHMENTS,
+  MAX_REPORT_ATTACHMENT_BYTES,
+  REPORT_ATTACHMENT_ACCEPT,
+  formatFileSize,
+} from "@/lib/fieldReportAttachments";
+
+const ATTACHMENT_SLOTS = Array.from(
+  { length: MAX_REPORT_ATTACHMENTS },
+  (_, i) => i + 1,
+);
 
 const MONTHS = [
   { value: 1, label: "January" },
@@ -63,6 +75,35 @@ export default function NewFieldReportPage({
     prayerRequests: "",
   });
 
+  // Why a rejected file was cleared back out of its input. Deliberately no
+  // "you picked X" state alongside it: file inputs are uncontrolled and React
+  // empties them once the form action settles, so any such hint would outlive
+  // the file it describes and the retry would silently save no attachments.
+  // The input's own "no file chosen" text is the one display that can't lie.
+  const [attachmentErrors, setAttachmentErrors] = useState<
+    Record<number, string>
+  >({});
+
+  function onAttachmentChange(slot: number) {
+    return (ev: React.ChangeEvent<HTMLInputElement>) => {
+      const file = ev.target.files?.[0];
+      if (!file) {
+        setAttachmentErrors((p) => ({ ...p, [slot]: "" }));
+        return;
+      }
+
+      let error = "";
+      if (!ALLOWED_REPORT_ATTACHMENT_TYPES.includes(file.type)) {
+        error = "Only PDF and image files are allowed.";
+      } else if (file.size > MAX_REPORT_ATTACHMENT_BYTES) {
+        error = `${formatFileSize(file.size)} is over the 2 MB limit.`;
+      }
+
+      if (error) ev.target.value = "";
+      setAttachmentErrors((p) => ({ ...p, [slot]: error }));
+    };
+  }
+
   function set(key: keyof typeof fields) {
     return (
       e: React.ChangeEvent<
@@ -82,6 +123,7 @@ export default function NewFieldReportPage({
   }, [state.ok, state.reportId]);
 
   const e = state.fieldErrors ?? {};
+  const submitFailed = !state.ok && (!!state.error || !!state.fieldErrors);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -321,6 +363,43 @@ export default function NewFieldReportPage({
               )}
             </div>
           ))}
+        </div>
+
+        {/* Attachments */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Attachments
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              Optional — up to {MAX_REPORT_ATTACHMENTS} files, max 2 MB each.
+              PDF or image files only.
+            </p>
+          </div>
+          {submitFailed && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              Any files you attached were cleared when the submission failed —
+              please choose them again before resubmitting.
+            </p>
+          )}
+          <div className="space-y-3">
+            {ATTACHMENT_SLOTS.map((slot) => (
+              <div key={slot}>
+                <input
+                  type="file"
+                  name={`attachment${slot}`}
+                  accept={REPORT_ATTACHMENT_ACCEPT}
+                  onChange={onAttachmentChange(slot)}
+                  className="block w-full text-xs text-gray-500 file:mr-3 file:rounded-lg file:border file:border-gray-200 file:bg-gray-50 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-gray-600 hover:file:bg-gray-100"
+                />
+                {attachmentErrors[slot] && (
+                  <p className="mt-0.5 text-xs text-red-500">
+                    {attachmentErrors[slot]}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex justify-end gap-3">

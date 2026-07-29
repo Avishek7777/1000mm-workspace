@@ -101,6 +101,8 @@ export const NOTIFICATION_TEMPLATES = {
   SALARY_REQUEST_REVIEWED: "salary.request_reviewed",
   APPLICATION_SUBMITTED_TO_LMD: "application.submitted_to_lmd",
   APPLICATION_RECOMMENDED_TO_UD: "application.recommended_to_ud",
+  APPLICATION_RETURNED_TO_LMD: "application.returned_to_lmd",
+  APPLICATION_RETURNED_TO_APPLICANT: "application.returned_to_applicant",
 } as const;
 
 export type NotificationTemplateKey =

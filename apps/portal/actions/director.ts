@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@1000mm/db";
 import { requireDbUser } from "@/lib/auth/helpers";
 import { headers } from "next/headers";
-import { notifyApplicantOfRejection } from "@/lib/applicationNotifications";
+import { notifyApplicantOfAcceptance, notifyApplicantOfRejection, notifyLmdOfReturn } from "@/lib/applicationNotifications";
 
 export type ActionResult = {
   ok: boolean;
@@ -140,6 +140,9 @@ export async function acceptApplicationAction(
   revalidatePath(`/dashboard/director/applications/${applicationId}`);
   revalidatePath(`/dashboard/director/applications`);
   revalidatePath(`/dashboard/director`);
+
+  await notifyApplicantOfAcceptance({ applicantId: app.applicantId });
+
   return { ok: true };
 }
 
@@ -293,5 +296,14 @@ export async function returnToLmdAction(
   revalidatePath(`/dashboard/director/applications/${applicationId}`);
   revalidatePath(`/dashboard/director/applications`);
   revalidatePath(`/dashboard/director`);
+
+  await notifyLmdOfReturn({
+    missionId: app.submittedFromMissionId,
+    applicationId,
+    applicantName: app.applicantFullName,
+    referenceNumber: app.referenceNumber ?? applicationId.slice(-8).toUpperCase(),
+    comment,
+  });
+
   return { ok: true };
 }

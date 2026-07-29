@@ -5,6 +5,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
+import { saveUploadedFile } from "@/lib/uploadFile";
+import {
+  ALLOWED_REPORT_ATTACHMENT_TYPES,
+  MAX_REPORT_ATTACHMENTS,
+  MAX_REPORT_ATTACHMENT_BYTES,
+  type FieldReportAttachment,
+} from "@/lib/fieldReportAttachments";
 
 export type ActionResult = {
   ok: boolean;
@@ -145,6 +152,51 @@ export async function submitFieldReportAction(
     };
   }
 
+  // Optional attachments — validated up front so nothing is written to disk
+  // unless every file passes.
+  const uploads: File[] = [];
+  for (let i = 1; i <= MAX_REPORT_ATTACHMENTS; i++) {
+    const file = formData.get(`attachment${i}`);
+    if (file instanceof File && file.size > 0) uploads.push(file);
+  }
+
+  for (const [i, file] of uploads.entries()) {
+    if (!ALLOWED_REPORT_ATTACHMENT_TYPES.includes(file.type)) {
+      return {
+        ok: false,
+        error: `Attachment ${i + 1} (${file.name}): only PDF and image files are allowed.`,
+      };
+    }
+    if (file.size > MAX_REPORT_ATTACHMENT_BYTES) {
+      return {
+        ok: false,
+        error: `Attachment ${i + 1} (${file.name}): exceeds the 2 MB limit.`,
+      };
+    }
+  }
+
+  const attachments: FieldReportAttachment[] = [];
+  for (const [i, file] of uploads.entries()) {
+    const saved = await saveUploadedFile(
+      file,
+      `field-reports/${userId}`,
+      null,
+      MAX_REPORT_ATTACHMENT_BYTES,
+    );
+    if (!saved.ok) {
+      return {
+        ok: false,
+        error: `Attachment ${i + 1} (${file.name}): ${saved.error}`,
+      };
+    }
+    attachments.push({
+      storageKey: saved.storageKey,
+      fileName: saved.fileName,
+      fileSizeBytes: saved.fileSizeBytes,
+      mimeType: saved.mimeType,
+    });
+  }
+
   // Get LMD name for snapshot
   const missionDirector = await prisma.localMission.findFirst({
     where: { users: { some: { id: userId } } },
@@ -177,6 +229,7 @@ export async function submitFieldReportAction(
       commentsOrSuggestions: d.commentsOrSuggestions ?? null,
       challengesFaced: d.challengesFaced ?? null,
       prayerRequests: d.prayerRequests ?? null,
+      attachments: attachments.length > 0 ? attachments : undefined,
     },
   });
 

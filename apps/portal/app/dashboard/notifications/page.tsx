@@ -31,13 +31,20 @@ function renderNotification(
     case "application.status_changed":
       return {
         icon: "application",
-        title: data.status === "REJECTED" ? "Application Not Approved" : "Application Status Updated",
+        title:
+          data.status === "REJECTED"
+            ? "Application Not Approved"
+            : data.status === "ACCEPTED"
+              ? "Application Accepted!"
+              : "Application Status Updated",
         body:
           data.status === "REJECTED"
             ? (data.reason as string)
               ? `Your application was not approved. Reason: ${data.reason as string}`
               : "Your application was not approved this time. Contact your Local Mission Director for details."
-            : `Your application status changed to ${(data.status as string)?.replace(/_/g, " ").toLowerCase() ?? "a new status"}.`,
+            : data.status === "ACCEPTED"
+              ? "Congratulations! Your application has been accepted by the Union Director."
+              : `Your application status changed to ${(data.status as string)?.replace(/_/g, " ").toLowerCase() ?? "a new status"}.`,
       };
     case "application.submitted_to_lmd":
       return {
@@ -54,6 +61,22 @@ function renderNotification(
         body: (data.applicantName as string)
           ? `${data.applicantName as string}'s application was recommended by the Local Mission Director and now needs your final review.`
           : "An application was recommended and now needs your final review.",
+      };
+    case "application.returned_to_lmd":
+      return {
+        icon: "application",
+        title: "Application Returned for Revision",
+        body: (data.applicantName as string)
+          ? `The Union Director returned ${data.applicantName as string}'s application${data.referenceNumber ? ` (${data.referenceNumber as string})` : ""} to your mission for revision.${data.comment ? ` Comment: ${data.comment as string}` : ""}`
+          : "The Union Director returned an application to your mission for revision.",
+      };
+    case "application.returned_to_applicant":
+      return {
+        icon: "application",
+        title: "Application Returned for Revision",
+        body: data.comment
+          ? `Your Local Mission Director sent your application back for corrections. Comment: ${data.comment as string}`
+          : "Your Local Mission Director sent your application back for corrections.",
       };
     case "complaint.submitted":
       return {

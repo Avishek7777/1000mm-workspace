@@ -8,7 +8,7 @@ import { prisma } from "@1000mm/db";
 import { uploadToR2, r2Prefix } from "@/lib/r2";
 import { DocumentKind } from "@1000mm/db";
 import { headers } from "next/headers";
-import { notifyUdOfRecommendation, notifyApplicantOfRejection } from "@/lib/applicationNotifications";
+import { notifyUdOfRecommendation, notifyApplicantOfRejection, notifyApplicantOfReturn } from "@/lib/applicationNotifications";
 
 export type ActionResult = {
   ok: boolean;
@@ -176,6 +176,12 @@ export async function returnToApplicantAction(
 
   revalidatePath(`/dashboard/lmd/applications/${applicationId}`);
   revalidatePath(`/dashboard/lmd/applications`);
+
+  await notifyApplicantOfReturn({
+    applicantId: app.applicant.id,
+    comment: parsed.data.comment,
+  });
+
   return { ok: true };
 }
 

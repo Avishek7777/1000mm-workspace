@@ -20,7 +20,9 @@ export default function config(phase: string): NextConfig {
     serverExternalPackages: ["@prisma/client"],
     experimental: {
       serverActions: {
-        bodySizeLimit: "10mb",
+        // Field reports allow 5 × 2 MB attachments; the limit covers the whole
+        // multipart body, so it needs headroom above the 10 MB of files alone.
+        bodySizeLimit: "12mb",
       },
     },
   };
