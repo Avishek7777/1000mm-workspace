@@ -1364,6 +1364,9 @@ model Testimony {
   name        String
   location    String
   quote       String   @db.Text
+  // Portal-relative "/api/uploads/…" path from the admin uploader. Null falls
+  // back to the gradient-and-initials avatar on the website.
+  imageUrl    String?
   color       String   @default("from-green-400 to-emerald-600")
   order       Int      @default(0)
   isPublished Boolean  @default(true)

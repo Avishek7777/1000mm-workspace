@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 
 export type Testimony = {
@@ -8,8 +9,147 @@ export type Testimony = {
   name: string;
   location: string;
   quote: string;
+  imageUrl?: string | null;
   color: string;
 };
+
+/**
+ * Cards clamp the quote to 5 lines. Anything longer than this gets a
+ * "Read full story" button — a character count rather than measuring the
+ * rendered element, which would need a layout pass and a resize observer for
+ * something readers never notice being slightly off.
+ */
+const QUOTE_PREVIEW_LIMIT = 300;
+
+/** Avatar photo when one is set, gradient tile with initials when not. */
+function TestimonyAvatar({
+  testimony,
+  size,
+}: {
+  testimony: Testimony;
+  size: "card" | "overlay";
+}) {
+  const box = size === "card" ? "w-14 h-14 rounded-2xl" : "w-16 h-16 rounded-2xl";
+  const initials = testimony.name
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("");
+
+  return (
+    <div
+      className={`relative ${box} overflow-hidden bg-gradient-to-br ${testimony.color} shadow-md flex items-center justify-center`}
+    >
+      {testimony.imageUrl ? (
+        <Image
+          src={testimony.imageUrl}
+          alt={testimony.name}
+          fill
+          sizes="64px"
+          className="object-cover"
+        />
+      ) : (
+        <span className="text-white font-bold text-lg z-10 select-none">
+          {initials}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function TestimonyOverlay({
+  testimony,
+  onClose,
+}: {
+  testimony: Testimony;
+  onClose: () => void;
+}) {
+  // Escape to close, and lock the page behind the overlay so scrolling the
+  // story doesn't scroll the list underneath it.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Testimony from ${testimony.name}`}
+    >
+      <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 16, scale: 0.98 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+        className="relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className={`absolute top-0 right-0 h-24 w-24 rounded-bl-[2rem] rounded-tr-3xl opacity-10 bg-gradient-to-br ${testimony.color}`}
+          aria-hidden="true"
+        />
+
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-4 right-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-stone-500 shadow-sm transition-colors hover:bg-stone-100 hover:text-stone-800"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <div className="flex items-center gap-4 border-b border-stone-100 px-6 py-5 sm:px-8">
+          <TestimonyAvatar testimony={testimony} size="overlay" />
+          <div className="min-w-0">
+            <p className="font-bold text-stone-800">{testimony.name}</p>
+            <p className="text-xs font-medium tracking-wide text-stone-400">
+              {testimony.location}
+            </p>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto px-6 py-6 sm:px-8">
+          <div
+            className="font-heading mb-1 inline-block text-5xl leading-none select-none"
+            style={{
+              background: "linear-gradient(90deg, #16a34a, #f97316)",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              color: "transparent",
+            }}
+            aria-hidden="true"
+          >
+            &ldquo;
+          </div>
+          <p className="whitespace-pre-line text-[15px] leading-relaxed text-stone-600">
+            {testimony.quote}
+          </p>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 const FALLBACK_TESTIMONIES: Testimony[] = [
   {
@@ -64,6 +204,7 @@ const FALLBACK_TESTIMONIES: Testimony[] = [
 
 export default function Testimonies({ testimonies }: { testimonies?: Testimony[] }) {
   const items = testimonies && testimonies.length > 0 ? testimonies : FALLBACK_TESTIMONIES;
+  const [active, setActive] = useState<Testimony | null>(null);
 
   return (
     <section
@@ -142,23 +283,7 @@ export default function Testimonies({ testimonies }: { testimonies?: Testimony[]
 
               {/* Profile avatar */}
               <div className="shrink-0">
-                <div
-                  className={`relative w-14 h-14 rounded-2xl overflow-hidden bg-gradient-to-br ${t.color} shadow-md flex items-center justify-center`}
-                >
-                  <Image
-                    src={`/images/testimony-${i + 1}.jpg`}
-                    alt={t.name}
-                    fill
-                    className="object-cover"
-                    onError={() => {}}
-                  />
-                  {/* Fallback initials */}
-                  <span
-                    className="text-white font-bold text-lg z-10 select-none"
-                  >
-                    {t.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-                  </span>
-                </div>
+                <TestimonyAvatar testimony={t} size="card" />
                 {/* Location pill */}
                 <div className="mt-2 text-center">
                   <span className="text-[10px] text-stone-400 tracking-wide font-medium">
@@ -189,6 +314,18 @@ export default function Testimonies({ testimonies }: { testimonies?: Testimony[]
                 >
                   {t.quote}
                 </p>
+                {t.quote.length > QUOTE_PREVIEW_LIMIT && (
+                  <button
+                    type="button"
+                    onClick={() => setActive(t)}
+                    className="mt-2 inline-flex w-fit items-center gap-1 text-xs font-semibold text-orange-500 transition-colors hover:text-orange-600"
+                  >
+                    Read full story
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                )}
                 <p
                   className="mt-3 font-bold text-stone-800 text-sm"
                 >
@@ -199,6 +336,16 @@ export default function Testimonies({ testimonies }: { testimonies?: Testimony[]
           ))}
         </div>
       </div>
+
+      <AnimatePresence>
+        {active && (
+          <TestimonyOverlay
+            key={active.id}
+            testimony={active}
+            onClose={() => setActive(null)}
+          />
+        )}
+      </AnimatePresence>
     </section>
   );
 }

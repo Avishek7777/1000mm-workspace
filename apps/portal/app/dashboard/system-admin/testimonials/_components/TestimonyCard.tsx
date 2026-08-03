@@ -10,6 +10,7 @@ type Testimony = {
   name: string;
   location: string;
   quote: string;
+  imageUrl: string | null;
   color: string;
   order: number;
   isPublished: boolean;
@@ -48,7 +49,16 @@ export function TestimonyCard({ testimony }: { testimony: Testimony }) {
       <div className="flex items-start justify-between gap-2 border-b border-gray-100 px-4 py-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <div className={`h-7 w-7 shrink-0 rounded-lg bg-gradient-to-br ${testimony.color} flex items-center justify-center`}>
+            <div className={`relative h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br ${testimony.color} flex items-center justify-center`}>
+              {testimony.imageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={testimony.imageUrl}
+                  alt={testimony.name}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  onError={(e) => (e.currentTarget.style.display = "none")}
+                />
+              ) : null}
               <span className="text-[10px] font-bold text-white">
                 {testimony.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
               </span>

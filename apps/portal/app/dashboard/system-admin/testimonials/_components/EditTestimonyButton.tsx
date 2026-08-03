@@ -10,6 +10,7 @@ type Testimony = {
   name: string;
   location: string;
   quote: string;
+  imageUrl: string | null;
   color: string;
   order: number;
   isPublished: boolean;

@@ -11,7 +11,7 @@ import Footer from "@/components/sections/Footer";
 import CurrentProjectsSection, { type Project } from "@/components/sections/CurrentProjectsSection";
 import PageShowFix from "@/components/PageShowFix";
 import { PROJECTS as FALLBACK_PROJECTS } from "@/lib/projects";
-import { resolveProjectImages } from "@/lib/portal";
+import { resolveProjectImages, resolvePortalImage } from "@/lib/portal";
 
 async function fetchProjects(): Promise<Project[]> {
   const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL;
@@ -36,7 +36,13 @@ async function fetchTestimonies(): Promise<Testimony[]> {
       cache: "no-store",
     });
     if (!res.ok) throw new Error("fetch failed");
-    return res.json();
+    const testimonies: Testimony[] = await res.json();
+    // Photos are stored as portal-relative /api/uploads/… paths; the website
+    // is a different origin, so they need absolute URLs before rendering.
+    return testimonies.map((t) => ({
+      ...t,
+      imageUrl: resolvePortalImage(t.imageUrl),
+    }));
   } catch {
     return [];
   }

@@ -1,3 +1,6 @@
+"use client";
+
+import { TestimonyPhotoUploader } from "@/app/dashboard/_components/TestimonyPhotoUploader";
 import type { TestimonyActionResult } from "@/actions/testimonials";
 
 const COLOR_OPTIONS = [
@@ -21,6 +24,7 @@ type Props = {
     name?: string;
     location?: string;
     quote?: string;
+    imageUrl?: string | null;
     color?: string;
     order?: number;
     isPublished?: boolean;
@@ -76,6 +80,10 @@ export function TestimonyForm({ state, pending, submitLabel, defaults }: Props) 
           placeholder="In their own words..."
         />
         {fe.quote && <p className="mt-0.5 text-xs text-red-500">{fe.quote}</p>}
+      </div>
+
+      <div>
+        <TestimonyPhotoUploader defaultValue={defaults?.imageUrl} error={fe.imageUrl} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">

@@ -24,10 +24,21 @@ const testimonySchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(120),
   location: z.string().trim().min(2, "Location is required").max(120),
   quote: z.string().trim().min(10, "Quote is required"),
+  // Empty string means "no photo" — normalise to null so the website's
+  // initials fallback triggers instead of rendering a broken <img>.
+  imageUrl: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? null : v),
+    z.string().trim().max(500).nullable().default(null),
+  ),
   color: z.string().trim().min(2, "Color is required"),
   order: z.coerce.number().int().default(0),
   isPublished: z.preprocess((v) => v === "true" || v === true, z.boolean()).default(true),
 });
+
+function revalidateTestimonies() {
+  revalidatePath("/dashboard/settings/testimonials");
+  revalidatePath("/dashboard/system-admin/testimonials");
+}
 
 export async function createTestimonyAction(
   _prev: TestimonyActionResult,
@@ -46,7 +57,7 @@ export async function createTestimonyAction(
   }
 
   await prisma.testimony.create({ data: parsed.data });
-  revalidatePath("/dashboard/settings/testimonials");
+  revalidateTestimonies();
   return { ok: true };
 }
 
@@ -68,18 +79,18 @@ export async function updateTestimonyAction(
   }
 
   await prisma.testimony.update({ where: { id }, data: parsed.data });
-  revalidatePath("/dashboard/settings/testimonials");
+  revalidateTestimonies();
   return { ok: true };
 }
 
 export async function deleteTestimonyAction(id: string): Promise<void> {
   await requireSA();
   await prisma.testimony.delete({ where: { id } });
-  revalidatePath("/dashboard/settings/testimonials");
+  revalidateTestimonies();
 }
 
 export async function togglePublishTestimonyAction(id: string, current: boolean): Promise<void> {
   await requireSA();
   await prisma.testimony.update({ where: { id }, data: { isPublished: !current } });
-  revalidatePath("/dashboard/settings/testimonials");
+  revalidateTestimonies();
 }

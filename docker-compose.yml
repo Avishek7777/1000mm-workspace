@@ -1,35 +1,33 @@
+# Local development database only.
+#
+# The apps themselves run natively via `pnpm dev` (portal :3001, website :3000)
+# — running them in Docker too just fights over those ports. Production is the
+# VPS (systemd + Nginx + local PostgreSQL); see DEPLOY.md.
+#
+# Port 5433 on the host, not 5432, so this never collides with a locally
+# installed PostgreSQL. Matches DATABASE_URL in packages/db/.env.
+
 services:
-  postgres:
-    image: postgres:17
+  db:
+    # 16, not 17 — matches both the existing dev volume and production (the VPS
+    # runs PostgreSQL 16). Bumping this major version will not start against an
+    # older data directory; it needs a dump/restore.
+    image: postgres:16
+    container_name: mm1000-db
+    restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: mm1000
-
-  portal:
-    build:
-      context: .
-      dockerfile: apps/portal/Dockerfile
+      POSTGRES_USER: mm1000
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: mm1000_dev
     volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/apps/portal/node_modules
-    working_dir: /app
-    command: pnpm --filter portal dev
-    ports:
-      - "3001:3001"
+      - mm1000-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mm1000 -d mm1000_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  website:
-    build:
-      context: .
-      dockerfile: apps/website/Dockerfile
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/apps/website/node_modules
-    working_dir: /app
-    command: pnpm --filter website dev
-    ports:
-      - "3000:3000"
+volumes:
+  mm1000-pgdata:

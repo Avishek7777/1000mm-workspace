@@ -14,8 +14,14 @@ export function resolveProjectImages<T extends { images: string[] }>(
 ): T {
   return {
     ...project,
-    images: project.images.map((src) =>
-      src.startsWith("/api/uploads/") ? `${PORTAL_URL}${src}` : src,
-    ),
+    images: project.images.map(resolvePortalImage),
   };
+}
+
+/** Single-URL form of the above, for records with one optional image. */
+export function resolvePortalImage(src: string): string;
+export function resolvePortalImage(src: string | null | undefined): string | null;
+export function resolvePortalImage(src: string | null | undefined): string | null {
+  if (!src) return null;
+  return src.startsWith("/api/uploads/") ? `${PORTAL_URL}${src}` : src;
 }
