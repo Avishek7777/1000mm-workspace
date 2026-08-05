@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
-import { prisma } from "@1000mm/db";
+import { prisma, tombstoneEmail } from "@1000mm/db";
 
 export type ActionResult = {
   ok: boolean;
@@ -251,11 +251,17 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
   if (user.role === "SYSTEM_ADMIN")
     return { ok: false, error: "Cannot delete a System Admin account." };
 
-  // Soft delete
+  // Soft delete. The email is tombstoned so the address becomes reusable —
+  // it is @unique, and a soft-deleted row would otherwise reserve it forever
+  // (blocking re-creation, self-registration, and email changes).
   await prisma.$transaction([
     prisma.user.update({
       where: { id: userId },
-      data: { deletedAt: new Date(), isActive: false },
+      data: {
+        deletedAt: new Date(),
+        isActive: false,
+        email: tombstoneEmail(user.email),
+      },
     }),
     prisma.auditLog.create({
       data: {
@@ -529,10 +535,15 @@ export async function removeLmdAction(userId: string): Promise<ActionResult> {
       });
     }
 
-    // Soft delete the user
+    // Soft delete the user. Tombstoning the email frees the address for reuse
+    // — see the note in deleteUserAction.
     await tx.user.update({
       where: { id: userId },
-      data: { deletedAt: new Date(), isActive: false },
+      data: {
+        deletedAt: new Date(),
+        isActive: false,
+        email: tombstoneEmail(user.email),
+      },
     });
 
     await tx.auditLog.create({
