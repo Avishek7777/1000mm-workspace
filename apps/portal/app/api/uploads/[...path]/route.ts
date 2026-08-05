@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { auth } from "@/lib/auth/config";
+
+/**
+ * Upload folders the public website is allowed to read without a session.
+ *
+ * The website renders project and testimony images through next/image, whose
+ * optimizer fetches them server-to-server with no cookies — so these must stay
+ * open. Everything else here is personal: applicant NIDs, birth and baptism
+ * certificates, profile photos, assignment submissions, LMD paperwork. Those
+ * now require a logged-in portal session.
+ *
+ * Matched against the first path segment, which is the `folder` value passed
+ * to /api/upload (see lib/uploadFile.ts and lib/r2.ts).
+ */
+const PUBLIC_PREFIXES = new Set(["projects", "testimonies"]);
 
 export async function GET(
   req: NextRequest,
@@ -15,6 +30,16 @@ export async function GET(
     )
   ) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const isPublic = PUBLIC_PREFIXES.has(segments[0] ?? "");
+  if (!isPublic) {
+    const session = await auth();
+    if (!session?.user?.id) {
+      // 404 rather than 401: an unauthenticated caller learns nothing about
+      // whether a given storage key exists.
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
   }
 
   const filePath = path.join(process.cwd(), "public", "uploads", ...segments);
@@ -50,10 +75,18 @@ export async function GET(
         "Content-Type": contentType,
         // inline = open in browser, attachment = force download
         "Content-Disposition": "inline",
-        // Short-lived cache: several upload flows reuse deterministic file
-        // names (project extras, profile photos), so replacements must
+        // Public assets get a short shared cache: several upload flows reuse
+        // deterministic file names (project extras), so replacements must
         // propagate quickly to the website image optimizer and browsers.
-        "Cache-Control": "public, max-age=60, must-revalidate",
+        //
+        // Session-gated files must never enter a shared cache. Cloudflare
+        // proxies the portal and caches .pdf/.jpg by default, so a `public`
+        // directive here would let one applicant's documents be served from
+        // the edge to someone else.
+        "Cache-Control": isPublic
+          ? "public, max-age=60, must-revalidate"
+          : "private, no-store",
+        ...(isPublic ? {} : { Vary: "Cookie" }),
       },
     });
   } catch {
