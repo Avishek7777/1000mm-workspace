@@ -9,13 +9,19 @@ export default async function NewApplicationPage() {
 
   const userId = session.user.id;
 
-  // Check if there's already a submitted/active application
+  // Check if there's already a submitted/active application.
+  //
+  // RETURNED_TO_APPLICANT is deliberately exempt: a returned application is
+  // the applicant's to edit again, and the "Edit & Resubmit" buttons on
+  // /dashboard/my-application and /dashboard/trainee link straight here.
+  // Treating it as "already submitted" bounced them back to the page they
+  // came from, so the button appeared to do nothing at all.
   const existingSubmitted = await prisma.application.findFirst({
     where: {
       applicantId: userId,
       deletedAt: null,
       status: {
-        notIn: ["DRAFT", "WITHDRAWN"],
+        notIn: ["DRAFT", "WITHDRAWN", "RETURNED_TO_APPLICANT"],
       },
     },
   });
@@ -85,16 +91,32 @@ export default async function NewApplicationPage() {
   // Use draft if exists, otherwise fall back to previous application
   const formSource = existingDraft ?? previousApplication;
   const isReapply = !existingDraft && !!previousApplication;
+  const isReturned =
+    isReapply && previousApplication?.status === "RETURNED_TO_APPLICANT";
 
   return (
     <div className="min-h-screen bg-gray-50">
       {isReapply && (
         <div className="mx-auto max-w-3xl px-6 pt-6">
-          <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm text-blue-800">
-            <strong>Re-applying?</strong> We've pre-filled the form with your
-            previous application data. Please review all fields before
-            submitting — some information may have changed.
-          </div>
+          {isReturned ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-900">
+              <strong>Application returned.</strong> Your application was sent
+              back for changes and is pre-filled below. Update the fields
+              mentioned in the reviewer&rsquo;s comment, then submit again.
+              {previousApplication?.lmdReviewerComment && (
+                <p className="mt-2 border-t border-amber-200 pt-2 text-amber-800">
+                  <span className="font-medium">Reviewer&rsquo;s comment:</span>{" "}
+                  {previousApplication.lmdReviewerComment}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm text-blue-800">
+              <strong>Re-applying?</strong> We&rsquo;ve pre-filled the form with
+              your previous application data. Please review all fields before
+              submitting — some information may have changed.
+            </div>
+          )}
         </div>
       )}
       <BioDataForm

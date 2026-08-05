@@ -591,10 +591,17 @@ export async function submitApplicationAction(
     prisma.applicationStatusHistory.create({
       data: {
         applicationId,
-        fromStatus: "DRAFT",
+        // Not always DRAFT: a returned application keeps its
+        // RETURNED_TO_APPLICANT status while the applicant edits it, and only
+        // flips to SUBMITTED here. Hardcoding DRAFT logged a transition that
+        // never happened.
+        fromStatus: app.status,
         toStatus: "SUBMITTED",
         triggeredById: userId,
-        comment: "Application submitted by applicant.",
+        comment:
+          app.status === "RETURNED_TO_APPLICANT"
+            ? "Application resubmitted by applicant after being returned."
+            : "Application submitted by applicant.",
       },
     }),
     prisma.auditLog.create({

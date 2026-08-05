@@ -20,9 +20,13 @@ export default function config(phase: string): NextConfig {
     serverExternalPackages: ["@prisma/client"],
     experimental: {
       serverActions: {
-        // Field reports allow 5 × 2 MB attachments; the limit covers the whole
-        // multipart body, so it needs headroom above the 10 MB of files alone.
-        bodySizeLimit: "12mb",
+        // Sized for the largest single submission, which is the bio-data
+        // application: 7 documents × 2 MB (the per-file cap in
+        // actions/application.ts) = 14 MB of files alone. The limit covers the
+        // whole multipart body, so it needs headroom above that — at 12 MB a
+        // fully-documented application silently exceeded it and the form hung
+        // on "Saving…" forever. Field reports (5 × 2 MB) fit comfortably too.
+        bodySizeLimit: "24mb",
       },
     },
   };
