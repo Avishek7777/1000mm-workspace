@@ -12,6 +12,7 @@ import {
   FormCard,
   FormNav,
 } from "./FormFields";
+import { useToast } from "@/app/dashboard/_components/Toast";
 import type { ExistingDraft } from "./BioDataForm";
 
 type Props = {
@@ -296,6 +297,7 @@ export function Page4Application({
     },
   ];
 
+  const notify = useToast();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -494,10 +496,12 @@ export function Page4Application({
               >
                 <FileInput
                   name={doc.name}
+                  label={doc.label}
                   accept="image/jpeg,image/png,application/pdf"
                   hint={doc.hint}
                   error={errors[doc.name]}
                   existingFile={docs.find((d) => d.kind === doc.kind) ?? null}
+                  onNotify={notify}
                 />
               </Field>
             ))}

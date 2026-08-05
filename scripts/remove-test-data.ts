@@ -18,26 +18,34 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const TEST_EMAIL_DOMAIN = "seedtest.local";
-const TEST_PROGRAM_CODE = "TEST-BATCH";
+// Both seeds are marker-based; this removes either or both.
+const TEST_EMAIL_DOMAINS = ["seedtest.local", "demo.local"];
+const TEST_PROGRAM_CODES = ["TEST-BATCH", "DEMO-2026"];
+const TEST_TESTIMONY_NAMES = [
+  "Samuel Das",
+  "Rebecca Sarkar",
+  "Timothy Gomes",
+  "Esther Akter",
+];
 
 async function main() {
   const confirmed = process.argv.includes("--yes");
 
   const users = await prisma.user.findMany({
-    where: { email: { endsWith: `@${TEST_EMAIL_DOMAIN}` } },
+    where: { OR: TEST_EMAIL_DOMAINS.map((d) => ({ email: { endsWith: `@${d}` } })) },
     select: { id: true, email: true },
   });
   const userIds = users.map((u) => u.id);
 
-  const program = await prisma.trainingProgram.findUnique({
-    where: { code: TEST_PROGRAM_CODE },
+  const programs = await prisma.trainingProgram.findMany({
+    where: { code: { in: TEST_PROGRAM_CODES } },
     select: { id: true, code: true },
   });
+  const programIds = programs.map((p) => p.id);
 
-  const windows = program
+  const windows = programIds.length
     ? await prisma.applicationWindow.findMany({
-        where: { programId: program.id },
+        where: { programId: { in: programIds } },
         select: { id: true },
       })
     : [];
@@ -58,7 +66,7 @@ async function main() {
   console.log(`  ${users.length} test users        ${users.map((u) => u.email).join(", ") || "—"}`);
   console.log(`  ${applications.length} applications      ${applications.map((a) => a.referenceNumber ?? "(draft)").join(", ") || "—"}`);
   console.log(`  ${windows.length} application window(s)`);
-  console.log(`  ${program ? 1 : 0} program           ${program?.code ?? "—"}`);
+  console.log(`  ${programs.length} program(s)        ${programs.map((p) => p.code).join(", ") || "—"}`);
 
   if (!confirmed) {
     console.log("\nDry run. Re-run with --yes to delete.");
@@ -107,10 +115,16 @@ async function main() {
     console.log(`  ✓ ${w.count} application windows`);
   }
 
-  if (program) {
-    await prisma.trainingProgram.delete({ where: { id: program.id } });
-    console.log(`  ✓ 1 program`);
+  if (programIds.length) {
+    const p = await prisma.trainingProgram.deleteMany({ where: { id: { in: programIds } } });
+    console.log(`  ✓ ${p.count} programs`);
   }
+
+  // Demo testimonies, matched by name so hand-written ones survive.
+  const t = await prisma.testimony.deleteMany({
+    where: { name: { in: TEST_TESTIMONY_NAMES } },
+  });
+  if (t.count) console.log(`  ✓ ${t.count} demo testimonies`);
 
   console.log("\nDone. No real data was touched.");
 }

@@ -106,7 +106,7 @@ export default async function MyApplicationPage({
       submittedFromMission: { select: { name: true } },
       documents: {
         where: { deletedAt: null },
-        select: { id: true, kind: true, fileName: true, createdAt: true },
+        select: { id: true, kind: true, fileName: true, storageKey: true, createdAt: true },
         orderBy: { createdAt: "asc" },
       },
     },
@@ -364,6 +364,18 @@ export default async function MyApplicationPage({
                     {doc.kind.replace(/_/g, " ").toLowerCase()} ·{" "}
                     {new Date(doc.createdAt).toLocaleDateString("en-GB")}
                   </p>
+                  <a
+                    href={`/api/uploads/${doc.storageKey}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-teal-700 hover:text-teal-800 hover:underline"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    View
+                  </a>
                 </div>
               </li>
             ))}

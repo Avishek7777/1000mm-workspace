@@ -94,28 +94,87 @@ export function Textarea({
 // existingFile: { fileName } — shown when a file was previously uploaded for this field.
 // When the user picks a new file it replaces the indicator.
 
+// Mirrors UPLOAD_MAX_BYTES and DOC_TYPES in actions/application.ts. Checking
+// here too means the applicant hears about an oversized or wrong-typed file
+// immediately, instead of after filling in the rest of the form and
+// submitting — the server still enforces it, this is only a faster no.
+const CLIENT_MAX_BYTES = 2 * 1024 * 1024;
+
+function describeFileProblem(file: File, accept?: string): string | null {
+  if (file.size > CLIENT_MAX_BYTES) {
+    const mb = (file.size / (1024 * 1024)).toFixed(1);
+    return `“${file.name}” is ${mb} MB. Files must be under 2 MB.`;
+  }
+  if (accept) {
+    const allowed = accept.split(",").map((t) => t.trim());
+    if (allowed.length && !allowed.includes(file.type)) {
+      return `“${file.name}” is not an accepted file type. Use PDF, JPG, or PNG.`;
+    }
+  }
+  return null;
+}
+
 export function FileInput({
   error,
   accept,
   hint,
   existingFile,
+  label,
+  onNotify,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & {
   error?: string;
   hint?: string;
-  existingFile?: { fileName: string } | null;
+  existingFile?: { fileName: string; storageKey?: string } | null;
+  /** Used in toast copy so the applicant knows which field succeeded/failed. */
+  label?: string;
+  onNotify?: (kind: "success" | "error", message: string) => void;
 }) {
   const [newFileName, setNewFileName] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   // What to show in the upload zone
   const uploaded = newFileName ?? null;
   const existing = !newFileName && existingFile ? existingFile.fileName : null;
+  const shownError = error ?? localError ?? undefined;
+  const viewHref =
+    !newFileName && existingFile?.storageKey
+      ? `/api/uploads/${existingFile.storageKey}`
+      : null;
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setNewFileName(null);
+      setLocalError(null);
+      return;
+    }
+
+    const problem = describeFileProblem(file, accept);
+    if (problem) {
+      // Clear the input so an invalid file is never submitted, and so the
+      // previously uploaded file (if any) stays as the effective value.
+      e.target.value = "";
+      setNewFileName(null);
+      setLocalError(problem);
+      onNotify?.("error", problem);
+      return;
+    }
+
+    setLocalError(null);
+    setNewFileName(file.name);
+    onNotify?.(
+      "success",
+      `${label ? `${label}: ` : ""}“${file.name}” attached. It uploads when you submit.`,
+    );
+    props.onChange?.(e);
+  }
 
   return (
     <div>
       <label
         className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-5 text-center transition-colors hover:bg-gray-50 ${
-          error
+          shownError
             ? "border-red-400 bg-red-50"
             : existing
               ? "border-green-400 bg-green-50"
@@ -198,13 +257,28 @@ export function FileInput({
           type="file"
           accept={accept}
           className="file-input-hidden"
-          onChange={(e) => {
-            setNewFileName(e.target.files?.[0]?.name ?? null);
-            props.onChange?.(e);
-          }}
+          onChange={handleChange}
         />
       </label>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+
+      {/* Outside the <label> — inside it, clicking would reopen the file
+          picker instead of following the link. */}
+      {viewHref && (
+        <a
+          href={viewHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-teal-700 hover:text-teal-800 hover:underline"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          View uploaded file
+        </a>
+      )}
+
+      {shownError && <p className="mt-1 text-xs text-red-500">{shownError}</p>}
     </div>
   );
 }

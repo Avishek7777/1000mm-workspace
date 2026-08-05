@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ToastProvider } from "@/app/dashboard/_components/Toast";
 import { FormProgress } from "./FormProgress";
 import { Page1PersonalDetails } from "./Page1PersonalDetails";
 import { Page2FamilyDetails } from "./Page2FamilyDetails";
@@ -11,6 +12,9 @@ import { Page4Application } from "./Page4Application";
 export type UploadedDoc = {
   kind: string;
   fileName: string;
+  // Relative path served by /api/uploads/[...path] — lets the form link to
+  // the file the applicant already uploaded instead of only naming it.
+  storageKey: string;
   educationEntryIndex: number | null;
 };
 
@@ -137,6 +141,7 @@ export function BioDataForm({
   }
 
   return (
+    <ToastProvider>
     <div className="mx-auto max-w-3xl px-4 py-8">
       {/* Header */}
       <div className="mb-8">
@@ -205,5 +210,6 @@ export function BioDataForm({
         )}
       </div>
     </div>
+    </ToastProvider>
   );
 }
