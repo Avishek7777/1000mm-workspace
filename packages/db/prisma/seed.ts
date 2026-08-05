@@ -551,8 +551,17 @@ async function seedApplications(
       const submittedAt = randomDate(new Date("2026-01-01"), new Date("2026-06-01"));
       const applicantData = buildApplicantData(trainee, spec?.gender);
 
+      // Keyed on @@unique([applicantId, windowId]), not referenceNumber. An
+      // applicant can only hold one application per window, so that is the
+      // constraint a re-run actually collides with — keying on the reference
+      // number meant any change to its format (or data from an older seed
+      // revision) made the upsert try to insert and fail with P2002.
       const application = await prisma.application.upsert({
-        where: { referenceNumber },
+        where: { applicantId_windowId: { applicantId: trainee.id, windowId: program.window.id } },
+        // referenceNumber is deliberately not in `update`: it is an identity,
+        // and rewriting it on a re-seed can collide with whatever another row
+        // already holds. Existing applications keep the number they were
+        // issued; only newly created ones get the computed value.
         update: { status, submittedAt, lastTransitionAt: submittedAt, ...applicantData },
         create: { referenceNumber, applicantId: trainee.id, windowId: program.window.id, submittedFromMissionId: trainee.homeMissionId, status, submittedAt, lastTransitionAt: submittedAt, ...applicantData, profilePhotoDocumentId: null },
       });
@@ -1265,7 +1274,12 @@ async function seedSystemSettings() {
     { key: "application.form_current_version",     value: 1,                                     description: "Bio-data form schema version" },
   ];
   for (const s of settings) {
-    await prisma.systemSetting.upsert({ where: { key: s.key }, update: { value: s.value as any, description: s.description }, create: { key: s.key, value: s.value as any, description: s.description } });
+    // Same reasoning as projects: never clobber a value the client configured.
+    await prisma.systemSetting.upsert({
+      where: { key: s.key },
+      update: SAFE ? {} : { value: s.value as any, description: s.description },
+      create: { key: s.key, value: s.value as any, description: s.description },
+    });
   }
   console.log("✓ System settings seeded");
 }
@@ -1329,7 +1343,14 @@ async function seedProjects() {
   ];
 
   for (const p of projects) {
-    await prisma.project.upsert({ where: { slug: p.slug }, update: { ...p, isPublished: true }, create: { ...p, isPublished: true } });
+    // Safe mode creates a missing project but never overwrites one: the live
+    // projects carry full article bodies, objectives and budgets entered
+    // through the admin, none of which exist in this seed's thin fixtures.
+    await prisma.project.upsert({
+      where: { slug: p.slug },
+      update: SAFE ? {} : { ...p, isPublished: true },
+      create: { ...p, isPublished: true },
+    });
   }
 
   console.log(`✓ Seeded ${projects.length} projects`);
