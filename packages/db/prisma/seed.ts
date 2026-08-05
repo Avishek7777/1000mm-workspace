@@ -46,6 +46,22 @@ dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 const prisma = new PrismaClient();
 const BCRYPT_ROUNDS = 10;
 
+/**
+ * SEED_MODE=safe adapts this seed for a database that already holds real data
+ * (i.e. production). It changes three things:
+ *
+ *   · existing Local Missions keep their name/description instead of being
+ *     overwritten, and keep whichever director is already assigned — the seed
+ *     reuses that real director rather than replacing them with lmd.*@1000mm.local
+ *   · donations, contact messages and testimonies are added rather than
+ *     wiped first (those deleteMany calls are unscoped and would destroy real
+ *     submissions from the public website)
+ *
+ * Default (unset) is the original full-reset behaviour, which is what you want
+ * against a local dev database.
+ */
+const SAFE = process.env.SEED_MODE === "safe";
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function randomItem<T>(items: readonly T[]): T {
@@ -121,7 +137,9 @@ async function seedLocalMissions() {
   ];
   const created = {} as Record<LocalMissionCode, { id: string }>;
   for (const m of missions) {
-    const record = await prisma.localMission.upsert({ where: { code: m.code }, update: m, create: m });
+    // In safe mode `update: {}` leaves an existing mission's name, description
+    // and director untouched; it only creates a mission that is missing.
+    const record = await prisma.localMission.upsert({ where: { code: m.code }, update: SAFE ? {} : m, create: m });
     created[m.code] = record;
   }
   console.log("✓ Local missions seeded");
@@ -168,6 +186,20 @@ async function seedUsers(missions: Record<LocalMissionCode, { id: string }>) {
   const lmdNames: Record<LocalMissionCode, string> = { EBM: "Ratan Das", NBM: "Sukumar Roy", SBM: "Monoj Paul", WBM: "Bijon Biswas" };
   const lmds = await Promise.all(
     missionCodes.map(async (code) => {
+      // Safe mode: if this mission already has a director, seed everything
+      // against that real account instead of creating a parallel fake one —
+      // otherwise the client logs in as themselves and sees an empty queue.
+      if (SAFE) {
+        const mission = await prisma.localMission.findUnique({
+          where: { id: missions[code].id },
+          select: { directorId: true },
+        });
+        if (mission?.directorId) {
+          const existing = await prisma.user.findUnique({ where: { id: mission.directorId } });
+          if (existing) return { user: existing, missionCode: code };
+        }
+      }
+
       const email = `lmd.${code.toLowerCase()}@1000mm.local`;
       const user = await prisma.user.upsert({
         where: { email },
@@ -1028,7 +1060,13 @@ async function seedTrainerApplications(adminId: string) {
 // ─── Donations ────────────────────────────────────────────────────────────────
 
 async function seedDonations() {
-  await prisma.donation.deleteMany({});
+  // Unscoped wipe — skipped in safe mode, where real records may exist.
+  if (!SAFE) await prisma.donation.deleteMany({});
+  // Nothing was wiped in safe mode, so a second run would duplicate every row.
+  if (SAFE && (await prisma.donation.count()) > 0) {
+    console.log("• Skipped donations — table already has rows (safe mode)");
+    return;
+  }
 
   const donations = [
     { donorName: "Ahmed Hassan",    donorEmail: "ahmed@example.com",   amountMinor: BigInt(100000), currency: "BDT", gateway: PaymentGateway.BKASH,      status: DonationStatus.COMPLETED, receiptNumber: "RCP-2026-001", completedAt: new Date("2026-01-15"), donorMessage: "Support for training program." },
@@ -1063,7 +1101,13 @@ async function seedDonations() {
 // ─── Contact Messages ─────────────────────────────────────────────────────────
 
 async function seedContactMessages(adminId: string) {
-  await prisma.contactMessage.deleteMany({});
+  // Unscoped wipe — skipped in safe mode, where real records may exist.
+  if (!SAFE) await prisma.contactMessage.deleteMany({});
+  // Nothing was wiped in safe mode, so a second run would duplicate every row.
+  if (SAFE && (await prisma.contactMessage.count()) > 0) {
+    console.log("• Skipped contact messages — table already has rows (safe mode)");
+    return;
+  }
 
   const messages = [
     { fullName: "Mohammad Ali",      email: "mali@example.com",     phone: "01711000001", subject: "How to apply for the training program?", message: "I am interested in applying for the 1000MM 2026 training program. Can you tell me the eligibility requirements and how to apply online?", isHandled: true,  isSpam: false },
@@ -1229,7 +1273,13 @@ async function seedSystemSettings() {
 // ─── Testimonies ─────────────────────────────────────────────────────────────
 
 async function seedTestimonies() {
-  await prisma.testimony.deleteMany({});
+  // Unscoped wipe — skipped in safe mode, where real records may exist.
+  if (!SAFE) await prisma.testimony.deleteMany({});
+  // Nothing was wiped in safe mode, so a second run would duplicate every row.
+  if (SAFE && (await prisma.testimony.count()) > 0) {
+    console.log("• Skipped testimonies — table already has rows (safe mode)");
+    return;
+  }
 
   const testimonies = [
     { name: "Samuel Das",     location: "Dhaka",       color: "from-green-400 to-emerald-600", order: 1, isPublished: true,  quote: "Joining the 1000 Missionary Movement was the best decision of my life. I was a shy university student with no experience in public speaking. During my one year of service in rural Sylhet, I conducted children's programs and health seminars. God gave me courage I never had before. I saw 27 people give their hearts to Jesus. Now I am no longer afraid — I am a missionary for life." },
