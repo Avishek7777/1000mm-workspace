@@ -91,8 +91,11 @@ export default async function LmdDeploymentsPage({
     .sort((a, b) => b - a)
     .map((y) => ({ value: String(y), label: String(y) }));
 
-  // Trainees in this mission for the request form
-  const trainees = lmdMission
+  // Trainees in this mission for the request form. Their programme enrolments
+  // come along so the form can offer a "filter by programme" narrowing — a
+  // mission with several intakes otherwise presents one long undifferentiated
+  // list of names.
+  const traineeRecords = lmdMission
     ? await prisma.user.findMany({
         where: {
           homeMissionId: lmdMission.id,
@@ -100,8 +103,33 @@ export default async function LmdDeploymentsPage({
           isActive: true,
           deletedAt: null,
         },
-        select: { id: true, fullName: true },
+        select: {
+          id: true,
+          fullName: true,
+          enrollmentsAsTrainee: {
+            where: { deletedAt: null },
+            select: { programId: true },
+          },
+        },
         orderBy: { fullName: "asc" },
+      })
+    : [];
+
+  const trainees = traineeRecords.map((t) => ({
+    id: t.id,
+    fullName: t.fullName,
+    programIds: t.enrollmentsAsTrainee.map((e) => e.programId),
+  }));
+
+  // Every programme this mission's trainees are enrolled in — the same set the
+  // list filter uses, but computed from the trainees themselves so someone
+  // enrolled in a programme with no deployments yet still appears.
+  const traineeProgramIds = new Set(trainees.flatMap((t) => t.programIds));
+  const formPrograms = lmdMission
+    ? await prisma.trainingProgram.findMany({
+        where: { id: { in: [...traineeProgramIds] }, deletedAt: null },
+        orderBy: { startDate: "desc" },
+        select: { id: true, code: true, title: true },
       })
     : [];
 
@@ -123,6 +151,7 @@ export default async function LmdDeploymentsPage({
         {lmdMission && (
           <RequestDeploymentForm
             missionaries={trainees}
+            programs={formPrograms}
             missionName={`${lmdMission.name} (${lmdMission.code})`}
           />
         )}

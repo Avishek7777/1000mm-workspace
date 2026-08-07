@@ -4,19 +4,31 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { requestDeploymentAction } from "@/actions/deployments";
 
-type Missionary = { id: string; fullName: string };
+type Missionary = { id: string; fullName: string; programIds: string[] };
+type Program = { id: string; code: string; title: string };
 
 const INIT = { ok: false as const, error: "" };
 
 export function RequestDeploymentForm({
   missionaries,
+  programs,
   missionName,
 }: {
   missionaries: Missionary[];
+  programs: Program[];
   missionName: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  // Narrows the missionary list to those who attended a given programme.
+  // Purely a client-side view of data already sent — no refetch, and it does
+  // not touch the page's own programme filter, which scopes the deployments
+  // list rather than who can be requested.
+  const [programFilter, setProgramFilter] = useState("");
+
+  const visibleMissionaries = programFilter
+    ? missionaries.filter((m) => m.programIds.includes(programFilter))
+    : missionaries;
   const [state, action, pending] = useActionState(requestDeploymentAction, INIT);
   const isFirstRender = useRef(true);
 
@@ -53,20 +65,48 @@ export function RequestDeploymentForm({
         )}
 
         <form action={action} className="space-y-4">
+          {programs.length > 0 && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-700">
+                Filter by programme
+              </label>
+              <select
+                value={programFilter}
+                onChange={(e) => setProgramFilter(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500"
+              >
+                <option value="">All programmes</option>
+                {programs.map((p) => (
+                  <option key={p.id} value={p.id}>{p.code} — {p.title}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-700">
               Missionary <span className="text-red-500">*</span>
             </label>
             <select
+              // Remounts when the filter changes, clearing any selection that
+              // is no longer in the list — otherwise a name filtered out of
+              // view would still be submitted.
+              key={programFilter}
               name="missionaryId"
               required
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500"
+              disabled={visibleMissionaries.length === 0}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500 disabled:bg-gray-50 disabled:text-gray-400"
             >
               <option value="">Select a missionary…</option>
-              {missionaries.map((m) => (
+              {visibleMissionaries.map((m) => (
                 <option key={m.id} value={m.id}>{m.fullName}</option>
               ))}
             </select>
+            <p className="mt-1 text-[11px] text-gray-400">
+              {visibleMissionaries.length === 0
+                ? "No missionaries attended this programme."
+                : `${visibleMissionaries.length} of ${missionaries.length} shown`}
+            </p>
           </div>
 
           <div>
