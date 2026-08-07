@@ -158,6 +158,10 @@ export async function GET(
     lmdReviewedAt: app.lmdReviewCompletedAt?.toISOString() ?? undefined,
     directorReviewerName: app.directorReviewer?.fullName ?? undefined,
     directorReviewedAt: app.directorReviewCompletedAt?.toISOString() ?? undefined,
+    // Which document kinds the applicant actually uploaded, so the PDF can
+    // print a ticked checklist. Deduplicated because education certificates
+    // are one row per education entry.
+    uploadedDocumentKinds: [...new Set(app.documents.map((d) => d.kind))],
   };
   return NextResponse.json(data);
 }

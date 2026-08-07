@@ -34,7 +34,7 @@ export function PdfDownloadButton({
         <BioDataPDF
           {...data}
           referenceNumber={referenceNumber}
-          submittedAt={new Date().toISOString()}
+          submittedAt={data.submittedAt ?? new Date().toISOString()}
           logoUrl="/logos/1000mm-logo.png"
           sdaLogoUrl="/logos/sda-logo.png"
           missionName={missionName}

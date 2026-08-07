@@ -119,6 +119,26 @@ const styles = StyleSheet.create({
     fontWeight: 700,
   },
   valueNormal: { fontSize: 9, color: "#111" },
+  checklistGrid: { flexDirection: "row", flexWrap: "wrap", marginBottom: 3 },
+  checklistItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "50%",
+    marginBottom: 2,
+    paddingRight: 6,
+  },
+  checkbox: {
+    width: 7,
+    height: 7,
+    borderWidth: 0.7,
+    borderColor: "#555",
+    marginRight: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxFill: { width: 3.5, height: 3.5, backgroundColor: "#1a5276" },
+  checklistLabel: { fontSize: 7.5, color: "#222" },
+  checklistLabelMuted: { fontSize: 7.5, color: "#999" },
   declarationBox: {
     borderWidth: 0.5,
     borderColor: "#bbb",
@@ -190,6 +210,8 @@ const styles = StyleSheet.create({
 export type BioDataPDFProps = {
   referenceNumber: string;
   submittedAt: string;
+  /** DocumentKind values the applicant uploaded — drives the ticked checklist. */
+  uploadedDocumentKinds?: string[];
   ipAddress?: string;
   logoUrl?: string;
   sdaLogoUrl?: string;
@@ -322,6 +344,39 @@ function SectionTitle({ title }: { title: string }) {
 }
 
 /**
+ * The documents an applicant is expected to provide, in the order the form
+ * asks for them. `kind` matches DocumentKind so the tick is driven by what was
+ * actually uploaded rather than by anything re-entered by hand.
+ */
+const DOCUMENT_CHECKLIST: Array<{ kind: string; label: string }> = [
+  { kind: "PROFILE_PHOTO", label: "Passport-size photograph" },
+  { kind: "NID", label: "National ID card (NID)" },
+  { kind: "BIRTH_CERTIFICATE", label: "Birth certificate" },
+  { kind: "BAPTISM_CERTIFICATE", label: "Baptism certificate" },
+  { kind: "DISTRICT_PASTOR_RECOMMENDATION", label: "District pastor's recommendation" },
+  { kind: "EDUCATION_CERTIFICATE", label: "Education certificate(s)" },
+  { kind: "FATHER_NID", label: "Father's NID" },
+  { kind: "MOTHER_NID", label: "Mother's NID" },
+  { kind: "PARENT_PASSPORT_PHOTO", label: "Parent's passport-size photo" },
+  { kind: "PARENTS_CONSENT", label: "Parent's consent form" },
+  { kind: "LETTER_OF_INTENT", label: "Letter of intent" },
+];
+
+/** Checkboxes are drawn, not typed: Helvetica has no reliable box glyph. */
+function ChecklistItem({ label, checked }: { label: string; checked: boolean }) {
+  return (
+    <View style={styles.checklistItem}>
+      <View style={styles.checkbox}>
+        {checked ? <View style={styles.checkboxFill} /> : null}
+      </View>
+      <Text style={checked ? styles.checklistLabel : styles.checklistLabelMuted}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+/**
  * A signature block that fills itself in automatically once the system has
  * recorded the corresponding step (submission / LMD review / director
  * review) — there's no physical signing, so the name + date stand in for it.
@@ -388,6 +443,7 @@ export function BioDataPDF({
   applicantEmail,
   presentAddress,
   permanentAddress,
+  uploadedDocumentKinds = [],
   fatherName,
   fatherAge,
   fatherReligion,
@@ -703,12 +759,26 @@ export function BioDataPDF({
           />
         </View>
 
-        {/* ── 5. Declaration ── */}
+        {/* ── 5. Documents submitted ── */}
+        <View style={styles.section}>
+          <SectionTitle title="5. DOCUMENTS SUBMITTED" />
+          <View style={styles.checklistGrid}>
+            {DOCUMENT_CHECKLIST.map((doc) => (
+              <ChecklistItem
+                key={doc.kind}
+                label={doc.label}
+                checked={uploadedDocumentKinds.includes(doc.kind)}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* ── 6. Declaration ── */}
         {/* The sworn statement the applicant had to tick before submitting.
             Reproduced verbatim from the form (Page4Application) so the printed
             copy shows exactly what was agreed to, not a paraphrase. */}
         <View style={styles.section}>
-          <SectionTitle title="5. DECLARATION" />
+          <SectionTitle title="6. DECLARATION" />
           <View style={styles.declarationBox}>
             <Text style={styles.declarationText}>
               I declare that all the information I have provided in this
