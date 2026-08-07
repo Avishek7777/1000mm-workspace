@@ -119,6 +119,21 @@ const styles = StyleSheet.create({
     fontWeight: 700,
   },
   valueNormal: { fontSize: 9, color: "#111" },
+  declarationBox: {
+    borderWidth: 0.5,
+    borderColor: "#bbb",
+    backgroundColor: "#fbfbfb",
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    marginBottom: 4,
+  },
+  declarationText: { fontSize: 8, color: "#222", lineHeight: 1.4 },
+  declarationAck: {
+    fontSize: 7.5,
+    color: "#1a5276",
+    fontFamily: "Helvetica-Bold",
+    marginTop: 3,
+  },
   divider: {
     borderBottomWidth: 0.5,
     borderBottomColor: "#ddd",
@@ -686,6 +701,25 @@ export function BioDataPDF({
               { label: "Harmful Habits", value: yesNo(badHabits) },
             ]}
           />
+        </View>
+
+        {/* ── 5. Declaration ── */}
+        {/* The sworn statement the applicant had to tick before submitting.
+            Reproduced verbatim from the form (Page4Application) so the printed
+            copy shows exactly what was agreed to, not a paraphrase. */}
+        <View style={styles.section}>
+          <SectionTitle title="5. DECLARATION" />
+          <View style={styles.declarationBox}>
+            <Text style={styles.declarationText}>
+              I declare that all the information I have provided in this
+              application is true and accurate to the best of my knowledge. I
+              understand that providing false information may result in
+              disqualification or removal from the programme.
+            </Text>
+            <Text style={styles.declarationAck}>
+              {`Accepted by ${applicantFullName || "the applicant"} on ${formatSigDate(submittedAt) || "—"}`}
+            </Text>
+          </View>
         </View>
 
         {/* ── Footer ── */}

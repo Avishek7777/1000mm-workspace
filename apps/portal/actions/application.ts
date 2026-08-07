@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth/config";
 import { prisma } from "@1000mm/db";
 import { uploadToR2, r2Prefix } from "@/lib/r2";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { notifyLmdOfSubmission } from "@/lib/applicationNotifications";
 import {
   Gender,
@@ -557,6 +558,9 @@ export async function submitApplicationAction(
     // Optional — applicants may attach a signed letter of intent
     ["letterOfIntent", DocumentKind.LETTER_OF_INTENT],
   ];
+  // Validate everything first — cheap, no I/O — so an invalid file is rejected
+  // before any of the others are written to disk.
+  const pendingUploads: Array<[File | null, DocumentKind]> = [];
   for (const [fieldName, kind] of docKinds) {
     const file = formData.get(fieldName) as File | null;
     if (file && file.size > 0) {
@@ -564,8 +568,17 @@ export async function submitApplicationAction(
       if (uploadError)
         return { ok: false, fieldErrors: { [fieldName]: uploadError } };
     }
-    await uploadFormFile(file, kind, applicationId, userId);
+    pendingUploads.push([file, kind]);
   }
+
+  // Written concurrently rather than one after another: seven documents each
+  // doing read-buffer → mkdir → write → INSERT serially made the applicant
+  // wait for the sum of all seven round-trips.
+  await Promise.all(
+    pendingUploads.map(([file, kind]) =>
+      uploadFormFile(file, kind, applicationId, userId),
+    ),
+  );
 
   // Capture client IP from request headers
   const ipAddress = await getClientIp();
@@ -617,11 +630,18 @@ export async function submitApplicationAction(
     }),
   ]);
 
-  await notifyLmdOfSubmission({
-    missionId: app.submittedFromMissionId,
-    applicationId,
-    applicantName: app.applicantFullName,
-    referenceNumber,
+  // Runs after the response is sent. This awaits an HTTPS round-trip to Resend,
+  // which the applicant has no reason to wait for — a slow or unreachable mail
+  // API was making the form sit on "Saving…" long after the application had
+  // actually been stored. notifyLmdOfSubmission swallows its own errors, so a
+  // mail failure still cannot fail the submission.
+  after(async () => {
+    await notifyLmdOfSubmission({
+      missionId: app.submittedFromMissionId,
+      applicationId,
+      applicantName: app.applicantFullName,
+      referenceNumber,
+    });
   });
 
   return { ok: true, applicationId, referenceNumber };
