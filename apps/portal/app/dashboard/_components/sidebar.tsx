@@ -154,6 +154,19 @@ const NAV_SECTIONS: { section: string; labelColor: string; iconColor: string; ho
         ),
       },
       {
+        label: "Field Projects",
+        href: (role) =>
+          role === "LOCAL_DIRECTOR"
+            ? "/dashboard/lmd/projects"
+            : "/dashboard/director/projects",
+        roles: DIRECTOR_ROLES,
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 3v18h18" /><path d="M7 16l4-6 4 3 5-8" />
+          </svg>
+        ),
+      },
+      {
         label: "Assignments",
         href: "/dashboard/assignments",
         roles: ["TRAINEE"],

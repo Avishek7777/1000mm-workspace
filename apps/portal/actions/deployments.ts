@@ -4,6 +4,10 @@ import { requireRole } from "@/lib/auth/helpers";
 import { prisma } from "@1000mm/db";
 import { revalidatePath } from "next/cache";
 import { syncMissionaryDeploymentLocation } from "@/lib/deploymentSync";
+import {
+  openAssignment,
+  closeAssignmentsForDeployment,
+} from "@/lib/fieldProjectAssignments";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -85,20 +89,35 @@ export async function requestDeploymentAction(
     }
   }
 
-  await prisma.missionaryDeployment.create({
-    data: {
-      missionaryId,
-      missionId: lmdMission.id,
-      location: location || null,
-      startDate,
-      endDate,
-      status: "PENDING",
-      requestedById: user.id,
+  // The deployment and its opening assignment-history row are written
+  // together — a deployment recorded without its assignment would leave a gap
+  // in the project's history that nothing later can reconstruct.
+  await prisma.$transaction(async (tx) => {
+    const deployment = await tx.missionaryDeployment.create({
+      data: {
+        missionaryId,
+        missionId: lmdMission.id,
+        location: location || null,
+        startDate,
+        endDate,
+        status: "PENDING",
+        requestedById: user.id,
+        fieldProjectId,
+        role,
+        responsibilities,
+        jobDescription,
+      },
+      select: { id: true },
+    });
+
+    await openAssignment(tx, {
       fieldProjectId,
+      missionaryId,
+      deploymentId: deployment.id,
       role,
-      responsibilities,
-      jobDescription,
-    },
+      assignedById: user.id,
+      startedAt: startDate,
+    });
   });
 
   revalidatePath("/dashboard/lmd/deployments");
@@ -141,6 +160,10 @@ export async function reviewDeploymentAction(
         where: { id: deployment.missionaryId },
         data: { isMissionary: true },
       });
+    } else {
+      // A rejected request never became real work, so its assignment row
+      // closes immediately rather than lingering as an open one.
+      await closeAssignmentsForDeployment(tx, deploymentId, "Request rejected");
     }
   });
 
@@ -181,12 +204,17 @@ export async function endDeploymentAction(
     }
   }
 
-  await prisma.missionaryDeployment.update({
-    where: { id: deploymentId },
-    data: {
-      status: "COMPLETED",
-      endDate: deployment.endDate ?? new Date(),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.missionaryDeployment.update({
+      where: { id: deploymentId },
+      data: {
+        status: "COMPLETED",
+        endDate: deployment.endDate ?? new Date(),
+      },
+    });
+    // The missionary is no longer on the project, so their assignment closes
+    // with the deployment rather than being left open forever.
+    await closeAssignmentsForDeployment(tx, deploymentId, "Deployment ended");
   });
 
   await syncMissionaryDeploymentLocation(deployment.missionaryId);

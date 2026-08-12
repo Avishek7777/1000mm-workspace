@@ -4,6 +4,10 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/helpers";
 import { prisma, FieldProjectStage } from "@1000mm/db";
+import {
+  openAssignment,
+  closeAssignmentsForDeployment,
+} from "@/lib/fieldProjectAssignments";
 
 export type FieldProjectResult =
   | { ok: true; projectId?: string }
@@ -203,12 +207,17 @@ export async function archiveFieldProjectAction(
   const ctx = await resolveMissionForWrite(projectId);
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
-  // Soft delete, and detach it from any deployment still pointing at it so the
-  // assignment does not silently reference an archived project.
+  // Soft delete, detach it from any deployment still pointing at it so the
+  // assignment does not silently reference an archived project, and close the
+  // open history rows — otherwise the project reads as still having a team.
   await prisma.$transaction([
     prisma.missionaryDeployment.updateMany({
       where: { fieldProjectId: projectId },
       data: { fieldProjectId: null },
+    }),
+    prisma.fieldProjectAssignment.updateMany({
+      where: { fieldProjectId: projectId, endedAt: null },
+      data: { endedAt: new Date(), endReason: "Project archived" },
     }),
     prisma.fieldProject.update({
       where: { id: projectId },
@@ -236,7 +245,13 @@ export async function reassignDeploymentProjectAction(
 
   const deployment = await prisma.missionaryDeployment.findFirst({
     where: { id: deploymentId, deletedAt: null },
-    select: { id: true, missionId: true },
+    select: {
+      id: true,
+      missionId: true,
+      missionaryId: true,
+      fieldProjectId: true,
+      role: true,
+    },
   });
   if (!deployment) return { ok: false, error: "Deployment not found." };
 
@@ -261,12 +276,36 @@ export async function reassignDeploymentProjectAction(
     }
   }
 
-  await prisma.missionaryDeployment.update({
-    where: { id: deploymentId },
-    data: {
-      fieldProjectId,
-      ...(role !== undefined ? { role: role || null } : {}),
-    },
+  const nextRole = role !== undefined ? role || null : deployment.role;
+  const projectChanged = deployment.fieldProjectId !== fieldProjectId;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.missionaryDeployment.update({
+      where: { id: deploymentId },
+      data: {
+        fieldProjectId,
+        ...(role !== undefined ? { role: role || null } : {}),
+      },
+    });
+
+    // Only touch history when the project actually moved. Editing just the
+    // role should not read as leaving one project and joining another.
+    if (projectChanged) {
+      await closeAssignmentsForDeployment(tx, deploymentId, "Reassigned");
+      await openAssignment(tx, {
+        fieldProjectId,
+        missionaryId: deployment.missionaryId,
+        deploymentId,
+        role: nextRole,
+        assignedById: user.id,
+      });
+    } else if (role !== undefined) {
+      // Same project, new role — keep the open row in step with it.
+      await tx.fieldProjectAssignment.updateMany({
+        where: { deploymentId, endedAt: null },
+        data: { role: nextRole },
+      });
+    }
   });
 
   revalidateProjectViews();

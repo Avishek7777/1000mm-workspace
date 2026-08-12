@@ -251,6 +251,8 @@ model User {
   deploymentAssignments       ProgramEnrollment[]            @relation("DeploymentAssignedBy")
   fieldReportComments         FieldReportComment[]           @relation("FieldReportCommentAuthor")
   fieldProjectsCreated        FieldProject[]                 @relation("FieldProjectCreatedBy")
+  fieldProjectAssignments     FieldProjectAssignment[]       @relation("FieldProjectAssignee")
+  fieldProjectsAssignedBy     FieldProjectAssignment[]       @relation("FieldProjectAssignedBy")
   lmdReportWindowsCreated     LmdReportWindow[]              @relation("LmdReportWindowCreatedBy")
   lmdReports                  LmdReport[]                    @relation("LmdReportAuthor")
   flagRequests                UserFlagRequest[]              @relation("FlaggedUser")
@@ -1369,14 +1371,49 @@ model FieldProject {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  mission     LocalMission           @relation(fields: [missionId], references: [id])
-  createdBy   User                   @relation("FieldProjectCreatedBy", fields: [createdById], references: [id])
+  mission     LocalMission             @relation(fields: [missionId], references: [id])
+  createdBy   User                     @relation("FieldProjectCreatedBy", fields: [createdById], references: [id])
   deployments MissionaryDeployment[]
   reports     FieldReport[]
+  assignments FieldProjectAssignment[]
 
   @@index([missionId])
   @@index([stage])
   @@map("field_projects")
+}
+
+/// Who worked on a field project, and when.
+///
+/// MissionaryDeployment.fieldProjectId is mutable — reassigning repoints it —
+/// so it only ever answers "who is on this now". This table is the record of
+/// who has been on it: a row is opened when someone is assigned and closed
+/// (endedAt) when they are moved off or their deployment ends.
+model FieldProjectAssignment {
+  id             String  @id @default(cuid())
+  fieldProjectId String
+  missionaryId   String
+  deploymentId   String?
+  role           String?
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  /// Why the assignment closed — "Reassigned", "Deployment ended", etc.
+  endReason String?
+
+  assignedById String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fieldProject FieldProject          @relation(fields: [fieldProjectId], references: [id])
+  missionary   User                  @relation("FieldProjectAssignee", fields: [missionaryId], references: [id])
+  deployment   MissionaryDeployment? @relation(fields: [deploymentId], references: [id])
+  assignedBy   User                  @relation("FieldProjectAssignedBy", fields: [assignedById], references: [id])
+
+  @@index([fieldProjectId])
+  @@index([missionaryId])
+  @@index([endedAt])
+  @@map("field_project_assignments")
 }
 
 enum DeploymentStatus {
@@ -1410,11 +1447,12 @@ model MissionaryDeployment {
   updatedAt        DateTime         @updatedAt
   deletedAt        DateTime?
 
-  missionary   User          @relation("MissionaryDeployments", fields: [missionaryId], references: [id])
-  mission      LocalMission  @relation(fields: [missionId], references: [id])
-  fieldProject FieldProject? @relation(fields: [fieldProjectId], references: [id])
-  requestedBy  User          @relation("DeploymentRequestedBy", fields: [requestedById], references: [id])
-  reviewedBy   User?         @relation("DeploymentReviewedBy", fields: [reviewedById], references: [id])
+  missionary         User                     @relation("MissionaryDeployments", fields: [missionaryId], references: [id])
+  mission            LocalMission             @relation(fields: [missionId], references: [id])
+  fieldProject       FieldProject?            @relation(fields: [fieldProjectId], references: [id])
+  projectAssignments FieldProjectAssignment[]
+  requestedBy        User                     @relation("DeploymentRequestedBy", fields: [requestedById], references: [id])
+  reviewedBy         User?                    @relation("DeploymentReviewedBy", fields: [reviewedById], references: [id])
 
   @@index([missionaryId])
   @@index([missionId])

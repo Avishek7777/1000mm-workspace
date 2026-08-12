@@ -4,15 +4,9 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateFieldProjectProgressAction } from "@/actions/fieldProjects";
 import type { FieldProjectStage } from "@1000mm/db";
+import { STAGES } from "@/lib/fieldProjectStages";
 
-const STAGES: Array<{ value: FieldProjectStage; label: string }> = [
-  { value: "PLANNING", label: "Planning" },
-  { value: "STARTED", label: "Started" },
-  { value: "IN_PROGRESS", label: "In progress" },
-  { value: "NEARLY_COMPLETE", label: "Nearly complete" },
-  { value: "COMPLETED", label: "Completed" },
-  { value: "ON_HOLD", label: "On hold" },
-];
+
 
 /**
  * Lets a reviewer move a project on while reading the report that prompted it,
