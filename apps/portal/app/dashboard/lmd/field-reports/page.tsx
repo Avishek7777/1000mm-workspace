@@ -42,6 +42,7 @@ export default async function LmdFieldReportsPage({
       include: {
         trainee: { select: { fullName: true } },
         program: { select: { code: true } },
+        fieldProject: { select: { name: true, stage: true, progressPercent: true } },
         _count: { select: { comments: true } },
       },
     }),
@@ -216,6 +217,21 @@ export default async function LmdFieldReportsPage({
                       </span>
                     )}
                   </div>
+                  {/* Snapshot first — what the project was called when this
+                      report was written. */}
+                  {(r.projectNameSnapshot ?? r.fieldProject?.name) && (
+                    <p className="mb-1 text-xs text-gray-600">
+                      <span className="font-medium text-gray-700">
+                        {r.projectNameSnapshot ?? r.fieldProject?.name}
+                      </span>
+                      {r.projectRoleSnapshot ? (
+                        <span className="text-gray-500">{" · "}{r.projectRoleSnapshot}</span>
+                      ) : null}
+                      {r.fieldProject?.progressPercent != null ? (
+                        <span className="text-gray-400">{" · "}{r.fieldProject.progressPercent}%</span>
+                      ) : null}
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-4 text-xs text-gray-500">
                     <span>Activities: {r.totalActivities}</span>
                     <span>Days: {r.daysOfWork}</span>

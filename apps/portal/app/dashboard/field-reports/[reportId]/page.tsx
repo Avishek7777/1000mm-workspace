@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import { prisma } from "@1000mm/db";
+import { ProjectProgressPanel } from "../_components/ProjectProgressPanel";
 import Link from "next/link";
 import { Paperclip, ExternalLink } from "lucide-react";
 import { CommentForm } from "./_components/CommentForm";
@@ -66,6 +67,9 @@ export default async function FieldReportDetailPage({
         },
       },
       program: { select: { code: true, title: true } },
+      fieldProject: {
+        select: { id: true, name: true, stage: true, progressPercent: true, objective: true },
+      },
       comments: {
         orderBy: { createdAt: "asc" },
         include: { author: { select: { fullName: true, role: true } } },
@@ -188,6 +192,20 @@ export default async function FieldReportDetailPage({
             </p>
           </div>
           <div>
+            <p className="text-xs text-gray-400">Field Project</p>
+            <p className="font-medium text-gray-900">
+              {/* Snapshot first: it is what the project was called when this
+                  report was written, which is what the report is about. */}
+              {report.projectNameSnapshot ?? report.fieldProject?.name ?? "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400">Role</p>
+            <p className="font-medium text-gray-900">
+              {report.projectRoleSnapshot ?? "—"}
+            </p>
+          </div>
+          <div>
             <p className="text-xs text-gray-400">Submitted</p>
             <p className="font-medium text-gray-900">
               {new Date(report.submittedAt).toLocaleDateString("en-GB", {
@@ -199,6 +217,18 @@ export default async function FieldReportDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Field project — shown whenever the report is tied to one. Reviewers
+          who own the mission can move the project on from here; everyone else
+          sees it read-only. */}
+      {report.fieldProject && (
+        <ProjectProgressPanel
+          project={report.fieldProject}
+          canEdit={["LOCAL_DIRECTOR", "MAIN_DIRECTOR", "SECRETARY", "ASSOCIATE_DIRECTOR", "SYSTEM_ADMIN"].includes(
+            user.role,
+          )}
+        />
+      )}
 
       {/* Metrics grid */}
       <div className="rounded-xl border border-gray-200 bg-white p-5">

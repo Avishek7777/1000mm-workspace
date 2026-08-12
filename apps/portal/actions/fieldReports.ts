@@ -203,6 +203,20 @@ export async function submitFieldReportAction(
     include: { director: { select: { fullName: true } } },
   });
 
+  // The project and role come from the missionary's active deployment rather
+  // than being re-entered on the form — the LMD assigned them, and asking the
+  // missionary to restate it would let the two drift apart. Snapshotted for
+  // the same reason as workplaceSnapshot: the report must keep reading
+  // correctly after a project is renamed or the missionary is reassigned.
+  const activeDeployment = await prisma.missionaryDeployment.findFirst({
+    where: { missionaryId: userId, status: "ACTIVE", deletedAt: null },
+    orderBy: { startDate: "desc" },
+    select: {
+      role: true,
+      fieldProject: { select: { id: true, name: true } },
+    },
+  });
+
   const report = await prisma.fieldReport.create({
     data: {
       traineeId: userId,
@@ -212,6 +226,9 @@ export async function submitFieldReportAction(
       reportYear: d.reportYear,
       workplaceSnapshot: enrollment.deploymentLocation ?? null,
       lmdNameSnapshot: missionDirector?.director?.fullName ?? null,
+      fieldProjectId: activeDeployment?.fieldProject?.id ?? null,
+      projectNameSnapshot: activeDeployment?.fieldProject?.name ?? null,
+      projectRoleSnapshot: activeDeployment?.role ?? null,
       totalActivities: d.totalActivities,
       daysOfWork: d.daysOfWork,
       hoursOfWork: d.hoursOfWork,
