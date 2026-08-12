@@ -20,6 +20,14 @@ export async function requestDeploymentAction(
   const startDateStr = formData.get("startDate") as string;
   const endDateStr = (formData.get("endDate") as string) || null;
 
+  // Assignment details — what the missionary will be working on and on what
+  // terms. All optional: a deployment can be requested before the work is
+  // pinned down, and the project can be attached later from the projects page.
+  const fieldProjectId = ((formData.get("fieldProjectId") as string) || "").trim() || null;
+  const role = ((formData.get("role") as string) || "").trim() || null;
+  const responsibilities = ((formData.get("responsibilities") as string) || "").trim() || null;
+  const jobDescription = ((formData.get("jobDescription") as string) || "").trim() || null;
+
   if (!missionaryId || !startDateStr) {
     return { ok: false, error: "Missionary and start date are required." };
   }
@@ -65,6 +73,18 @@ export async function requestDeploymentAction(
     return { ok: false, error: "End date must be after start date." };
   }
 
+  // A project can only take missionaries from the mission that owns it —
+  // checked here rather than trusting the id posted by the form.
+  if (fieldProjectId) {
+    const project = await prisma.fieldProject.findFirst({
+      where: { id: fieldProjectId, missionId: lmdMission.id, deletedAt: null },
+      select: { id: true },
+    });
+    if (!project) {
+      return { ok: false, error: "That project is not available for your mission." };
+    }
+  }
+
   await prisma.missionaryDeployment.create({
     data: {
       missionaryId,
@@ -74,6 +94,10 @@ export async function requestDeploymentAction(
       endDate,
       status: "PENDING",
       requestedById: user.id,
+      fieldProjectId,
+      role,
+      responsibilities,
+      jobDescription,
     },
   });
 

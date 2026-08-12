@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth/helpers";
 import { FilterBar } from "@/app/dashboard/_components/FilterBar";
 import { RequestDeploymentForm } from "./_components/RequestDeploymentForm";
 import { CancelRequestButton, EndDeploymentButton } from "./_components/DeploymentActions";
+import { ReassignProjectButton } from "./_components/ReassignProjectButton";
 import { MissionaryExportButtons } from "./_components/MissionaryExportButtons";
 import type { DeploymentStatus } from "@1000mm/db";
 
@@ -19,6 +20,45 @@ const statusBadge: Record<string, string> = {
 };
 
 const VALID_STATUSES = ["PENDING", "ACTIVE", "COMPLETED", "REJECTED"] as const;
+
+const stageLabel: Record<string, string> = {
+  PLANNING:        "Planning",
+  STARTED:         "Started",
+  IN_PROGRESS:     "In progress",
+  NEARLY_COMPLETE: "Nearly complete",
+  COMPLETED:       "Completed",
+  ON_HOLD:         "On hold",
+};
+
+/** The project + role line shown under a deployment. */
+function AssignmentLine({
+  project,
+  role,
+}: {
+  project: { name: string; stage: string; progressPercent: number | null } | null;
+  role: string | null;
+}) {
+  if (!project && !role) {
+    return <p className="text-xs text-gray-400 italic">No project assigned</p>;
+  }
+  return (
+    <p className="text-xs text-gray-600">
+      {project ? (
+        <>
+          <span className="font-medium text-gray-800">{project.name}</span>
+          <span className="text-gray-400">
+            {" · "}
+            {stageLabel[project.stage] ?? project.stage}
+            {project.progressPercent != null ? ` ${project.progressPercent}%` : ""}
+          </span>
+        </>
+      ) : (
+        <span className="text-gray-400 italic">No project</span>
+      )}
+      {role ? <span className="text-gray-500">{" · "}{role}</span> : null}
+    </p>
+  );
+}
 
 export default async function LmdDeploymentsPage({
   searchParams,
@@ -63,6 +103,7 @@ export default async function LmdDeploymentsPage({
         missionary: { select: { id: true, fullName: true } },
         mission: { select: { code: true, name: true } },
         reviewedBy: { select: { fullName: true } },
+        fieldProject: { select: { id: true, name: true, stage: true, progressPercent: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -121,9 +162,18 @@ export default async function LmdDeploymentsPage({
     programIds: t.enrollmentsAsTrainee.map((e) => e.programId),
   }));
 
-  // Every programme this mission's trainees are enrolled in — the same set the
-  // list filter uses, but computed from the trainees themselves so someone
-  // enrolled in a programme with no deployments yet still appears.
+  // Field projects this mission owns — the assignment picker on the request
+  // form, and the reassignment control on each deployment row.
+  const fieldProjects = lmdMission
+    ? await prisma.fieldProject.findMany({
+        where: { missionId: lmdMission.id, deletedAt: null },
+        orderBy: [{ stage: "asc" }, { name: "asc" }],
+        select: { id: true, name: true },
+      })
+    : [];
+
+  // Every programme this mission's trainees are enrolled in — computed from the
+  // trainees themselves, so an intake with no deployments yet still appears.
   const traineeProgramIds = new Set(trainees.flatMap((t) => t.programIds));
   const formPrograms = lmdMission
     ? await prisma.trainingProgram.findMany({
@@ -152,6 +202,7 @@ export default async function LmdDeploymentsPage({
           <RequestDeploymentForm
             missionaries={trainees}
             programs={formPrograms}
+            fieldProjects={fieldProjects}
             missionName={`${lmdMission.name} (${lmdMission.code})`}
           />
         )}
@@ -226,11 +277,21 @@ export default async function LmdDeploymentsPage({
                       {d.location ? `${d.location} · ` : ""}
                       {fmtDate(d.startDate)} → {d.endDate ? fmtDate(d.endDate) : "Open-ended"}
                     </p>
+                    <AssignmentLine project={d.fieldProject} role={d.role} />
                     <p className="text-xs text-gray-400">
                       {d.mission.code} · Requested {fmtDate(d.createdAt)}
                     </p>
                   </div>
-                  <CancelRequestButton deploymentId={d.id} />
+                  <div className="flex shrink-0 items-center gap-2">
+                    <ReassignProjectButton
+                      deploymentId={d.id}
+                      missionaryName={d.missionary.fullName}
+                      currentProjectId={d.fieldProjectId}
+                      currentRole={d.role}
+                      fieldProjects={fieldProjects}
+                    />
+                    <CancelRequestButton deploymentId={d.id} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -266,11 +327,21 @@ export default async function LmdDeploymentsPage({
                       {d.location ? `${d.location} · ` : ""}
                       {fmtDate(d.startDate)} → {d.endDate ? fmtDate(d.endDate) : "Open-ended"}
                     </p>
+                    <AssignmentLine project={d.fieldProject} role={d.role} />
                     <p className="text-xs text-gray-400">
                       {d.mission.code} · Approved by {d.reviewedBy?.fullName ?? "—"}
                     </p>
                   </div>
-                  <EndDeploymentButton deploymentId={d.id} name={d.missionary.fullName} />
+                  <div className="flex shrink-0 items-center gap-2">
+                    <ReassignProjectButton
+                      deploymentId={d.id}
+                      missionaryName={d.missionary.fullName}
+                      currentProjectId={d.fieldProjectId}
+                      currentRole={d.role}
+                      fieldProjects={fieldProjects}
+                    />
+                    <EndDeploymentButton deploymentId={d.id} name={d.missionary.fullName} />
+                  </div>
                 </div>
               ))}
             </div>

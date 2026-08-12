@@ -5,8 +5,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -14,7 +14,7 @@ datasource db {
 model ApplicationCounter {
   missionCode String
   year        Int
-  lastSerial  Int              @default(0)
+  lastSerial  Int    @default(0)
 
   @@id([missionCode, year])
   @@map("application_counters")
@@ -22,30 +22,31 @@ model ApplicationCounter {
 
 // ─── Local Missions ───────────────────────────────────────────────────────────
 model LocalMission {
-  id                 String              @id @default(cuid())
-  code               String              @unique
+  id                 String                 @id @default(cuid())
+  code               String                 @unique
   name               String
   nameBangla         String
   description        String?
   contactEmail       String?
   contactPhone       String?
   address            String?
-  directorId         String?             @unique
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  directorId         String?                @unique
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
   deletedAt          DateTime?
   applicationWindows ApplicationWindow[]
-  applications       Application[]       @relation("ApplicationSubmittedFromMission")
+  applications       Application[]          @relation("ApplicationSubmittedFromMission")
   complaints         Complaint[]
-  director           User?               @relation("MissionDirector", fields: [directorId], references: [id])
-  users              User[]              @relation("UserHomeMission")
-  lmdReports         LmdReport[]         @relation("LmdReportMission")
-  salaryRanges            SalaryRange[]
-  salaryAssignments       SalaryAssignment[]
-  salaryRequests          SalaryRequest[]
-  financialEntries        FinancialEntry[]
-  deployments             MissionaryDeployment[]
-  attendanceScans         AttendanceScan[]       @relation("AttendanceScanMission")
+  director           User?                  @relation("MissionDirector", fields: [directorId], references: [id])
+  users              User[]                 @relation("UserHomeMission")
+  lmdReports         LmdReport[]            @relation("LmdReportMission")
+  salaryRanges       SalaryRange[]
+  salaryAssignments  SalaryAssignment[]
+  salaryRequests     SalaryRequest[]
+  financialEntries   FinancialEntry[]
+  deployments        MissionaryDeployment[]
+  fieldProjects      FieldProject[]
+  attendanceScans    AttendanceScan[]       @relation("AttendanceScanMission")
 
   @@index([code])
   @@map("local_missions")
@@ -53,20 +54,20 @@ model LocalMission {
 
 // ─── Financial Management ─────────────────────────────────────────────────────
 model FinancialEntry {
-  id          String               @id @default(cuid())
+  id          String             @id @default(cuid())
   type        FinancialEntryType
   amount      Float
-  date        DateTime             @db.Date
+  date        DateTime           @db.Date
   description String
-  missionId   String?              // null = all-mission / organization-level entry
+  missionId   String? // null = all-mission / organization-level entry
   reference   String?
   createdById String
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
   deletedAt   DateTime?
 
-  mission     LocalMission?        @relation(fields: [missionId], references: [id])
-  createdBy   User                 @relation("FinancialEntryCreatedBy", fields: [createdById], references: [id])
+  mission   LocalMission? @relation(fields: [missionId], references: [id])
+  createdBy User          @relation("FinancialEntryCreatedBy", fields: [createdById], references: [id])
 
   @@index([missionId])
   @@index([type])
@@ -75,7 +76,7 @@ model FinancialEntry {
 }
 
 model UserFlagRequest {
-  id            String          @id @default(cuid())
+  id            String            @id @default(cuid())
   targetUserId  String
   requestedById String
   reason        String
@@ -83,11 +84,11 @@ model UserFlagRequest {
   resolvedById  String?
   resolvedAt    DateTime?
   resolverNote  String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  targetUser    User            @relation("FlaggedUser", fields: [targetUserId], references: [id])
-  requestedBy   User            @relation("FlagRequestedBy", fields: [requestedById], references: [id])
-  resolvedBy    User?           @relation("FlagResolvedBy", fields: [resolvedById], references: [id])
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  targetUser    User              @relation("FlaggedUser", fields: [targetUserId], references: [id])
+  requestedBy   User              @relation("FlagRequestedBy", fields: [requestedById], references: [id])
+  resolvedBy    User?             @relation("FlagResolvedBy", fields: [resolvedById], references: [id])
 
   @@index([status])
   @@index([targetUserId])
@@ -109,18 +110,18 @@ model SalaryRange {
 }
 
 model SalaryAssignment {
-  id           String       @id @default(cuid())
-  missionaryId String
-  missionId    String
-  amount       Int
+  id                 String       @id @default(cuid())
+  missionaryId       String
+  missionId          String
+  amount             Int
   deploymentLocation String?
-  cycle        Int
-  assignedById String
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  missionary   User         @relation("MissionarySalaryAssignments", fields: [missionaryId], references: [id])
-  mission      LocalMission @relation(fields: [missionId], references: [id])
-  assignedBy   User         @relation("SalaryAssignedBy", fields: [assignedById], references: [id])
+  cycle              Int
+  assignedById       String
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  missionary         User         @relation("MissionarySalaryAssignments", fields: [missionaryId], references: [id])
+  mission            LocalMission @relation(fields: [missionId], references: [id])
+  assignedBy         User         @relation("SalaryAssignedBy", fields: [assignedById], references: [id])
 
   @@unique([missionaryId, cycle])
   @@map("salary_assignments")
@@ -151,18 +152,19 @@ model SalaryRequest {
   @@index([year, month])
   @@map("salary_requests")
 }
+
 // ─── Urgent Reports ────────────────────────────────────────────────────────────────────
 model UrgentReport {
-  id          String   @id @default(cuid())
-  title       String
-  body        String
-  issuedById  String
+  id              String  @id @default(cuid())
+  title           String
+  body            String
+  issuedById      String
   // Up to 5 attachment storage keys (local filesystem / R2)
-  attachment1 String?
-  attachment2 String?
-  attachment3 String?
-  attachment4 String?
-  attachment5 String?
+  attachment1     String?
+  attachment2     String?
+  attachment3     String?
+  attachment4     String?
+  attachment5     String?
   // Original filenames for display
   attachment1Name String?
   attachment2Name String?
@@ -175,7 +177,7 @@ model UrgentReport {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  issuedBy    User                    @relation("UrgentReportIssuedBy", fields: [issuedById], references: [id])
+  issuedBy    User                     @relation("UrgentReportIssuedBy", fields: [issuedById], references: [id])
   submissions UrgentReportSubmission[]
 
   @@index([publishedAt])
@@ -183,11 +185,11 @@ model UrgentReport {
 }
 
 model UrgentReportSubmission {
-  id       String @id @default(cuid())
-  reportId String
-  userId   String
-  response String?   // optional text from missionary
-  submittedAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  reportId        String
+  userId          String
+  response        String? // optional text from missionary
+  submittedAt     DateTime @default(now())
   // Up to 3 optional attachment storage keys (local filesystem / R2)
   attachment1     String?
   attachment1Name String?
@@ -199,79 +201,81 @@ model UrgentReportSubmission {
   report UrgentReport @relation(fields: [reportId], references: [id])
   user   User         @relation("UrgentReportSubmissions", fields: [userId], references: [id])
 
-  @@unique([reportId, userId])   // one submission per missionary per report
+  @@unique([reportId, userId]) // one submission per missionary per report
   @@index([reportId])
   @@index([userId])
   @@map("urgent_report_submissions")
 }
+
 // ─── Users ────────────────────────────────────────────────────────────────────
 model User {
-  id                      String                   @id @default(cuid())
-  email                   String                   @unique
-  emailVerified           DateTime?
-  passwordHash            String
-  fullName                String
-  fullNameBangla          String?
-  phone                   String?
-  dateOfBirth             DateTime?
-  preferredLanguage       String                   @default("en")
-  role                    UserRole                 @default(TRAINEE)
-  homeMissionId           String?
-  isActive                Boolean                  @default(true)
-  failedLoginCount        Int                      @default(0)
-  isMissionary            Boolean                  @default(false)
-  lockedUntil             DateTime?
-  lastLoginAt             DateTime?
-  profilePicture          String?
-  createdAt               DateTime                 @default(now())
-  updatedAt               DateTime                 @updatedAt
-  deletedAt               DateTime?
-  uploadedDocuments       ApplicationDocument[]    @relation("DocumentUploadedBy")
-  windowsCreated          ApplicationWindow[]      @relation("WindowCreatedBy")
-  applications            Application[]            @relation("ApplicationApplicant")
-  reviewedAsDirector      Application[]            @relation("ApplicationDirectorReviewer")
-  reviewedAsLmd           Application[]            @relation("ApplicationLmdReviewer")
-  auditLogs               AuditLog[]
-  emailVerificationTokens EmailVerificationToken[]
-  directedMission         LocalMission?            @relation("MissionDirector")
-  fieldReports            FieldReport[]
-  notifications           Notification[]
-  passwordResetTokens     PasswordResetToken[]
-  complaints              Complaint[]              @relation("ComplaintSubmittedBy")
-  resolvedComplaints      Complaint[]              @relation("ComplaintResolvedBy")
-  announcements           Announcement[]           @relation("AnnouncementCreatedBy")
-  enrollmentsAsTrainee    ProgramEnrollment[]
-  recommendations         Recommendation[]
-  sessionsHistory         Session[]
-  homeMission             LocalMission?            @relation("UserHomeMission", fields: [homeMissionId], references: [id])
-  assignedTopics          ProgramTopic[]           @relation("TopicTrainer")
-  deploymentAssignments   ProgramEnrollment[]      @relation("DeploymentAssignedBy")
-  fieldReportComments     FieldReportComment[]     @relation("FieldReportCommentAuthor")
-  lmdReportWindowsCreated LmdReportWindow[]        @relation("LmdReportWindowCreatedBy")
-  lmdReports              LmdReport[]              @relation("LmdReportAuthor")
-  flagRequests            UserFlagRequest[]        @relation("FlaggedUser")
-  flagRequestsMade        UserFlagRequest[]        @relation("FlagRequestedBy")
-  flagRequestsResolved    UserFlagRequest[]        @relation("FlagResolvedBy")
-  salaryRangesCreated     SalaryRange[]            @relation("SalaryRangeCreatedBy")
-  salaryAssignments       SalaryAssignment[]       @relation("MissionarySalaryAssignments")
-  salaryAssignmentsMade   SalaryAssignment[]       @relation("SalaryAssignedBy")
-  salaryRequests          SalaryRequest[]          @relation("MissionarySalaryRequests")
-  salaryRequestsReviewed  SalaryRequest[]          @relation("SalaryRequestReviewedBy")
-  financialEntries        FinancialEntry[]         @relation("FinancialEntryCreatedBy")
-  trainerApplicationsReviewed TrainerApplication[] @relation("TrainerApplicationReviewedBy")
-  trainerApplicationCreated   TrainerApplication?  @relation("TrainerApplicationCreatedUser")
+  id                          String                         @id @default(cuid())
+  email                       String                         @unique
+  emailVerified               DateTime?
+  passwordHash                String
+  fullName                    String
+  fullNameBangla              String?
+  phone                       String?
+  dateOfBirth                 DateTime?
+  preferredLanguage           String                         @default("en")
+  role                        UserRole                       @default(TRAINEE)
+  homeMissionId               String?
+  isActive                    Boolean                        @default(true)
+  failedLoginCount            Int                            @default(0)
+  isMissionary                Boolean                        @default(false)
+  lockedUntil                 DateTime?
+  lastLoginAt                 DateTime?
+  profilePicture              String?
+  createdAt                   DateTime                       @default(now())
+  updatedAt                   DateTime                       @updatedAt
+  deletedAt                   DateTime?
+  uploadedDocuments           ApplicationDocument[]          @relation("DocumentUploadedBy")
+  windowsCreated              ApplicationWindow[]            @relation("WindowCreatedBy")
+  applications                Application[]                  @relation("ApplicationApplicant")
+  reviewedAsDirector          Application[]                  @relation("ApplicationDirectorReviewer")
+  reviewedAsLmd               Application[]                  @relation("ApplicationLmdReviewer")
+  auditLogs                   AuditLog[]
+  emailVerificationTokens     EmailVerificationToken[]
+  directedMission             LocalMission?                  @relation("MissionDirector")
+  fieldReports                FieldReport[]
+  notifications               Notification[]
+  passwordResetTokens         PasswordResetToken[]
+  complaints                  Complaint[]                    @relation("ComplaintSubmittedBy")
+  resolvedComplaints          Complaint[]                    @relation("ComplaintResolvedBy")
+  announcements               Announcement[]                 @relation("AnnouncementCreatedBy")
+  enrollmentsAsTrainee        ProgramEnrollment[]
+  recommendations             Recommendation[]
+  sessionsHistory             Session[]
+  homeMission                 LocalMission?                  @relation("UserHomeMission", fields: [homeMissionId], references: [id])
+  assignedTopics              ProgramTopic[]                 @relation("TopicTrainer")
+  deploymentAssignments       ProgramEnrollment[]            @relation("DeploymentAssignedBy")
+  fieldReportComments         FieldReportComment[]           @relation("FieldReportCommentAuthor")
+  fieldProjectsCreated        FieldProject[]                 @relation("FieldProjectCreatedBy")
+  lmdReportWindowsCreated     LmdReportWindow[]              @relation("LmdReportWindowCreatedBy")
+  lmdReports                  LmdReport[]                    @relation("LmdReportAuthor")
+  flagRequests                UserFlagRequest[]              @relation("FlaggedUser")
+  flagRequestsMade            UserFlagRequest[]              @relation("FlagRequestedBy")
+  flagRequestsResolved        UserFlagRequest[]              @relation("FlagResolvedBy")
+  salaryRangesCreated         SalaryRange[]                  @relation("SalaryRangeCreatedBy")
+  salaryAssignments           SalaryAssignment[]             @relation("MissionarySalaryAssignments")
+  salaryAssignmentsMade       SalaryAssignment[]             @relation("SalaryAssignedBy")
+  salaryRequests              SalaryRequest[]                @relation("MissionarySalaryRequests")
+  salaryRequestsReviewed      SalaryRequest[]                @relation("SalaryRequestReviewedBy")
+  financialEntries            FinancialEntry[]               @relation("FinancialEntryCreatedBy")
+  trainerApplicationsReviewed TrainerApplication[]           @relation("TrainerApplicationReviewedBy")
+  trainerApplicationCreated   TrainerApplication?            @relation("TrainerApplicationCreatedUser")
   trainerAppAttachments       TrainerApplicationAttachment[] @relation("TrainerAppAttachmentUploader")
-  attendanceScansRecorded  AttendanceScan[]               @relation("AttendanceScanScanner")
-  attendanceScans          AttendanceScan[]               @relation("AttendanceScanTrainee")
-  urgentReportsIssued     UrgentReport[]           @relation("UrgentReportIssuedBy")
-  urgentReportSubmissions UrgentReportSubmission[] @relation("UrgentReportSubmissions")
-  assignmentsCreated      Assignment[]             @relation("AssignmentCreatedBy")
-  assignmentSubmissions   AssignmentSubmission[]   @relation("AssignmentSubmissions")
-  assignmentFeedback      AssignmentSubmission[]   @relation("AssignmentFeedback")
-  resourcesUploaded       Resource[]               @relation("ResourceUploadedBy")
-  missionaryDeployments   MissionaryDeployment[]   @relation("MissionaryDeployments")
-  deploymentRequests      MissionaryDeployment[]   @relation("DeploymentRequestedBy")
-  deploymentReviews       MissionaryDeployment[]   @relation("DeploymentReviewedBy")
+  attendanceScansRecorded     AttendanceScan[]               @relation("AttendanceScanScanner")
+  attendanceScans             AttendanceScan[]               @relation("AttendanceScanTrainee")
+  urgentReportsIssued         UrgentReport[]                 @relation("UrgentReportIssuedBy")
+  urgentReportSubmissions     UrgentReportSubmission[]       @relation("UrgentReportSubmissions")
+  assignmentsCreated          Assignment[]                   @relation("AssignmentCreatedBy")
+  assignmentSubmissions       AssignmentSubmission[]         @relation("AssignmentSubmissions")
+  assignmentFeedback          AssignmentSubmission[]         @relation("AssignmentFeedback")
+  resourcesUploaded           Resource[]                     @relation("ResourceUploadedBy")
+  missionaryDeployments       MissionaryDeployment[]         @relation("MissionaryDeployments")
+  deploymentRequests          MissionaryDeployment[]         @relation("DeploymentRequestedBy")
+  deploymentReviews           MissionaryDeployment[]         @relation("DeploymentReviewedBy")
 
   @@index([email])
   @@index([homeMissionId])
@@ -341,51 +345,51 @@ model EmailVerificationToken {
 
 // ─── Trainer ────────────────────────────────────────────────────────────
 model TrainerApplication {
-  id              String                    @id @default(cuid())
+  id String @id @default(cuid())
 
   // Personal info
-  fullName        String
-  email           String                    @unique
-  phone           String?
-  country         String?                   // country of origin / residence
-  fullAddress     String
-  specialization  String                    // free text — what they teach / area of expertise
+  fullName       String
+  email          String  @unique
+  phone          String?
+  country        String? // country of origin / residence
+  fullAddress    String
+  specialization String // free text — what they teach / area of expertise
 
   // Uploaded file storage keys (served via /api/uploads/[...path])
-  cvStorageKey          String?             // kind: TRAINER_CV
-  passportStorageKey    String?             // kind: TRAINER_PASSPORT
-  photoStorageKey       String?             // kind: TRAINER_PHOTO (PP sized)
+  cvStorageKey       String? // kind: TRAINER_CV
+  passportStorageKey String? // kind: TRAINER_PASSPORT
+  photoStorageKey    String? // kind: TRAINER_PHOTO (PP sized)
 
   // Checkbox acknowledgements
-  acceptsSelfFunding    Boolean             @default(false)  // "responsible for own expenses"
-  requestsInvitationLetter Boolean          @default(false)  // "needs invitation letter"
+  acceptsSelfFunding       Boolean @default(false) // "responsible for own expenses"
+  requestsInvitationLetter Boolean @default(false) // "needs invitation letter"
 
   // Workflow
-  status          TrainerApplicationStatus  @default(PENDING)
-  reviewedById    String?
-  reviewedAt      DateTime?
-  reviewNote      String?                   // SA internal note (rejection reason or approval note)
+  status       TrainerApplicationStatus @default(PENDING)
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String? // SA internal note (rejection reason or approval note)
 
   // If approved — link to the created User account
-  createdUserId   String?                   @unique
+  createdUserId String? @unique
 
   // Optional custom letter bodies (SA can edit the template text before generating)
   invitationLetterBody     String?
   recommendationLetterBody String?
 
   // Necessary documents attachment section (up to 4 document requirements listed in letters)
-  requiredDoc1    String?
-  requiredDoc2    String?
-  requiredDoc3    String?
-  requiredDoc4    String?
+  requiredDoc1 String?
+  requiredDoc2 String?
+  requiredDoc3 String?
+  requiredDoc4 String?
 
-  ipAddress       String?
-  createdAt       DateTime                  @default(now())
-  updatedAt       DateTime                  @updatedAt
+  ipAddress String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  reviewedBy      User?                     @relation("TrainerApplicationReviewedBy", fields: [reviewedById], references: [id])
-  createdUser     User?                     @relation("TrainerApplicationCreatedUser", fields: [createdUserId], references: [id])
-  attachments     TrainerApplicationAttachment[]
+  reviewedBy  User?                          @relation("TrainerApplicationReviewedBy", fields: [reviewedById], references: [id])
+  createdUser User?                          @relation("TrainerApplicationCreatedUser", fields: [createdUserId], references: [id])
+  attachments TrainerApplicationAttachment[]
 
   @@index([status])
   @@index([createdAt])
@@ -401,8 +405,8 @@ model TrainerApplicationAttachment {
   uploadedById  String
   uploadedAt    DateTime @default(now())
 
-  application  TrainerApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  uploadedBy   User               @relation("TrainerAppAttachmentUploader", fields: [uploadedById], references: [id])
+  application TrainerApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  uploadedBy  User               @relation("TrainerAppAttachmentUploader", fields: [uploadedById], references: [id])
 
   @@index([applicationId])
   @@map("trainer_application_attachments")
@@ -451,12 +455,12 @@ model TrainingProgram {
   applicationWindows ApplicationWindow[]
   enrollments        ProgramEnrollment[]
   fieldReports       FieldReport[]
-  isMain                  Boolean                  @default(false)
+  isMain             Boolean             @default(false)
 
-  assignments      Assignment[]
-  resources        Resource[]
-  topics           ProgramTopic[]
-  attendanceScans  AttendanceScan[] @relation("AttendanceScanProgram")
+  assignments     Assignment[]
+  resources       Resource[]
+  topics          ProgramTopic[]
+  attendanceScans AttendanceScan[] @relation("AttendanceScanProgram")
 
   @@index([category])
   @@index([startDate])
@@ -466,14 +470,14 @@ model TrainingProgram {
 
 // ─── Program Topics ───────────────────────────────────────────────────────────
 model ProgramTopic {
-  id          String    @id @default(cuid())
-  programId   String
-  title       String
-  trainerId   String?
-  order       Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  id        String    @id @default(cuid())
+  programId String
+  title     String
+  trainerId String?
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   program     TrainingProgram @relation(fields: [programId], references: [id])
   trainer     User?           @relation("TopicTrainer", fields: [trainerId], references: [id])
@@ -535,18 +539,18 @@ model AssignmentSubmission {
 
 // ─── Resources ────────────────────────────────────────────────────────────────
 model Resource {
-  id            String    @id @default(cuid())
-  title         String
-  description   String?
+  id             String    @id @default(cuid())
+  title          String
+  description    String?
   fileStorageKey String
-  fileName      String
-  mimeType      String?
-  fileSizeBytes Int?
-  programId     String?   // null = general (SA/UD only); set = program-specific (trainer)
-  uploadedById  String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime?
+  fileName       String
+  mimeType       String?
+  fileSizeBytes  Int?
+  programId      String? // null = general (SA/UD only); set = program-specific (trainer)
+  uploadedById   String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
 
   program    TrainingProgram? @relation(fields: [programId], references: [id])
   uploadedBy User             @relation("ResourceUploadedBy", fields: [uploadedById], references: [id])
@@ -557,32 +561,33 @@ model Resource {
 }
 
 model ProgramEnrollment {
-  id                     String          @id @default(cuid())
-  programId              String
-  traineeId              String
-  applicationId          String?         @unique
-  enrolledAt             DateTime        @default(now())
-  attendanceConfirmed    Boolean         @default(false)
-  certificateIssued      Boolean         @default(false)
-  certificateIssuedAt    DateTime?
-  certificateRevokedAt   DateTime?
+  id                      String          @id @default(cuid())
+  programId               String
+  traineeId               String
+  applicationId           String?         @unique
+  enrolledAt              DateTime        @default(now())
+  attendanceConfirmed     Boolean         @default(false)
+  certificateIssued       Boolean         @default(false)
+  certificateIssuedAt     DateTime?
+  certificateRevokedAt    DateTime?
   certificateRevokeReason String?
-  deploymentLocation     String?
-  deploymentLatitude     Float?
-  deploymentLongitude    Float?
-  deploymentAssignedAt   DateTime?
-  deploymentAssignedById String?
-  notes                  String?
-  createdAt              DateTime        @default(now())
-  updatedAt              DateTime        @updatedAt
-  deletedAt              DateTime?
-  application            Application?    @relation(fields: [applicationId], references: [id])
-  program                TrainingProgram @relation(fields: [programId], references: [id])
-  trainee                User            @relation(fields: [traineeId], references: [id])
-  deploymentAssignedBy   User?           @relation("DeploymentAssignedBy", fields: [deploymentAssignedById], references: [id])
+  deploymentLocation      String?
+  deploymentLatitude      Float?
+  deploymentLongitude     Float?
+  deploymentAssignedAt    DateTime?
+  deploymentAssignedById  String?
+  notes                   String?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  deletedAt               DateTime?
+  application             Application?    @relation(fields: [applicationId], references: [id])
+  program                 TrainingProgram @relation(fields: [programId], references: [id])
+  trainee                 User            @relation(fields: [traineeId], references: [id])
+  deploymentAssignedBy    User?           @relation("DeploymentAssignedBy", fields: [deploymentAssignedById], references: [id])
 
-  status      EnrollmentStatus @default(ENROLLED)
-  appliedAt   DateTime?
+  status    EnrollmentStatus @default(ENROLLED)
+  appliedAt DateTime?
+
   @@unique([programId, traineeId])
   @@index([programId])
   @@index([traineeId])
@@ -599,10 +604,10 @@ model AttendanceScan {
   scannedAt    DateTime @default(now())
   scannedById  String
 
-  program    TrainingProgram    @relation("AttendanceScanProgram", fields: [programId], references: [id])
-  trainee    User               @relation("AttendanceScanTrainee", fields: [traineeId], references: [id])
-  scannedBy  User               @relation("AttendanceScanScanner", fields: [scannedById], references: [id])
-  mission    LocalMission?      @relation("AttendanceScanMission", fields: [missionId], references: [id])
+  program   TrainingProgram @relation("AttendanceScanProgram", fields: [programId], references: [id])
+  trainee   User            @relation("AttendanceScanTrainee", fields: [traineeId], references: [id])
+  scannedBy User            @relation("AttendanceScanScanner", fields: [scannedById], references: [id])
+  mission   LocalMission?   @relation("AttendanceScanMission", fields: [missionId], references: [id])
 
   @@index([programId])
   @@index([traineeId])
@@ -802,16 +807,24 @@ model ApplicationDocument {
 
 // ─── Field Reports ────────────────────────────────────────────────────────────
 model FieldReport {
-  id            String   @id @default(cuid())
+  id            String @id @default(cuid())
   traineeId     String
   applicationId String
   programId     String
-  reportMonth   Int      // 1–12
+  reportMonth   Int // 1–12
   reportYear    Int
 
   // Auto-filled at submit time
   workplaceSnapshot String?
   lmdNameSnapshot   String?
+
+  /// The field project this report covers, plus snapshots taken at submit
+  /// time — same reasoning as workplaceSnapshot above: a report must keep
+  /// reading correctly after the project is renamed or the missionary moves
+  /// to different work.
+  fieldProjectId      String?
+  projectNameSnapshot String?
+  projectRoleSnapshot String?
 
   // Activity metrics
   totalActivities           Int @default(0)
@@ -841,14 +854,16 @@ model FieldReport {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  trainee     User               @relation(fields: [traineeId], references: [id])
-  application Application        @relation(fields: [applicationId], references: [id])
-  program     TrainingProgram    @relation(fields: [programId], references: [id])
-  comments    FieldReportComment[]
+  trainee      User                 @relation(fields: [traineeId], references: [id])
+  application  Application          @relation(fields: [applicationId], references: [id])
+  program      TrainingProgram      @relation(fields: [programId], references: [id])
+  fieldProject FieldProject?        @relation(fields: [fieldProjectId], references: [id])
+  comments     FieldReportComment[]
 
   @@unique([traineeId, reportMonth, reportYear])
   @@index([traineeId])
   @@index([programId])
+  @@index([fieldProjectId])
   @@index([reportYear, reportMonth])
   @@map("field_reports")
 }
@@ -927,9 +942,9 @@ model Donation {
 
 // ─── Audit Log ────────────────────────────────────────────────────────────────
 model AuditLog {
-  id               String            @id @default(cuid())
+  id               String        @id @default(cuid())
   action           AuditAction
-  severity         AuditSeverity     @default(INFO)
+  severity         AuditSeverity @default(INFO)
   actorId          String?
   actorRole        UserRole?
   actorMissionCode String?
@@ -938,8 +953,8 @@ model AuditLog {
   ipAddress        String?
   userAgent        String?
   details          Json?
-  createdAt        DateTime          @default(now())
-  actor            User?             @relation(fields: [actorId], references: [id])
+  createdAt        DateTime      @default(now())
+  actor            User?         @relation(fields: [actorId], references: [id])
 
   @@index([actorId])
   @@index([targetType, targetId])
@@ -1011,15 +1026,15 @@ model SystemSetting {
 // ─── LMD Report Windows ───────────────────────────────────────────────────────
 // Opened by UD/SA. When OPEN, LMDs can submit their monthly summary report.
 model LmdReportWindow {
-  id          String             @id @default(cuid())
-  reportMonth Int                // 1–12
+  id          String               @id @default(cuid())
+  reportMonth Int // 1–12
   reportYear  Int
   state       LmdReportWindowState @default(OPEN)
   notes       String?
   createdById String
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  createdBy   User               @relation("LmdReportWindowCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  createdBy   User                 @relation("LmdReportWindowCreatedBy", fields: [createdById], references: [id])
   reports     LmdReport[]
 
   @@unique([reportMonth, reportYear])
@@ -1030,7 +1045,7 @@ model LmdReportWindow {
 // ─── LMD Reports ─────────────────────────────────────────────────────────────
 // Monthly summary report submitted by an LMD covering all their trainees.
 model LmdReport {
-  id          String          @id @default(cuid())
+  id          String @id @default(cuid())
   windowId    String
   lmdId       String
   missionId   String
@@ -1038,24 +1053,24 @@ model LmdReport {
   reportYear  Int
 
   // ── Aggregated metrics (from trainee field reports) ──
-  totalTrainees            Int @default(0)
-  totalActivities          Int @default(0)
-  totalDaysOfWork          Int @default(0)
-  totalHoursOfWork         Int @default(0)
-  totalNonSdaHomeVisits    Int @default(0)
-  totalBibleStudies        Int @default(0)
-  totalMedicalVisits       Int @default(0)
-  totalWorshipSessions     Int @default(0)
-  totalNewGroups           Int @default(0)
-  totalBaptismCandidates   Int @default(0)
-  totalBaptisms            Int @default(0)
-  totalPeopleReached       Int @default(0)
+  totalTrainees          Int @default(0)
+  totalActivities        Int @default(0)
+  totalDaysOfWork        Int @default(0)
+  totalHoursOfWork       Int @default(0)
+  totalNonSdaHomeVisits  Int @default(0)
+  totalBibleStudies      Int @default(0)
+  totalMedicalVisits     Int @default(0)
+  totalWorshipSessions   Int @default(0)
+  totalNewGroups         Int @default(0)
+  totalBaptismCandidates Int @default(0)
+  totalBaptisms          Int @default(0)
+  totalPeopleReached     Int @default(0)
 
   // ── LMD narrative ──
-  overallSummary           String
-  challengesAndNeeds       String?
+  overallSummary            String
+  challengesAndNeeds        String?
   recommendationsToDirector String?
-  prayerRequests           String?
+  prayerRequests            String?
 
   submittedAt DateTime @default(now())
   createdAt   DateTime @default(now())
@@ -1080,13 +1095,10 @@ enum FlagRequestStatus {
   REJECTED
 }
 
-
 enum LmdReportWindowState {
   OPEN
   CLOSED
 }
-
-
 
 enum UserRole {
   TRAINEE
@@ -1204,7 +1216,6 @@ enum DocumentKind {
   TRAINER_CV
   TRAINER_PASSPORT
   TRAINER_PHOTO
-
 }
 
 enum ComplaintCategory {
@@ -1309,8 +1320,8 @@ enum SalaryRequestStatus {
 }
 
 enum EnrollmentStatus {
-  APPLIED    // trainee applied to this program (consent given) — awaiting SA/UD placement
-  ENROLLED   // SA/UD has placed the trainee into the program
+  APPLIED // trainee applied to this program (consent given) — awaiting SA/UD placement
+  ENROLLED // SA/UD has placed the trainee into the program
 }
 
 enum FinancialEntryType {
@@ -1322,37 +1333,93 @@ enum FinancialEntryType {
   OTHER
 }
 
+/// Work a missionary is deployed to carry out in the field.
+///
+/// Distinct from `Project`, which is the public website's fundraising
+/// initiatives (slug, images, donations). This one never surfaces publicly —
+/// it is the mission's own record of what its missionaries are working on.
+enum FieldProjectStage {
+  PLANNING // agreed but not started
+  STARTED // work has begun
+  IN_PROGRESS // underway
+  NEARLY_COMPLETE // final stretch
+  COMPLETED // finished
+  ON_HOLD // paused
+}
+
+model FieldProject {
+  id        String @id @default(cuid())
+  missionId String
+  name      String
+  objective String @db.Text
+
+  /// "How much of the work has been done" — a stage for consistent filtering
+  /// and reporting, plus an optional percentage for finer detail within it.
+  stage           FieldProjectStage @default(PLANNING)
+  progressPercent Int?
+
+  /// Project time — when the work is expected to run.
+  startDate DateTime?
+  endDate   DateTime?
+
+  notes       String? @db.Text
+  createdById String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  mission     LocalMission           @relation(fields: [missionId], references: [id])
+  createdBy   User                   @relation("FieldProjectCreatedBy", fields: [createdById], references: [id])
+  deployments MissionaryDeployment[]
+  reports     FieldReport[]
+
+  @@index([missionId])
+  @@index([stage])
+  @@map("field_projects")
+}
+
 enum DeploymentStatus {
-  PENDING    // LMD requested, awaiting SA/UD approval
-  ACTIVE     // Approved and active
-  COMPLETED  // Ended (manually or endDate passed)
-  REJECTED   // SA/UD rejected the request
+  PENDING // LMD requested, awaiting SA/UD approval
+  ACTIVE // Approved and active
+  COMPLETED // Ended (manually or endDate passed)
+  REJECTED // SA/UD rejected the request
 }
 
 model MissionaryDeployment {
-  id           String           @id @default(cuid())
+  id           String  @id @default(cuid())
   missionaryId String
   missionId    String
   location     String?
-  startDate    DateTime
-  endDate      DateTime?
-  status       DeploymentStatus @default(PENDING)
-  requestedById String
-  reviewedById  String?
-  reviewNote    String?
-  reviewedAt    DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  deletedAt    DateTime?
 
-  missionary  User         @relation("MissionaryDeployments", fields: [missionaryId], references: [id])
-  mission     LocalMission @relation(fields: [missionId], references: [id])
-  requestedBy User         @relation("DeploymentRequestedBy", fields: [requestedById], references: [id])
-  reviewedBy  User?        @relation("DeploymentReviewedBy", fields: [reviewedById], references: [id])
+  /// What the missionary is assigned to, and on what terms. Set by the LMD on
+  /// the deployment request; repointing fieldProjectId moves them to a
+  /// different project without ending the deployment.
+  fieldProjectId   String?
+  role             String?
+  responsibilities String?          @db.Text
+  jobDescription   String?          @db.Text
+  startDate        DateTime
+  endDate          DateTime?
+  status           DeploymentStatus @default(PENDING)
+  requestedById    String
+  reviewedById     String?
+  reviewNote       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
+
+  missionary   User          @relation("MissionaryDeployments", fields: [missionaryId], references: [id])
+  mission      LocalMission  @relation(fields: [missionId], references: [id])
+  fieldProject FieldProject? @relation(fields: [fieldProjectId], references: [id])
+  requestedBy  User          @relation("DeploymentRequestedBy", fields: [requestedById], references: [id])
+  reviewedBy   User?         @relation("DeploymentReviewedBy", fields: [reviewedById], references: [id])
 
   @@index([missionaryId])
   @@index([missionId])
   @@index([status])
+  @@index([fieldProjectId])
   @@map("missionary_deployments")
 }
 
@@ -1381,26 +1448,26 @@ model Testimony {
 // Managed by SA in the portal; fetched by the public website via /api/public/projects
 
 model Project {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  title       String
-  subtitle    String
-  description String   @db.Text
-  location    String
-  date        String   // display string e.g. "Dec 10, 2025 — Ongoing"
-  images      String[] // up to 5 image URLs; first is the cover
-  tags        String[]
-  status      String   @default("Active") // "Active" | "Completed" | "Upcoming"
-  goal        String?  // short one-line objective
-  participants Int?    // number of people impacted
-  highlight   String?  // key achievement or highlight text
-  body        String?  @db.Text // full article body (multi-paragraph) for detail page
-  budget      String?  // funding info e.g. "BDT 1,891,382 (≈ USD 15,503)"
-  objectives  String[] // bullet-point list of key activities/objectives
-  order       Int      @default(0)
-  isPublished Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  title        String
+  subtitle     String
+  description  String   @db.Text
+  location     String
+  date         String // display string e.g. "Dec 10, 2025 — Ongoing"
+  images       String[] // up to 5 image URLs; first is the cover
+  tags         String[]
+  status       String   @default("Active") // "Active" | "Completed" | "Upcoming"
+  goal         String? // short one-line objective
+  participants Int? // number of people impacted
+  highlight    String? // key achievement or highlight text
+  body         String?  @db.Text // full article body (multi-paragraph) for detail page
+  budget       String? // funding info e.g. "BDT 1,891,382 (≈ USD 15,503)"
+  objectives   String[] // bullet-point list of key activities/objectives
+  order        Int      @default(0)
+  isPublished  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([isPublished])
   @@map("projects")
