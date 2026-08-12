@@ -22,31 +22,32 @@ model ApplicationCounter {
 
 // ─── Local Missions ───────────────────────────────────────────────────────────
 model LocalMission {
-  id                 String                 @id @default(cuid())
-  code               String                 @unique
-  name               String
-  nameBangla         String
-  description        String?
-  contactEmail       String?
-  contactPhone       String?
-  address            String?
-  directorId         String?                @unique
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
-  deletedAt          DateTime?
-  applicationWindows ApplicationWindow[]
-  applications       Application[]          @relation("ApplicationSubmittedFromMission")
-  complaints         Complaint[]
-  director           User?                  @relation("MissionDirector", fields: [directorId], references: [id])
-  users              User[]                 @relation("UserHomeMission")
-  lmdReports         LmdReport[]            @relation("LmdReportMission")
-  salaryRanges       SalaryRange[]
-  salaryAssignments  SalaryAssignment[]
-  salaryRequests     SalaryRequest[]
-  financialEntries   FinancialEntry[]
-  deployments        MissionaryDeployment[]
-  fieldProjects      FieldProject[]
-  attendanceScans    AttendanceScan[]       @relation("AttendanceScanMission")
+  id                  String                 @id @default(cuid())
+  code                String                 @unique
+  name                String
+  nameBangla          String
+  description         String?
+  contactEmail        String?
+  contactPhone        String?
+  address             String?
+  directorId          String?                @unique
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  deletedAt           DateTime?
+  applicationWindows  ApplicationWindow[]
+  applications        Application[]          @relation("ApplicationSubmittedFromMission")
+  complaints          Complaint[]
+  director            User?                  @relation("MissionDirector", fields: [directorId], references: [id])
+  users               User[]                 @relation("UserHomeMission")
+  lmdReports          LmdReport[]            @relation("LmdReportMission")
+  salaryRanges        SalaryRange[]
+  salaryAssignments   SalaryAssignment[]
+  salaryRequests      SalaryRequest[]
+  financialEntries    FinancialEntry[]
+  deployments         MissionaryDeployment[]
+  fieldProjects       FieldProject[]
+  scholarshipRequests ScholarshipRequest[]
+  attendanceScans     AttendanceScan[]       @relation("AttendanceScanMission")
 
   @@index([code])
   @@map("local_missions")
@@ -253,6 +254,9 @@ model User {
   fieldProjectsCreated        FieldProject[]                 @relation("FieldProjectCreatedBy")
   fieldProjectAssignments     FieldProjectAssignment[]       @relation("FieldProjectAssignee")
   fieldProjectsAssignedBy     FieldProjectAssignment[]       @relation("FieldProjectAssignedBy")
+  scholarshipRequests         ScholarshipRequest[]           @relation("ScholarshipApplicant")
+  scholarshipsReviewedAsLmd   ScholarshipRequest[]           @relation("ScholarshipLmdReviewer")
+  scholarshipsReviewedAsUd    ScholarshipRequest[]           @relation("ScholarshipUdReviewer")
   lmdReportWindowsCreated     LmdReportWindow[]              @relation("LmdReportWindowCreatedBy")
   lmdReports                  LmdReport[]                    @relation("LmdReportAuthor")
   flagRequests                UserFlagRequest[]              @relation("FlaggedUser")
@@ -1414,6 +1418,108 @@ model FieldProjectAssignment {
   @@index([missionaryId])
   @@index([endedAt])
   @@map("field_project_assignments")
+}
+
+/// ─── Scholarships ────────────────────────────────────────────────────────────
+
+/// Serial counter for scholarship reference numbers, kept separate from
+/// ApplicationCounter so the two sequences never interfere.
+model ScholarshipCounter {
+  missionCode String
+  year        Int
+  lastSerial  Int    @default(0)
+
+  @@id([missionCode, year])
+  @@map("scholarship_counters")
+}
+
+enum ScholarshipStatus {
+  SUBMITTED // missionary submitted, awaiting the LMD
+  UNDER_LMD_REVIEW // LMD has picked it up
+  LMD_SUGGESTED // LMD recommends it; now with the UD
+  LMD_REJECTED // LMD declined; ends here
+  APPROVED // UD approved, with a funded amount
+  REJECTED // UD declined
+}
+
+/// A missionary's application for study funding, following the printed
+/// "Scholarship Application Form". Eligibility is twelve months of active
+/// deployment, enforced when the form is submitted.
+///
+/// Review runs missionary → LMD (meets, uploads the minutes, suggests or
+/// rejects) → UD (final decision, and decides the amount funded).
+model ScholarshipRequest {
+  id              String            @id @default(cuid())
+  referenceNumber String            @unique
+  missionaryId    String
+  missionId       String
+  status          ScholarshipStatus @default(SUBMITTED)
+
+  // ── Applicant / study details ──
+  dateOfBirth          DateTime?
+  servingYear          String?
+  passingGrade         String?
+  passingYear          String?
+  gpa                  String?
+  planningToStudy      String?
+  subject              String?
+  collegeName          String?
+  collegeAddress       String?
+  estimatedMonthlyFees String?
+  yearlyFees           String?
+  additionalFees       String?
+
+  // ── Family / contact ──
+  fatherName  String?
+  motherName  String?
+  siblingName String?
+  homeAddress String?
+  phoneNumber String?
+  emailId     String?
+
+  // ── Narratives ──
+  experience       String @db.Text
+  desireToStudy    String @db.Text
+  familyBackground String @db.Text
+
+  submittedByName String
+  submittedAt     DateTime @default(now())
+
+  // ── Attachments (storage keys served by /api/uploads) ──
+  photoKey                 String?
+  missionaryCertificateKey String?
+  academicResultKey        String?
+  recommendationLetterKey  String?
+  nidKey                   String?
+
+  // ── LMD review ──
+  lmdReviewerId   String?
+  lmdDecisionNote String?   @db.Text
+  lmdDecisionAt   DateTime?
+  /// Scanned copy of the committee's decision, uploaded by the LMD.
+  lmdMinutesKey   String?
+  lmdMinutesName  String?
+
+  // ── UD final decision ──
+  udReviewerId   String?
+  udDecisionNote String?   @db.Text
+  udDecisionAt   DateTime?
+  /// Amount the UD agrees to fund. Only meaningful once APPROVED.
+  approvedAmount Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  missionary  User         @relation("ScholarshipApplicant", fields: [missionaryId], references: [id])
+  mission     LocalMission @relation(fields: [missionId], references: [id])
+  lmdReviewer User?        @relation("ScholarshipLmdReviewer", fields: [lmdReviewerId], references: [id])
+  udReviewer  User?        @relation("ScholarshipUdReviewer", fields: [udReviewerId], references: [id])
+
+  @@index([missionId])
+  @@index([missionaryId])
+  @@index([status])
+  @@map("scholarship_requests")
 }
 
 enum DeploymentStatus {

@@ -151,6 +151,14 @@ export default async function FieldReportDetailPage({
               {report.program.code} · {report.program.title}
             </p>
           </div>
+          <a
+            href={`/api/export/field-reports/${report.id}/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50"
+          >
+            Download PDF
+          </a>
           <PrintButton label="Print" />
         </div>
       </div>
