@@ -11,6 +11,7 @@ import {
   checkScholarshipEligibility,
   generateScholarshipReference,
 } from "@/lib/scholarshipEligibility";
+import { loadScholarshipApplicant } from "@/lib/scholarshipApplicant";
 
 export type ScholarshipResult =
   | { ok: true; referenceNumber?: string }
@@ -61,10 +62,7 @@ export async function submitScholarshipAction(
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, fullName: true, homeMissionId: true, homeMission: { select: { code: true } } },
-  });
+  const user = await loadScholarshipApplicant(userId);
   if (!user?.homeMissionId || !user.homeMission) {
     return { ok: false, error: "Your account is not assigned to a mission." };
   }
@@ -134,7 +132,10 @@ export async function submitScholarshipAction(
       missionaryId: userId,
       missionId: user.homeMissionId,
       status: "SUBMITTED",
-      dateOfBirth: d.dateOfBirth ? new Date(d.dateOfBirth) : null,
+      // Taken from the account (or the applicant's bio-data) rather than the
+      // posted value, for the same reason as the name below: it is already on
+      // record and should not be re-stated differently here.
+      dateOfBirth: user.dateOfBirth ?? (d.dateOfBirth ? new Date(d.dateOfBirth) : null),
       servingYear: d.servingYear || null,
       passingGrade: d.passingGrade || null,
       passingYear: d.passingYear || null,

@@ -8,7 +8,6 @@ const INIT: ScholarshipResult = { ok: false };
 
 /** Mirrors the printed form's field order so the two read the same. */
 const TEXT_FIELDS: Array<{ name: string; label: string; placeholder?: string; type?: string }> = [
-  { name: "dateOfBirth", label: "Date of Birth", type: "date" },
   { name: "servingYear", label: "Serving Year", placeholder: "e.g. 2025–2026" },
   { name: "passingGrade", label: "Passing Grade", placeholder: "e.g. HSC" },
   { name: "passingYear", label: "Year", placeholder: "e.g. 2024" },
@@ -54,7 +53,13 @@ const ATTACHMENTS: Array<{ name: string; label: string; hint: string }> = [
   { name: "nid", label: "NID", hint: "PDF, JPG or PNG, max 2 MB" },
 ];
 
-export function ScholarshipForm({ applicantName }: { applicantName: string }) {
+export function ScholarshipForm({
+  applicantName,
+  applicantDateOfBirth,
+}: {
+  applicantName: string;
+  applicantDateOfBirth: string | null;
+}) {
   const router = useRouter();
   const [state, action, pending] = useActionState(submitScholarshipAction, INIT);
   const firstRender = useRef(true);
@@ -80,7 +85,7 @@ export function ScholarshipForm({ applicantName }: { applicantName: string }) {
       <div className="rounded-xl border border-gray-200 bg-white p-5">
         <h2 className="mb-4 text-sm font-medium text-gray-900">Applicant Details</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
+          <div>
             <label className="mb-1 block text-xs font-medium text-gray-700">
               Name of Missionary
             </label>
@@ -89,7 +94,37 @@ export function ScholarshipForm({ applicantName }: { applicantName: string }) {
               readOnly
               className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600"
             />
-            <p className="mt-1 text-[11px] text-gray-400">Taken from your account.</p>
+            <p className="mt-1 text-[11px] text-gray-400">From your account.</p>
+          </div>
+
+          {/* Locked when we already hold a date of birth; typed only when
+              neither the account nor the applicant's bio-data has one, so
+              nobody is left staring at an empty field they cannot fill. */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-700">
+              Date of Birth
+            </label>
+            {applicantDateOfBirth ? (
+              <>
+                <input
+                  value={new Date(applicantDateOfBirth).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                  readOnly
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600"
+                />
+                <p className="mt-1 text-[11px] text-gray-400">From your records.</p>
+              </>
+            ) : (
+              <input
+                name="dateOfBirth"
+                type="date"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500"
+              />
+            )}
+            {fe.dateOfBirth && <p className="mt-0.5 text-xs text-red-500">{fe.dateOfBirth}</p>}
           </div>
           {TEXT_FIELDS.map((f) => (
             <div key={f.name}>

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import { prisma } from "@1000mm/db";
 import { checkScholarshipEligibility } from "@/lib/scholarshipEligibility";
+import { loadScholarshipApplicant } from "@/lib/scholarshipApplicant";
 import { ScholarshipForm } from "./_components/ScholarshipForm";
 import { ScholarshipStatusCard } from "@/app/dashboard/_components/scholarships/ScholarshipStatusCard";
 
@@ -11,10 +12,7 @@ export default async function ScholarshipPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, fullName: true, role: true, isMissionary: true },
-  });
+  const user = await loadScholarshipApplicant(session.user.id);
   if (!user) redirect("/login");
 
   const [requests, eligibility] = await Promise.all([
@@ -93,7 +91,12 @@ export default async function ScholarshipPage() {
           Your application is under review. You can apply again once it has been decided.
         </p>
       ) : eligibility.eligible ? (
-        <ScholarshipForm applicantName={user.fullName} />
+        <ScholarshipForm
+          applicantName={user.fullName}
+          applicantDateOfBirth={
+            user.dateOfBirth ? user.dateOfBirth.toISOString().slice(0, 10) : null
+          }
+        />
       ) : null}
     </div>
   );
