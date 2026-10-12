@@ -59,7 +59,9 @@ export async function GET(req: NextRequest) {
   const enrollments = await prisma.programEnrollment.findMany({
     where: {
       deletedAt: null,
-      application: { status: "ACCEPTED" },
+      // On the roster — not "has an accepted application". Trainees placed
+      // manually may have no application row linked to their enrollment.
+      status: "ENROLLED",
       ...(programId ? { programId } : {}),
       ...(enrollmentIds?.length ? { id: { in: enrollmentIds } } : {}),
     },
@@ -92,7 +94,7 @@ export async function GET(req: NextRequest) {
   });
 
   if (enrollments.length === 0) {
-    return new NextResponse("No accepted enrollments found.", { status: 404 });
+    return new NextResponse("No enrolled trainees found.", { status: 404 });
   }
 
   const generatedAt = new Date().toLocaleString("en-GB", {

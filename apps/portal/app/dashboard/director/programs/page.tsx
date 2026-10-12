@@ -71,7 +71,8 @@ export default async function ProgramsPage({
       },
       _count: {
         select: {
-          enrollments: { where: { deletedAt: null } },
+          // APPLIED rows are intents, not places — match the detail page.
+          enrollments: { where: { deletedAt: null, status: "ENROLLED" } },
         },
       },
     },

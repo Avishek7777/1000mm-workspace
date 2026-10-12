@@ -34,7 +34,8 @@ export async function GET(req: NextRequest) {
     where: {
       deletedAt: null,
       programId,
-      application: { status: "ACCEPTED" },
+      // See api/id-cards/route.ts — roster membership, not application link.
+      status: "ENROLLED",
     },
     include: {
       trainee: {

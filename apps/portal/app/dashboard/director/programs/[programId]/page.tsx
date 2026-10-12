@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ProgramEditForm, WindowPanel } from "./_components/ProgramComponents";
 import { PublishToggle } from "../_components/PublishToggle";
 import { TopicsPanel } from "./_components/TopicsPanel";
+import { RosterPanel } from "./_components/RosterPanel";
 
 const CATEGORY_LABELS: Record<string, string> = {
   SPIRITUAL: "Spiritual",
@@ -63,10 +64,24 @@ export default async function ProgramDetailPage({
       },
       enrollments: {
         where: { deletedAt: null },
+        orderBy: [
+          { trainee: { homeMission: { code: "asc" } } },
+          { trainee: { fullName: "asc" } },
+        ],
         select: {
           id: true,
+          status: true,
+          enrolledAt: true,
           attendanceConfirmed: true,
           certificateIssued: true,
+          trainee: {
+            select: {
+              id: true,
+              fullName: true,
+              homeMission: { select: { code: true } },
+            },
+          },
+          application: { select: { referenceNumber: true } },
         },
       },
       topics: {
@@ -98,22 +113,36 @@ export default async function ProgramDetailPage({
     }),
   ]);
 
-  const activeCount = await prisma.trainingProgram.count({
-    where: { isPublished: true, deletedAt: null },
-  });
+  const [activeCount, acceptedOnWindows] = await Promise.all([
+    prisma.trainingProgram.count({
+      where: { isPublished: true, deletedAt: null },
+    }),
+    // Accepted applicants from this program's own windows who hold no place on
+    // it yet — the gap between "accepted" and "enrolled".
+    prisma.user.count({
+      where: {
+        role: "TRAINEE",
+        deletedAt: null,
+        applications: {
+          some: { status: "ACCEPTED", deletedAt: null, window: { programId } },
+        },
+        enrollmentsAsTrainee: {
+          none: { programId, deletedAt: null, status: "ENROLLED" },
+        },
+      },
+    }),
+  ]);
 
   const activeWindow = program.applicationWindows.find(
     (w) => w.state === "OPEN",
   );
   const latestWindow = program.applicationWindows[0] ?? null;
 
-  const enrolledCount = program.enrollments.length;
-  const attendingCount = program.enrollments.filter(
-    (e) => e.attendanceConfirmed,
-  ).length;
-  const certifiedCount = program.enrollments.filter(
-    (e) => e.certificateIssued,
-  ).length;
+  // APPLIED rows are intents, not places — only ENROLLED counts as on the roster.
+  const roster = program.enrollments.filter((e) => e.status === "ENROLLED");
+  const enrolledCount = roster.length;
+  const attendingCount = roster.filter((e) => e.attendanceConfirmed).length;
+  const certifiedCount = roster.filter((e) => e.certificateIssued).length;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -249,6 +278,22 @@ export default async function ProgramDetailPage({
           (w) => !["ARCHIVED"].includes(w.state),
         ) && <CreateWindowSection programId={program.id} missions={missions} />}
       </div>
+
+      {/* Roster — add/remove trainees manually */}
+      <RosterPanel
+        programId={program.id}
+        programCode={program.code}
+        acceptedOnWindows={acceptedOnWindows}
+        enrolled={roster.map((e) => ({
+          id: e.id,
+          traineeName: e.trainee.fullName,
+          missionCode: e.trainee.homeMission?.code ?? null,
+          referenceNumber: e.application?.referenceNumber ?? null,
+          enrolledAt: e.enrolledAt,
+          attendanceConfirmed: e.attendanceConfirmed,
+          certificateIssued: e.certificateIssued,
+        }))}
+      />
 
       {/* Training content quick links */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

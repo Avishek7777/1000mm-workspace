@@ -44,7 +44,7 @@ export default async function IdCardsPage({
   });
   const missionCodes = missions.map((m) => m.code);
 
-  // Programs with accepted enrollments (filtered by year/mission)
+  // Programs with enrolled trainees (filtered by year/mission)
   const programs = await prisma.trainingProgram.findMany({
     where: {
       deletedAt: null,
@@ -52,10 +52,11 @@ export default async function IdCardsPage({
       enrollments: {
         some: {
           deletedAt: null,
-          application: {
-            status: "ACCEPTED",
-            ...(mission ? { submittedFromMission: { code: mission } } : {}),
-          },
+          // Roster membership, not application link — manually placed trainees
+          // may have no application attached. Mission comes off the trainee's
+          // home mission, matching the printed roster at /dashboard/trainees.
+          status: "ENROLLED",
+          ...(mission ? { trainee: { homeMission: { code: mission } } } : {}),
         },
       },
     },
@@ -65,7 +66,7 @@ export default async function IdCardsPage({
 
   // Year options from all programs with enrollments
   const allProgramYears = await prisma.trainingProgram.findMany({
-    where: { deletedAt: null, enrollments: { some: { deletedAt: null, application: { status: "ACCEPTED" } } } },
+    where: { deletedAt: null, enrollments: { some: { deletedAt: null, status: "ENROLLED" } } },
     select: { startDate: true },
   });
   const availableYears = [...new Set(allProgramYears.map((p) => new Date(p.startDate).getFullYear()))].sort((a, b) => b - a);
