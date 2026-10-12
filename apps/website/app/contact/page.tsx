@@ -36,7 +36,7 @@ const staticInfo = [
   {
     icon: Mail,
     title: "Email",
-    lines: ["info@1000mm.org.bd"],
+    lines: ["info@1000mmbd.org"],
     gradient: "linear-gradient(135deg, #f97316, #fb923c)",
   },
   {

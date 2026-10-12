@@ -592,10 +592,10 @@ export default async function ProjectDetailPage({
               </a>
               <span className="hidden text-stone-300 sm:inline">·</span>
               <a
-                href="mailto:info@1000mm.org.bd"
+                href="mailto:info@1000mmbd.org"
                 className="text-sm font-semibold text-teal-700 hover:underline"
               >
-                info@1000mm.org.bd
+                info@1000mmbd.org
               </a>
             </div>
           </div>

@@ -69,7 +69,7 @@ const staticInfo = [
   {
     icon: Phone,
     title: "Contact",
-    lines: ["+880 1324-333377", "info@1000mm.org.bd", "www.1000mm.org.bd"],
+    lines: ["+880 1324-333377", "info@1000mmbd.org", "www.1000mm.org.bd"],
     gradient: "linear-gradient(135deg, #f97316, #fb923c)",
   },
 ];

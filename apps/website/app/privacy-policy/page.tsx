@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 const EFFECTIVE_DATE = "1997";
-const CONTACT_EMAIL = "info@1000mm.org.bd";
+const CONTACT_EMAIL = "info@1000mmbd.org";
 const ORG_ADDRESS = "149 Shah Ali Bagh, Mirpur - 1, Dhaka 1216, Bangladesh";
 
 function Section({

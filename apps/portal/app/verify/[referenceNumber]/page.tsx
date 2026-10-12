@@ -9,30 +9,43 @@ export default async function VerifyPage({
   const { referenceNumber } = await params;
   const ref = referenceNumber.trim().toUpperCase();
 
+  const SELECT = {
+    certificateIssued: true,
+    certificateIssuedAt: true,
+    certificateRevokedAt: true,
+    deploymentLocation: true,
+    trainee: {
+      select: {
+        fullName: true,
+        homeMission: { select: { code: true, name: true } },
+      },
+    },
+    program: {
+      select: { code: true, title: true, startDate: true, endDate: true },
+    },
+  } as const;
+
   // No certificateIssued filter: the same QR/reference is printed on ID cards,
   // which exist before any certificate is issued. An enrollment without a
   // certificate verifies as a trainee ID instead of "not found".
-  const enrollment = await prisma.programEnrollment.findFirst({
-    where: {
-      deletedAt: null,
-      application: { referenceNumber: ref },
-    },
-    select: {
-      certificateIssued: true,
-      certificateIssuedAt: true,
-      certificateRevokedAt: true,
-      deploymentLocation: true,
-      trainee: {
-        select: {
-          fullName: true,
-          homeMission: { select: { code: true, name: true } },
-        },
-      },
-      program: {
-        select: { code: true, title: true, startDate: true, endDate: true },
-      },
-    },
+  let found = await prisma.programEnrollment.findFirst({
+    where: { deletedAt: null, application: { referenceNumber: ref } },
+    select: SELECT,
   });
+
+  // Trainees placed on a roster manually may have no application linked
+  // (applicationId is @unique, so a prior enrollment can already hold it).
+  // Their ID card falls back to printing the last 8 characters of the
+  // enrollment id, so resolve that form too or the QR reads "not found".
+  if (!found && /^[0-9A-Z]{8}$/.test(ref)) {
+    found = await prisma.programEnrollment.findFirst({
+      where: { deletedAt: null, id: { endsWith: ref.toLowerCase() } },
+      select: SELECT,
+    });
+  }
+
+  // Back to a const so the isValid/isIdOnly checks below narrow it for the JSX.
+  const enrollment = found;
 
   const isRevoked = !!enrollment?.certificateRevokedAt;
   const isValid = !!enrollment?.certificateIssued && !isRevoked;

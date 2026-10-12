@@ -250,7 +250,7 @@ export default function DonationProceedsPage() {
             </a>
 
             <a
-              href="mailto:info@1000mm.org.bd"
+              href="mailto:info@1000mmbd.org"
               className="flex items-center gap-4 rounded-2xl border border-teal-200 bg-teal-50/60 px-6 py-4 hover:shadow-md hover:border-teal-300 transition-all duration-200"
             >
               <span
@@ -270,7 +270,7 @@ export default function DonationProceedsPage() {
                   className="font-bold text-sm"
                   style={{ fontFamily: "Georgia, serif", color: "#3b1f08" }}
                 >
-                  info@1000mm.org.bd
+                  info@1000mmbd.org
                 </p>
               </div>
             </a>

@@ -501,7 +501,7 @@ export default function HowToDonatePage() {
               </a>{" "}
               or email us at{" "}
               <span className="text-orange-500 font-semibold">
-                donate@1000mm.org.bd
+                donate@1000mmbd.org
               </span>
               . We will send you a donation receipt within 24 hours. All
               donations go directly toward missionary training, deployment, and
@@ -724,7 +724,7 @@ export default function HowToDonatePage() {
                   </a>
 
                   <a
-                    href="mailto:donate@1000mm.org.bd"
+                    href="mailto:donate@1000mmbd.org"
                     className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl font-semibold text-white text-sm hover:scale-[1.02] hover:shadow-lg transition-all duration-300"
                     style={{
                       background:
@@ -739,7 +739,7 @@ export default function HowToDonatePage() {
                       <span className="text-white/60 text-[10px] uppercase tracking-widest font-normal">
                         Email Us
                       </span>
-                      <span>donate@1000mm.org.bd</span>
+                      <span>donate@1000mmbd.org</span>
                     </div>
                   </a>
                 </div>

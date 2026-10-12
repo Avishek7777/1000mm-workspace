@@ -92,7 +92,7 @@ export default async function SystemAdminDashboard() {
     activePrograms,
     upcomingPrograms,
     missions,
-    missionaryCounts,
+    applicationCounts,
     pendingTrainerApps,
     pendingFlagRequests,
   ] = await Promise.all([
@@ -114,9 +114,12 @@ export default async function SystemAdminDashboard() {
       select: { id: true, code: true, name: true },
       orderBy: { code: "asc" },
     }),
-    prisma.user.groupBy({
-      by: ["homeMissionId"],
-      where: { isMissionary: true, isActive: true, deletedAt: null },
+    // The panel below is "Applications by mission", so count applications by
+    // the mission they were submitted from — not users flagged isMissionary,
+    // which is set later by the deployment workflow and is 0 on a fresh DB.
+    prisma.application.groupBy({
+      by: ["submittedFromMissionId"],
+      where: { deletedAt: null },
       _count: { id: true },
     }),
     prisma.trainerApplication.count({ where: { status: "PENDING" } }),
@@ -124,7 +127,7 @@ export default async function SystemAdminDashboard() {
   ]);
 
   const missionCountMap = new Map(
-    missionaryCounts.map((m) => [m.homeMissionId, m._count.id]),
+    applicationCounts.map((m) => [m.submittedFromMissionId, m._count.id]),
   );
 
   const statsCards = [

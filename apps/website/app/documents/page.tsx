@@ -345,10 +345,10 @@ export default function DocumentsPage() {
               viewer installed (such as Adobe Acrobat or your browser's built-in
               viewer). For questions about filling out the forms, contact us at{" "}
               <a
-                href="mailto:info@1000mm.org.bd"
+                href="mailto:info@1000mmbd.org"
                 className="font-semibold text-amber-900 underline underline-offset-2 hover:text-orange-700"
               >
-                info@1000mm.org.bd
+                info@1000mmbd.org
               </a>
               .
             </p>

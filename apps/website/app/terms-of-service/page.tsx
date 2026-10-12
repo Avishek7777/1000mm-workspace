@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 const EFFECTIVE_DATE = "1997";
-const CONTACT_EMAIL = "info@1000mm.org.bd";
+const CONTACT_EMAIL = "info@1000mmbd.org";
 const GOVERNING_LAW = "the laws of Bangladesh";
 
 function Section({
