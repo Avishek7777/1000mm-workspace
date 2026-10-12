@@ -10,7 +10,7 @@ const tmpl = new Uint8Array(
   readFileSync(path.join(process.cwd(), "public", "certificates", "template.pdf")),
 );
 
-const qrDataUrl = await QRCode.toDataURL("https://1000mm.org.bd/verify/MMBD-2025-0029", {
+const qrDataUrl = await QRCode.toDataURL("https://1000mmbd.org/verify/MMBD-2025-0029", {
   margin: 0,
   width: 240,
 });

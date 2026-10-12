@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
 
   // /verify lives on the portal itself; NEXT_PUBLIC_APP_URL points to the
   // public website, so it must not be used here.
-  const verifyUrl = `${process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://portal.1000mm.org.bd"}/verify/${refNum}`;
+  const verifyUrl = `${process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://portal.1000mmbd.org"}/verify/${refNum}`;
 
   let logoUrl: string | undefined;
   let sdaLogoUrl: string | undefined;

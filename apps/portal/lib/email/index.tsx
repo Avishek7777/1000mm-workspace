@@ -6,10 +6,12 @@ import TrainerSetup from "./templates/TrainerSetup";
 import ContactReply from "./templates/ContactReply";
 import ApplicationEvent from "./templates/ApplicationEvent";
 
-const FROM = process.env.RESEND_FROM_EMAIL ?? "noreply@1000mm.org.bd";
+const FROM = process.env.RESEND_FROM_EMAIL ?? "noreply@1000mmbd.org";
 // Contact-form replies always come from the public info address so
-// recipients can reply directly to it.
-const CONTACT_REPLY_FROM = "info@1000mm.org.bd";
+// recipients can reply directly to it. Env-overridable for the same reason
+// as the bulk-email senders: an unverified domain fails every send.
+const CONTACT_REPLY_FROM =
+  process.env.CONTACT_REPLY_FROM_EMAIL ?? "info@1000mmbd.org";
 const APP_URL = process.env.AUTH_URL ?? "http://localhost:3001";
 
 // Lazy so that merely importing this module (e.g. via an actions barrel)

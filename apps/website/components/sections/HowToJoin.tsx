@@ -6,7 +6,7 @@ import { ClipboardCheck, UserCheck, Send, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 const PORTAL_URL =
-  process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://portal.1000mm.org.bd";
+  process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://portal.1000mmbd.org";
 
 const steps = [
   {

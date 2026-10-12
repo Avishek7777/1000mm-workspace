@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@1000mm/db";
 
 const WEBSITE_URL =
-  process.env.NEXT_PUBLIC_WEBSITE_URL ?? "https://1000mm.org.bd";
+  process.env.NEXT_PUBLIC_WEBSITE_URL ?? "https://1000mmbd.org";
 
 export async function GET() {
   const programs = await prisma.trainingProgram.findMany({

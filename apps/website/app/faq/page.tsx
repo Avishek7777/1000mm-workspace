@@ -24,7 +24,7 @@ import NavBar from "@/components/NavBar";
 import Footer from "@/components/sections/Footer";
 
 const PORTAL_URL =
-  process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://portal.1000mm.org.bd";
+  process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://portal.1000mmbd.org";
 
 type QA = { q: string; a: React.ReactNode };
 type Category = { label: string; items: QA[] };

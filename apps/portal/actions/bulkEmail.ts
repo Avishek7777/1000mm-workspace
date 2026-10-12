@@ -10,8 +10,12 @@ import React from "react";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const INFO_FROM = "1000MM Bangladesh <info@1000mm.org.bd>";
-const DONATE_FROM = "1000MM Bangladesh <donate@1000mm.org.bd>";
+// Env-overridable so the sending domain can be rolled back without a rebuild
+// if it is not yet verified in Resend (sends fail outright until it is).
+const INFO_FROM =
+  process.env.RESEND_INFO_FROM ?? "1000MM Bangladesh <info@1000mmbd.org>";
+const DONATE_FROM =
+  process.env.RESEND_DONATE_FROM ?? "1000MM Bangladesh <donate@1000mmbd.org>";
 
 const AUDIENCE_ROLES = {
   all_users: undefined,

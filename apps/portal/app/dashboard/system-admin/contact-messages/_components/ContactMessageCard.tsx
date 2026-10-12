@@ -71,7 +71,7 @@ function ReplyForm({
         value={reply}
         onChange={(e) => setReply(e.target.value)}
         rows={4}
-        placeholder="Write your reply… It will be emailed from info@1000mm.org.bd."
+        placeholder="Write your reply… It will be emailed from info@1000mmbd.org."
         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
       />
       {state.fieldErrors?.reply && (
@@ -191,7 +191,7 @@ export function ContactMessageCard({
             Reply sent
             {message.repliedByName && <> by {message.repliedByName}</>}
             {message.repliedAt && <> on {formatDate(message.repliedAt)}</>} from
-            info@1000mm.org.bd
+            info@1000mmbd.org
           </p>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
             {message.replyBody}

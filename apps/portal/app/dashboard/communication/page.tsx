@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@1000mm/db";
 import Link from "next/link";
 
-const INFO_EMAIL = "info@1000mm.org.bd";
-const DONATE_EMAIL = "donate@1000mm.org.bd";
+const INFO_EMAIL = "info@1000mmbd.org";
+const DONATE_EMAIL = "donate@1000mmbd.org";
 
 export default async function CommunicationHubPage() {
   const session = await auth();

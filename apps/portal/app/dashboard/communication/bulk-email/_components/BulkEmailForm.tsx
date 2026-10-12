@@ -13,8 +13,8 @@ const AUDIENCES = [
 ];
 
 const FROM_OPTIONS = [
-  { value: "info",   label: "info@1000mm.org.bd",   desc: "General / organizational messages" },
-  { value: "donate", label: "donate@1000mm.org.bd", desc: "Donation appeals & financial updates" },
+  { value: "info",   label: "info@1000mmbd.org",   desc: "General / organizational messages" },
+  { value: "donate", label: "donate@1000mmbd.org", desc: "Donation appeals & financial updates" },
 ];
 
 type Counts = Record<string, number>;

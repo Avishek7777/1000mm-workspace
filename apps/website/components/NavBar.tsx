@@ -6,7 +6,7 @@ import { Menu, X, ChevronDown } from "lucide-react";
 import Image from "next/image";
 
 const PORTAL_URL =
-  process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://portal.1000mm.org.bd";
+  process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://portal.1000mmbd.org";
 
 const navLinks = [
   { label: "Home", href: "/" },
