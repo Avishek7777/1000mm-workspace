@@ -35,8 +35,16 @@ const PUBLIC_PATHS = new Set([
   "/verify-email",
 ]);
 
-// These prefixes are never blocked regardless of auth state
-const PUBLIC_PREFIXES = ["/api/auth", "/_next", "/favicon"];
+// These prefixes are never blocked regardless of auth state.
+//
+// "/verify/" is public by design: the QR printed on an ID card or certificate
+// is meant to be scanned by an outsider — an employer, a church, a checkpoint —
+// who has no portal account. Gated, the QR just bounced them to a login page.
+// Access is controlled by the unguessable token in the link rather than by a
+// session; a lookup by the (sequential, enumerable) reference number falls back
+// to a reduced record with no photo and no deployment location.
+// See lib/verification.ts.
+const PUBLIC_PREFIXES = ["/api/auth", "/_next", "/favicon", "/verify/"];
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;

@@ -1,4 +1,5 @@
 import { prisma } from "@1000mm/db";
+import { VERIFY_TOKEN_RE, loadEnrollmentPhoto } from "@/lib/verification";
 import Link from "next/link";
 
 export default async function VerifyPage({
@@ -7,9 +8,17 @@ export default async function VerifyPage({
   params: Promise<{ referenceNumber: string }>;
 }) {
   const { referenceNumber } = await params;
-  const ref = referenceNumber.trim().toUpperCase();
+  const code = referenceNumber.trim();
+
+  // A verification token is 32 lowercase hex characters; reference numbers are
+  // uppercase with dashes ({MISSION}-{YEAR}-{00001}) and the ID-card fallback
+  // is 8 uppercase alphanumerics. So both forms share this route without
+  // ambiguity.
+  const isToken = VERIFY_TOKEN_RE.test(code);
+  const ref = code.toUpperCase();
 
   const SELECT = {
+    id: true,
     certificateIssued: true,
     certificateIssuedAt: true,
     certificateRevokedAt: true,
@@ -17,27 +26,44 @@ export default async function VerifyPage({
     trainee: {
       select: {
         fullName: true,
+        profilePicture: true,
         homeMission: { select: { code: true, name: true } },
       },
     },
     program: {
       select: { code: true, title: true, startDate: true, endDate: true },
     },
+    application: {
+      select: {
+        referenceNumber: true,
+        documents: {
+          where: { kind: "PROFILE_PHOTO" as const, deletedAt: null },
+          orderBy: { createdAt: "desc" as const },
+          take: 1,
+          select: { storageKey: true },
+        },
+      },
+    },
   } as const;
 
-  // No certificateIssued filter: the same QR/reference is printed on ID cards,
-  // which exist before any certificate is issued. An enrollment without a
+  // No certificateIssued filter: the same QR is printed on ID cards, which
+  // exist before any certificate is issued. An enrollment without a
   // certificate verifies as a trainee ID instead of "not found".
-  let found = await prisma.programEnrollment.findFirst({
-    where: { deletedAt: null, application: { referenceNumber: ref } },
-    select: SELECT,
-  });
+  let found = isToken
+    ? await prisma.programEnrollment.findFirst({
+        where: { deletedAt: null, verifyToken: code },
+        select: SELECT,
+      })
+    : await prisma.programEnrollment.findFirst({
+        where: { deletedAt: null, application: { referenceNumber: ref } },
+        select: SELECT,
+      });
 
   // Trainees placed on a roster manually may have no application linked
   // (applicationId is @unique, so a prior enrollment can already hold it).
   // Their ID card falls back to printing the last 8 characters of the
   // enrollment id, so resolve that form too or the QR reads "not found".
-  if (!found && /^[0-9A-Z]{8}$/.test(ref)) {
+  if (!found && !isToken && /^[0-9A-Z]{8}$/.test(ref)) {
     found = await prisma.programEnrollment.findFirst({
       where: { deletedAt: null, id: { endsWith: ref.toLowerCase() } },
       select: SELECT,
@@ -46,6 +72,27 @@ export default async function VerifyPage({
 
   // Back to a const so the isValid/isIdOnly checks below narrow it for the JSX.
   const enrollment = found;
+
+  // Full detail is only shown to someone who reached this page from a scanned
+  // card or certificate. Reference numbers are sequential, so anyone can
+  // enumerate them; the photo and the deployment location are withheld on that
+  // path. Deployment location in particular says where a missionary physically
+  // is. See lib/verification.ts.
+  const full = isToken && !!enrollment;
+
+  const photoDataUrl = full
+    ? await loadEnrollmentPhoto(
+        enrollment.application?.documents[0]?.storageKey,
+        enrollment.trainee.profilePicture,
+        { width: 240, height: 300 },
+      )
+    : null;
+
+  // Token links do not carry a human-readable reference, so take it off the
+  // record; fall back to the same 8-character form the ID card prints.
+  const displayRef =
+    enrollment?.application?.referenceNumber ??
+    (enrollment ? enrollment.id.slice(-8).toUpperCase() : ref);
 
   const isRevoked = !!enrollment?.certificateRevokedAt;
   const isValid = !!enrollment?.certificateIssued && !isRevoked;
@@ -62,6 +109,16 @@ export default async function VerifyPage({
       </div>
 
       <div className="w-full max-w-md">
+        {/* Looked up by reference number rather than by scanning a card, so the
+            photo and deployment location are withheld — see lib/verification.ts. */}
+        {enrollment && !full && (
+          <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
+            <p className="text-[11px] text-gray-500">
+              Scan the QR code on the card or certificate itself to see the full
+              record, including the holder&apos;s photograph.
+            </p>
+          </div>
+        )}
         {isValid ? (
           <div className="rounded-2xl border border-teal-200 bg-white shadow-sm overflow-hidden">
             {/* Valid banner */}
@@ -79,10 +136,26 @@ export default async function VerifyPage({
               </div>
             </div>
 
+            {/* Photo, only on the scanned-card path — lets whoever is holding
+                the card check the face against the person in front of them,
+                which is the point of verifying an ID. */}
+            {photoDataUrl && (
+              <div className="flex justify-center border-b border-gray-100 bg-gray-50 py-5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photoDataUrl}
+                  alt={`Photograph of ${enrollment!.trainee.fullName}`}
+                  width={120}
+                  height={150}
+                  className="h-[150px] w-[120px] rounded-lg border border-gray-200 object-cover shadow-sm"
+                />
+              </div>
+            )}
+
             {/* Details */}
             <div className="divide-y divide-gray-100 px-6">
               {[
-                { label: "Reference Number", value: ref },
+                { label: "Reference Number", value: displayRef },
                 { label: "Recipient", value: enrollment.trainee.fullName },
                 { label: "Mission", value: enrollment.trainee.homeMission?.name ?? "—" },
                 { label: "Program", value: `${enrollment.program.code} — ${enrollment.program.title}` },
@@ -90,7 +163,7 @@ export default async function VerifyPage({
                   label: "Training Period",
                   value: `${new Date(enrollment.program.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} – ${new Date(enrollment.program.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`,
                 },
-                ...(enrollment.deploymentLocation
+                ...(full && enrollment.deploymentLocation
                   ? [{ label: "Deployment Location", value: enrollment.deploymentLocation }]
                   : []),
                 {
@@ -127,9 +200,26 @@ export default async function VerifyPage({
                 </div>
               </div>
             </div>
+
+            {/* Photo, only on the scanned-card path — lets whoever is holding
+                the card check the face against the person in front of them,
+                which is the point of verifying an ID. */}
+            {photoDataUrl && (
+              <div className="flex justify-center border-b border-gray-100 bg-gray-50 py-5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photoDataUrl}
+                  alt={`Photograph of ${enrollment!.trainee.fullName}`}
+                  width={120}
+                  height={150}
+                  className="h-[150px] w-[120px] rounded-lg border border-gray-200 object-cover shadow-sm"
+                />
+              </div>
+            )}
+
             <div className="divide-y divide-gray-100 px-6">
               {[
-                { label: "Reference Number", value: ref },
+                { label: "Reference Number", value: displayRef },
                 { label: "Name", value: enrollment!.trainee.fullName },
                 { label: "Mission", value: enrollment!.trainee.homeMission?.name ?? "—" },
                 { label: "Program", value: `${enrollment!.program.code} — ${enrollment!.program.title}` },

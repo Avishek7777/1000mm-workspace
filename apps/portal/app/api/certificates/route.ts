@@ -5,6 +5,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { CertificatePdf } from "@/lib/exports/CertificatePdf";
 import { createElement } from "react";
 import QRCode from "qrcode";
+import { verifyUrlFor } from "@/lib/verification";
 import path from "path";
 import { readFileSync } from "fs";
 import { createNotification, NOTIFICATION_TEMPLATES } from "@/lib/notifications";
@@ -114,9 +115,9 @@ export async function GET(req: NextRequest) {
       .catch(() => {});
   }
 
-  // /verify lives on the portal itself; NEXT_PUBLIC_APP_URL points to the
-  // public website, so it must not be used here.
-  const verifyUrl = `${process.env.NEXT_PUBLIC_PORTAL_URL ?? "https://portal.1000mmbd.org"}/verify/${refNum}`;
+  // The QR carries an unguessable token rather than the reference number,
+  // which is sequential and so enumerable. See lib/verification.ts.
+  const verifyUrl = await verifyUrlFor(enrollmentId);
 
   let logoUrl: string | undefined;
   let sdaLogoUrl: string | undefined;

@@ -1,6 +1,6 @@
 # Task List — 1000MMBD Portal
 
-Last updated: 2026-10-12
+Last updated: 2026-10-13
 
 > **Session backlog added 2026-06-26** — items #28–#49 below
 > **Session backlog added 2026-06-27 (session 2)** — items #51–#55 below
@@ -8,6 +8,7 @@ Last updated: 2026-10-12
 > **Session backlog added 2026-06-28** — items #74–#98 below
 > **Session backlog added 2026-07-02** — item #99 below
 > **Session backlog added 2026-10-12** — items #107–#113 below
+> **Session backlog added 2026-10-13** — items #115–#117 below
 
 ---
 
@@ -231,6 +232,12 @@ Last updated: 2026-10-12
   - `DEPLOY.md` still documents the old cPanel flow *and* the old domain throughout (URLs, `AUTH_URL`, `NEXT_PUBLIC_*`, verification steps). It is wrong on both counts and should be rewritten against the VPS flow rather than patched.
 - [x] **#113** Uploads lost after a deploy — fixed 2026-10-12. `public/uploads` in the standalone bundle is a symlink to `/var/www/1000mm-uploads` that `next build` destroys on every deploy, orphaning every uploaded file. Two traps found while fixing it: `ln -sfn` places the link *inside* an existing real directory instead of replacing it (so uploads got served from `/api/uploads/1000mm-uploads/...`), and 38 files under `apps/portal/public/uploads/` were still **tracked in git** despite the `.gitignore` entry — added after they were committed, so every pull recreated them exactly where the symlink belongs. Those are now untracked (`git rm -r --cached`, files left on disk).
 - [x] **#114** `scripts/1000mm-deploy.sh` checked into the repo (2026-10-12). The previous deploy script existed only at `/usr/local/bin/1000mm-deploy` on the VPS and was lost in the rebuild, which is why three deploys in a row were hand-typed and why #113 happened. Install with `sudo ln -sfn /srv/1000mm/scripts/1000mm-deploy.sh /usr/local/bin/1000mm-deploy` — a symlink, so the repo stays the source of truth. It rescues any uploads sitting in the working tree or bundle into the store *before* pulling (needed exactly once, now that those 38 files are untracked and a pull deletes them), prints the `AUTH_URL`/`NEXT_PUBLIC_*` values for confirmation *before* building since they are baked into client JS, pushes the schema, builds each app separately (both at once has been OOM-killed on this box), syncs `public/` and `static/` into the bundles, forces the uploads symlink with `rm -rf` + `ln -s`, restarts, and health-checks both origins plus an actual upload fetch. Preflight refuses to start unless the repo, toolchain, uploads store, both `.env.production` files and both systemd units are present, so a half-applied deploy is not a possible outcome. Flags: `-y`, `--skip-build`, `--no-restart`.
+
+---
+
+- [x] **#115** ID cards never carried the applicant's photo — the card rendered a hard-coded placeholder (person icon + the word `PHOTO`) and the route never queried one. Now pulled from the application's `PROFILE_PHOTO` document, falling back to the trainee's profile picture, read off disk rather than over `/api/uploads` (that route needs a session a server-side render does not carry, and `profile-photos` is not a public prefix). Downscaled with `sharp` to the 56x72pt box at print resolution: 248 KB -> 25 KB per photo, because embedding raw put ~250 KB per card into the PDF and a whole programme's sheet risked OOM on the 3.8 GB VPS. WebP is skipped — `@react-pdf` cannot decode it and it would throw mid-render, losing the whole sheet. `sharp` is now a declared dependency instead of an accidental transitive of `next` (2026-10-13).
+- [x] **#116** Verification reworked onto unguessable tokens (2026-10-13). Two problems: `/verify` was gated by `app/proxy.ts`, so an outsider scanning a card got bounced to `/login` and the QR was decoration; and the reference number it keyed off is sequential (`{MISSION}-{YEAR}-{00001}`, four mission codes, counter from 1), so making it public as-is would have let anyone enumerate every trainee's name, mission and **deployment location** — where a missionary physically is. New `ProgramEnrollment.verifyToken` (nullable + unique, 128-bit hex, generated lazily at first print) is what the ID-card and certificate QR links now carry, and `/verify/` is public. Holding the card is the credential: the token path shows the full record including the photograph, while a lookup by reference number still resolves (so already-printed cards keep working) but withholds the photo and the deployment location and tells the visitor to scan the card for the rest. Shared helpers in `lib/verification.ts`. 22 checks against the DB covering token generation/idempotency/collisions, both resolution paths, bad input, and proxy reachability.
+- [ ] **#117** `prisma db push` for #116 needs `--accept-data-loss` once, because Prisma flags any new unique constraint as potentially lossy. The actual SQL is two additive statements (`ADD COLUMN "verifyToken" TEXT` + `CREATE UNIQUE INDEX`) and Postgres allows multiple NULLs in a unique index, so there is no real data loss — but `scripts/1000mm-deploy.sh` runs plain `db push` and will **fail** on this deploy until the column exists. Apply it by hand first (see the deploy notes), then the script's push is a no-op. The flag was deliberately not added to the script, where it would let genuinely destructive changes through silently.
 
 ---
 

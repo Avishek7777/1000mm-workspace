@@ -594,6 +594,12 @@ model ProgramEnrollment {
   status    EnrollmentStatus @default(ENROLLED)
   appliedAt DateTime?
 
+  // Unguessable code printed into ID-card and certificate QR links. The public
+  // /verify page keys off this, not the reference number, which is sequential
+  // ({MISSION}-{YEAR}-{00001}) and so trivially enumerable. Holding the card is
+  // what grants access to the full record. Generated on first print.
+  verifyToken String? @unique
+
   @@unique([programId, traineeId])
   @@index([programId])
   @@index([traineeId])
