@@ -91,6 +91,13 @@ const styles = StyleSheet.create({
     color: TEAL,
     marginTop: 4,
   },
+  photo: {
+    width: 56,
+    height: 72,
+    // Fill the passport-ratio box rather than letterboxing an off-ratio
+    // upload; the box is already 56x72, so a portrait photo crops sensibly.
+    objectFit: "cover",
+  },
   info: {
     flex: 1,
     justifyContent: "center",
@@ -191,6 +198,8 @@ export type IdCardData = {
   enrolledAt: string;
   validUntil: string;
   qrDataUrl: string;
+  /** Data URL for the applicant's photo; null when none is on record. */
+  photoDataUrl?: string | null;
 };
 
 export function IdCardPdf({
@@ -235,10 +244,16 @@ export function IdCardPdf({
 
                 {/* Body */}
                 <View style={styles.cardBody}>
-                  {/* Photo placeholder */}
+                  {/* Applicant photo, or a placeholder when none is on record */}
                   <View style={styles.photoBox}>
-                    <PersonIcon />
-                    <Text style={styles.photoLabel}>PHOTO</Text>
+                    {card.photoDataUrl ? (
+                      <Image src={card.photoDataUrl} style={styles.photo} />
+                    ) : (
+                      <>
+                        <PersonIcon />
+                        <Text style={styles.photoLabel}>PHOTO</Text>
+                      </>
+                    )}
                   </View>
 
                   {/* Info */}

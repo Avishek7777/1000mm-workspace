@@ -4,6 +4,7 @@ import { prisma } from "@1000mm/db";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { IdCardPdf } from "@/lib/exports/IdCardPdf";
 import QRCode from "qrcode";
+import sharp from "sharp";
 import fs from "fs";
 import path from "path";
 
@@ -14,6 +15,71 @@ function loadLogoDataUrl(): string {
     return `data:image/png;base64,${buffer.toString("base64")}`;
   } catch {
     return "";
+  }
+}
+
+const UPLOADS_ROOT = path.join(process.cwd(), "public", "uploads");
+
+// @react-pdf/renderer only decodes JPEG and PNG. A WebP (which the
+// self-service profile upload accepts) would throw mid-render and lose the
+// whole sheet, so unsupported types are skipped and the card keeps its
+// placeholder instead.
+const PDF_SAFE_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+};
+
+// The card's photo box is 56x72pt; this is roughly that at print resolution.
+// Uploads are capped at 2 MB each, and embedding them raw put ~250 KB per
+// card into the PDF — a whole program's sheet would run to tens of MB and
+// risk OOM on the 3.8 GB VPS while rendering.
+const PHOTO_W = 233;
+const PHOTO_H = 300;
+
+/**
+ * Read an uploaded image off disk, downscaled, as a data URL.
+ *
+ * Deliberately not an HTTP fetch of /api/uploads/...: that route requires a
+ * session which a server-side render does not carry, and `profile-photos` is
+ * not in its public prefix list. Reading the file directly also means the
+ * photo never has to be reachable over the network to end up on a card.
+ */
+async function loadUploadDataUrl(
+  storageKey: string | null | undefined,
+): Promise<string | null> {
+  if (!storageKey) return null;
+
+  // Accept both a bare storageKey and a stored "/uploads/..." URL.
+  const key = storageKey.replace(/^\/+/, "").replace(/^uploads\//, "");
+  // Refuse anything that could climb out of the uploads root.
+  if (key.split("/").some((seg) => seg === "." || seg === "..")) return null;
+
+  const ext = key.split(".").pop()?.toLowerCase() ?? "";
+  const mime = PDF_SAFE_MIME[ext];
+  if (!mime) return null;
+
+  const full = path.join(UPLOADS_ROOT, key);
+  if (!full.startsWith(UPLOADS_ROOT)) return null;
+
+  let raw: Buffer;
+  try {
+    raw = fs.readFileSync(full);
+  } catch {
+    // Missing file is normal — not every trainee has a photo on record.
+    return null;
+  }
+
+  try {
+    const resized = await sharp(raw)
+      .rotate() // honour EXIF orientation, or phone photos come out sideways
+      .resize(PHOTO_W, PHOTO_H, { fit: "cover", position: "top" })
+      .jpeg({ quality: 82 })
+      .toBuffer();
+    return `data:image/jpeg;base64,${resized.toString("base64")}`;
+  } catch {
+    // Rather than lose the photo, fall back to the original bytes.
+    return `data:${mime};base64,${raw.toString("base64")}`;
   }
 }
 
@@ -70,6 +136,7 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           fullName: true,
+          profilePicture: true,
           homeMission: { select: { code: true } },
         },
       },
@@ -84,6 +151,14 @@ export async function GET(req: NextRequest) {
       application: {
         select: {
           referenceNumber: true,
+          // The passport photo submitted with the application is the official
+          // one for a card; the self-service profile picture is a fallback.
+          documents: {
+            where: { kind: "PROFILE_PHOTO", deletedAt: null },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { storageKey: true },
+          },
         },
       },
     },
@@ -119,9 +194,14 @@ export async function GET(req: NextRequest) {
         margin: 1,
         color: { dark: "#0F6E56", light: "#FAFAF8" },
       });
+      const photoDataUrl =
+        (await loadUploadDataUrl(e.application?.documents[0]?.storageKey)) ??
+        (await loadUploadDataUrl(e.trainee.profilePicture));
+
       return {
         enrollmentId: e.id,
         referenceNumber: refNum,
+        photoDataUrl,
         fullName: e.trainee.fullName,
         missionCode: e.trainee.homeMission?.code ?? "—",
         programCode: e.program.code,
