@@ -89,7 +89,9 @@ export default async function TraineesPage({
       },
       program: { select: { id: true, code: true, title: true } },
       deploymentAssignedBy: { select: { fullName: true } },
-      application: { select: { referenceNumber: true } },
+      // The reviewed name, not the portal account's — the two drift, and a
+      // printed roster has to match the ID cards. See lib/verification.ts.
+      application: { select: { referenceNumber: true, applicantFullName: true } },
     },
     orderBy: { enrolledAt: "desc" },
   });
@@ -158,6 +160,7 @@ export default async function TraineesPage({
       },
       application: {
         select: {
+          applicantFullName: true,
           permanentAddressDistrict: true,
           permanentAddressUpazila: true,
           permanentAddressVillage: true,
@@ -224,7 +227,7 @@ export default async function TraineesPage({
               return (
                 <tr key={e.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                   <td className="py-1.5 pr-3 text-xs text-gray-400">{i + 1}</td>
-                  <td className="py-1.5 pr-3 text-xs font-medium text-gray-900">{e.trainee.fullName}</td>
+                  <td className="py-1.5 pr-3 text-xs font-medium text-gray-900">{e.application?.applicantFullName ?? e.trainee.fullName}</td>
                   {isStaff && (
                     <td className="py-1.5 pr-3 text-xs text-gray-600">{e.trainee.homeMission?.code ?? "—"}</td>
                   )}
@@ -405,7 +408,7 @@ export default async function TraineesPage({
                     {/* Trainee */}
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">
-                        {e.trainee.fullName}
+                        {e.application?.applicantFullName ?? e.trainee.fullName}
                       </p>
                       <p className="text-xs text-gray-400">{e.trainee.email}</p>
                       {e.application?.referenceNumber && (
@@ -627,7 +630,7 @@ export default async function TraineesPage({
                     {i + 1}
                   </td>
                   <td className="py-1.5 pr-3 text-xs font-medium text-gray-900">
-                    {e.trainee.fullName}
+                    {e.application?.applicantFullName ?? e.trainee.fullName}
                   </td>
                   {isStaff && (
                     <td className="py-1.5 pr-3 text-xs text-gray-600">

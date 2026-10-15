@@ -45,7 +45,9 @@ export async function GET(req: NextRequest) {
         },
       },
       application: {
-        select: { referenceNumber: true },
+        // Same identity rule as the printed card, so what an admin ticks here
+        // is what comes out of the printer.
+        select: { referenceNumber: true, applicantFullName: true },
       },
     },
     orderBy: [
@@ -56,7 +58,7 @@ export async function GET(req: NextRequest) {
 
   const result = enrollments.map((e) => ({
     enrollmentId: e.id,
-    fullName: e.trainee.fullName,
+    fullName: e.application?.applicantFullName ?? e.trainee.fullName,
     referenceNumber:
       e.application?.referenceNumber ?? e.id.slice(-8).toUpperCase(),
     missionCode: e.trainee.homeMission?.code ?? "—",

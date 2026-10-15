@@ -4,7 +4,11 @@ import { prisma } from "@1000mm/db";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { IdCardPdf } from "@/lib/exports/IdCardPdf";
 import QRCode from "qrcode";
-import { loadEnrollmentPhoto, verifyUrlFor } from "@/lib/verification";
+import {
+  loadEnrollmentPhoto,
+  pickApplicationPhotoKey,
+  verifyUrlFor,
+} from "@/lib/verification";
 import fs from "fs";
 import path from "path";
 
@@ -86,13 +90,14 @@ export async function GET(req: NextRequest) {
       application: {
         select: {
           referenceNumber: true,
-          // The passport photo submitted with the application is the official
-          // one for a card; the self-service profile picture is a fallback.
+          // The name that was reviewed and accepted. The User account's
+          // fullName is NOT interchangeable with it — see below.
+          applicantFullName: true,
+          profilePhotoDocumentId: true,
           documents: {
             where: { kind: "PROFILE_PHOTO", deletedAt: null },
-            orderBy: { createdAt: "desc" },
-            take: 1,
-            select: { storageKey: true },
+            orderBy: { createdAt: "asc" },
+            select: { id: true, storageKey: true },
           },
         },
       },
@@ -128,15 +133,24 @@ export async function GET(req: NextRequest) {
         color: { dark: "#0F6E56", light: "#FAFAF8" },
       });
       const photoDataUrl = await loadEnrollmentPhoto(
-        e.application?.documents[0]?.storageKey,
+        pickApplicationPhotoKey(e.application),
+        !!e.application,
         e.trainee.profilePicture,
       );
+
+      // The card must carry the identity that was reviewed and accepted, not
+      // the portal account's display name. The two are separate fields and do
+      // drift: an account may be shared, registered under a relative's name, or
+      // simply never corrected, and printing trainee.fullName beside the
+      // application's reference number put one person's name on another
+      // person's ID.
+      const cardName = e.application?.applicantFullName ?? e.trainee.fullName;
 
       return {
         enrollmentId: e.id,
         referenceNumber: refNum,
         photoDataUrl,
-        fullName: e.trainee.fullName,
+        fullName: cardName,
         missionCode: e.trainee.homeMission?.code ?? "—",
         programCode: e.program.code,
         programTitle: e.program.title,

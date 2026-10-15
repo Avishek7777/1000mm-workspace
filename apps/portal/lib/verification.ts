@@ -137,17 +137,53 @@ export async function loadPhotoDataUrl(
   }
 }
 
+
 /**
- * The photo for an enrollment: the passport photo submitted with the
- * application is the official one, the self-service profile picture a fallback.
+ * The photograph for an application.
+ *
+ * `Application.profilePhotoDocumentId` is written on every photo upload, so it
+ * points at the one the applicant most recently chose. That is the
+ * authoritative pointer and every surface should agree on it — a card that
+ * disagrees with the page the reviewer approved is how the wrong face gets
+ * printed. Falls back to the oldest PROFILE_PHOTO for rows predating the
+ * pointer.
+ */
+export function pickApplicationPhotoKey(
+  app:
+    | {
+        profilePhotoDocumentId: string | null;
+        documents: { id: string; storageKey: string }[];
+      }
+    | null
+    | undefined,
+): string | null {
+  if (!app) return null;
+  const chosen = app.profilePhotoDocumentId
+    ? app.documents.find((d) => d.id === app.profilePhotoDocumentId)
+    : undefined;
+  return (chosen ?? app.documents[0])?.storageKey ?? null;
+}
+
+/**
+ * The photo to print for an enrollment.
+ *
+ * When an application is linked, its photograph is the ONLY acceptable source:
+ * that is the identity that was reviewed and accepted. The account's
+ * self-service `profilePicture` is deliberately not a fallback here — a portal
+ * account is not necessarily the applicant (one may be shared, or registered
+ * under a relative's name), so falling back to it put a casual snapshot of a
+ * different person onto official cards.
+ *
+ * The account picture is used only when there is no application at all, i.e. a
+ * trainee placed on a roster by hand, where the account is the only identity on
+ * record.
  */
 export async function loadEnrollmentPhoto(
   applicationPhotoKey: string | null | undefined,
+  hasApplication: boolean,
   profilePicture: string | null | undefined,
   size?: { width: number; height: number },
 ): Promise<string | null> {
-  return (
-    (await loadPhotoDataUrl(applicationPhotoKey, size)) ??
-    (await loadPhotoDataUrl(profilePicture, size))
-  );
+  if (hasApplication) return loadPhotoDataUrl(applicationPhotoKey, size);
+  return loadPhotoDataUrl(profilePicture, size);
 }

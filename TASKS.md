@@ -1,6 +1,6 @@
 # Task List — 1000MMBD Portal
 
-Last updated: 2026-10-13
+Last updated: 2026-10-15
 
 > **Session backlog added 2026-06-26** — items #28–#49 below
 > **Session backlog added 2026-06-27 (session 2)** — items #51–#55 below
@@ -9,6 +9,7 @@ Last updated: 2026-10-13
 > **Session backlog added 2026-07-02** — item #99 below
 > **Session backlog added 2026-10-12** — items #107–#113 below
 > **Session backlog added 2026-10-13** — items #115–#117 below
+> **Session backlog added 2026-10-15** — items #118–#120 below
 
 ---
 
@@ -238,6 +239,12 @@ Last updated: 2026-10-13
 - [x] **#115** ID cards never carried the applicant's photo — the card rendered a hard-coded placeholder (person icon + the word `PHOTO`) and the route never queried one. Now pulled from the application's `PROFILE_PHOTO` document, falling back to the trainee's profile picture, read off disk rather than over `/api/uploads` (that route needs a session a server-side render does not carry, and `profile-photos` is not a public prefix). Downscaled with `sharp` to the 56x72pt box at print resolution: 248 KB -> 25 KB per photo, because embedding raw put ~250 KB per card into the PDF and a whole programme's sheet risked OOM on the 3.8 GB VPS. WebP is skipped — `@react-pdf` cannot decode it and it would throw mid-render, losing the whole sheet. `sharp` is now a declared dependency instead of an accidental transitive of `next` (2026-10-13).
 - [x] **#116** Verification reworked onto unguessable tokens (2026-10-13). Two problems: `/verify` was gated by `app/proxy.ts`, so an outsider scanning a card got bounced to `/login` and the QR was decoration; and the reference number it keyed off is sequential (`{MISSION}-{YEAR}-{00001}`, four mission codes, counter from 1), so making it public as-is would have let anyone enumerate every trainee's name, mission and **deployment location** — where a missionary physically is. New `ProgramEnrollment.verifyToken` (nullable + unique, 128-bit hex, generated lazily at first print) is what the ID-card and certificate QR links now carry, and `/verify/` is public. Holding the card is the credential: the token path shows the full record including the photograph, while a lookup by reference number still resolves (so already-printed cards keep working) but withholds the photo and the deployment location and tells the visitor to scan the card for the rest. Shared helpers in `lib/verification.ts`. 22 checks against the DB covering token generation/idempotency/collisions, both resolution paths, bad input, and proxy reachability.
 - [ ] **#117** `prisma db push` for #116 needs `--accept-data-loss` once, because Prisma flags any new unique constraint as potentially lossy. The actual SQL is two additive statements (`ADD COLUMN "verifyToken" TEXT` + `CREATE UNIQUE INDEX`) and Postgres allows multiple NULLs in a unique index, so there is no real data loss — but `scripts/1000mm-deploy.sh` runs plain `db push` and will **fail** on this deploy until the column exists. Apply it by hand first (see the deploy notes), then the script's push is a no-op. The flag was deliberately not added to the script, where it would let genuinely destructive changes through silently.
+
+---
+
+- [x] **#118** Printed ID cards carried the wrong name and the wrong face (2026-10-15, confirmed from photographs of issued cards). Two independent identity sources: `Application.applicantFullName` is the name typed on the form, reviewed by the LMD and accepted — what the application page shows — while `User.fullName` is the portal *account* name, which is what the card printed. They drift whenever an account is shared, registered under a relative's name, or simply never corrected, so `SBM-2026-00014` printed "Barned Prosanjit Banerjee" against Shiuly Roy's reference number. Same split for photographs: the application's `PROFILE_PHOTO` is the reviewed passport photo, `User.profilePicture` is a casual self-uploaded account picture, and the card fell back to the latter whenever the application had no photo document — putting a stranger's snapshot on an official ID (`SBM-2026-00004`). Cards, the ID-card picker list, the verify page and the printed roster at `/dashboard/trainees` now all take the name from `applicantFullName` and the photo from the application only, falling back to the account only when there is no application at all (hand-added trainees). Also found: the review page picked `documents.find()` (oldest photo) while the card took the newest, so on any application with more than one upload the reviewer approved one image and the card printed another — both now resolve through `profilePhotoDocumentId`, the authoritative pointer. The account-photo fallback was introduced in #115 (`168a0d9`); the name defect predates it and only became visible once cards were printed in volume.
+- [ ] **#119** `scripts/audit-idcard-identity.mjs` (read-only) lists every enrollment whose printed card disagrees with its accepted application — name mismatches with both names side by side, photo fallbacks, multi-photo ambiguity, and genuinely crossed `traineeId`/`applicantId` links — and totals how many need reprinting. **Run it on production before reprinting.** Not yet run; scope of already-issued bad cards is unknown.
+- [ ] **#120** ~10 export routes still print the portal account name (`attendance`, `director-missionaries`, `lmd-missionaries`, `field-reports`, `lmd-reports` …). The surfaces tied to ID cards and the trainee roster were fixed under #118; these were deliberately left, since some concern missionaries filing reports where the account name may be the correct one. Decide per route once #119 shows how many rows actually differ.
 
 ---
 

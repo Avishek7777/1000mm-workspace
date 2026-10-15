@@ -1,5 +1,9 @@
 import { prisma } from "@1000mm/db";
-import { VERIFY_TOKEN_RE, loadEnrollmentPhoto } from "@/lib/verification";
+import {
+  VERIFY_TOKEN_RE,
+  loadEnrollmentPhoto,
+  pickApplicationPhotoKey,
+} from "@/lib/verification";
 import Link from "next/link";
 
 export default async function VerifyPage({
@@ -36,11 +40,12 @@ export default async function VerifyPage({
     application: {
       select: {
         referenceNumber: true,
+        applicantFullName: true,
+        profilePhotoDocumentId: true,
         documents: {
           where: { kind: "PROFILE_PHOTO" as const, deletedAt: null },
-          orderBy: { createdAt: "desc" as const },
-          take: 1,
-          select: { storageKey: true },
+          orderBy: { createdAt: "asc" as const },
+          select: { id: true, storageKey: true },
         },
       },
     },
@@ -82,11 +87,17 @@ export default async function VerifyPage({
 
   const photoDataUrl = full
     ? await loadEnrollmentPhoto(
-        enrollment.application?.documents[0]?.storageKey,
+        pickApplicationPhotoKey(enrollment.application),
+        !!enrollment.application,
         enrollment.trainee.profilePicture,
         { width: 240, height: 300 },
       )
     : null;
+
+  // As on the ID card: show the name that was reviewed and accepted, not the
+  // portal account's display name.
+  const displayName =
+    enrollment?.application?.applicantFullName ?? enrollment?.trainee.fullName;
 
   // Token links do not carry a human-readable reference, so take it off the
   // record; fall back to the same 8-character form the ID card prints.
@@ -144,7 +155,7 @@ export default async function VerifyPage({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={photoDataUrl}
-                  alt={`Photograph of ${enrollment!.trainee.fullName}`}
+                  alt={`Photograph of ${displayName}`}
                   width={120}
                   height={150}
                   className="h-[150px] w-[120px] rounded-lg border border-gray-200 object-cover shadow-sm"
@@ -156,7 +167,7 @@ export default async function VerifyPage({
             <div className="divide-y divide-gray-100 px-6">
               {[
                 { label: "Reference Number", value: displayRef },
-                { label: "Recipient", value: enrollment.trainee.fullName },
+                { label: "Recipient", value: displayName },
                 { label: "Mission", value: enrollment.trainee.homeMission?.name ?? "—" },
                 { label: "Program", value: `${enrollment.program.code} — ${enrollment.program.title}` },
                 {
@@ -209,7 +220,7 @@ export default async function VerifyPage({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={photoDataUrl}
-                  alt={`Photograph of ${enrollment!.trainee.fullName}`}
+                  alt={`Photograph of ${displayName}`}
                   width={120}
                   height={150}
                   className="h-[150px] w-[120px] rounded-lg border border-gray-200 object-cover shadow-sm"
@@ -220,7 +231,7 @@ export default async function VerifyPage({
             <div className="divide-y divide-gray-100 px-6">
               {[
                 { label: "Reference Number", value: displayRef },
-                { label: "Name", value: enrollment!.trainee.fullName },
+                { label: "Name", value: displayName },
                 { label: "Mission", value: enrollment!.trainee.homeMission?.name ?? "—" },
                 { label: "Program", value: `${enrollment!.program.code} — ${enrollment!.program.title}` },
                 {
