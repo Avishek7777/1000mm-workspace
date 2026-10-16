@@ -17,6 +17,124 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// ── Single-reference inspector ────────────────────────────────────────────────
+// `node scripts/audit-idcard-identity.mjs --ref SBM-2026-00014` prints every
+// identity field behind one reference number, so a mismatch can be attributed
+// to the right cause: one account whose display name differs from the
+// application it submitted, or a genuinely crossed enrollment -> application
+// link. Those need very different remedies.
+const refArg = process.argv.indexOf("--ref");
+if (refArg !== -1 && process.argv[refArg + 1]) {
+  const ref = process.argv[refArg + 1].trim().toUpperCase();
+  const app = await prisma.application.findFirst({
+    where: { referenceNumber: ref },
+    select: {
+      id: true,
+      applicantFullName: true,
+      applicantGender: true,
+      status: true,
+      applicantId: true,
+      applicant: {
+        select: { id: true, fullName: true, email: true, profilePicture: true },
+      },
+      profilePhotoDocumentId: true,
+      documents: {
+        where: { kind: "PROFILE_PHOTO", deletedAt: null },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, storageKey: true, createdAt: true },
+      },
+    },
+  });
+
+  if (!app) {
+    console.log(`No application with reference ${ref}.`);
+    await prisma.$disconnect();
+    process.exit(0);
+  }
+
+  console.log(`\n=== ${ref} ===\n`);
+  console.log("APPLICATION   (what was reviewed and accepted)");
+  console.log(`  applicantFullName  : ${app.applicantFullName}`);
+  console.log(`  gender             : ${app.applicantGender}`);
+  console.log(`  status             : ${app.status}`);
+  console.log(`  applicantId        : ${app.applicantId}`);
+
+  console.log("\nACCOUNT       (what the old card printed)");
+  console.log(`  user.id            : ${app.applicant.id}`);
+  console.log(`  user.fullName      : ${app.applicant.fullName}`);
+  console.log(`  user.email         : ${app.applicant.email}`);
+  console.log(`  user.profilePicture: ${app.applicant.profilePicture ?? "(none)"}`);
+
+  const sameName =
+    app.applicantFullName.trim().toLowerCase() ===
+    app.applicant.fullName.trim().toLowerCase();
+  console.log(`\n  names agree?       : ${sameName ? "yes" : "NO  <-- the mismatch"}`);
+
+  console.log(`\nPHOTOS on the application: ${app.documents.length}`);
+  for (const d of app.documents) {
+    const mark = d.id === app.profilePhotoDocumentId ? "   <- profilePhotoDocumentId" : "";
+    console.log(`  ${d.createdAt.toISOString()}  ${d.storageKey}${mark}`);
+  }
+  if (app.documents.length === 0) {
+    console.log("  (none -- the old card fell back to the ACCOUNT picture above)");
+  }
+
+  const enrs = await prisma.programEnrollment.findMany({
+    where: { OR: [{ applicationId: app.id }, { traineeId: app.applicantId }] },
+    select: {
+      id: true,
+      traineeId: true,
+      applicationId: true,
+      deletedAt: true,
+      status: true,
+      trainee: { select: { fullName: true } },
+      program: { select: { code: true } },
+      // Each enrollment's OWN application. The integrity test is whether that
+      // application's applicant is this enrollment's trainee — not whether it
+      // happens to be the reference being inspected. A trainee with two
+      // accepted applications legitimately has an enrollment pointing at the
+      // other one, which is not a fault.
+      application: { select: { referenceNumber: true, applicantId: true } },
+    },
+  });
+
+  console.log(`\nENROLLMENTS touching this application or applicant: ${enrs.length}`);
+  let crossed = false;
+  for (const e of enrs) {
+    const wrongTrainee = !!e.application && e.application.applicantId !== e.traineeId;
+    if (wrongTrainee) crossed = true;
+    const other =
+      e.application && e.application.referenceNumber !== ref
+        ? `   (its own ref: ${e.application.referenceNumber ?? "none"})`
+        : e.applicationId
+          ? ""
+          : "   (no application linked)";
+    console.log(
+      `  ${e.program.code.padEnd(16)} ${e.status.padEnd(9)} trainee="${e.trainee.fullName}"` +
+        (e.deletedAt ? " (removed)" : "") +
+        other +
+        (wrongTrainee ? "   <-- CROSSED: this application belongs to someone else" : ""),
+    );
+  }
+
+  console.log("\nVERDICT");
+  if (crossed) {
+    console.log("  CROSSED LINK — an enrollment points at a different person's record.");
+    console.log("  This is a data-integrity problem and needs the rows repaired;");
+    console.log("  no code path creates it, so it predates or bypassed the app.");
+  } else if (sameName) {
+    console.log("  Consistent — no mismatch on this reference.");
+  } else {
+    console.log("  ONE ACCOUNT, TWO NAMES — the reference number and every link are");
+    console.log("  correct. The account's display name simply differs from the name on");
+    console.log("  the application it submitted, and the card printed the account name.");
+    console.log("  Fixed in 50d99b6; reprint this card.");
+  }
+
+  await prisma.$disconnect();
+  process.exit(0);
+}
+
 const enrollments = await prisma.programEnrollment.findMany({
   where: { deletedAt: null, status: "ENROLLED" },
   select: {
