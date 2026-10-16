@@ -139,23 +139,25 @@ export async function loadPhotoDataUrl(
 
 
 /**
- * The photograph for an application: the FIRST PROFILE_PHOTO uploaded.
+ * The photograph for an application: the LAST PROFILE_PHOTO uploaded.
  *
  * Callers must pass `documents` ordered by `createdAt` ascending.
  *
- * Deliberately not `Application.profilePhotoDocumentId`. That field is
- * rewritten on every upload, so it tracks the most recent file rather than an
- * approved choice — and the most recent file is not trustworthy. On
- * SBM-2026-00004 the newest of two uploads is a photograph of a different
- * person entirely, which is exactly how a stranger's face reached a printed
- * card. The oldest is what the review page shows (it fetches `createdAt: asc`
- * and takes the first), so it is the image a reviewer actually looked at when
- * they accepted the application.
+ * Most applications carrying several photographs are same-session retries —
+ * five uploads inside one day on more than one of them — where each attempt
+ * supersedes the last, so the final file is the one the applicant meant to
+ * submit. It also makes the remedy for a wrong photograph obvious: upload the
+ * correct one and it becomes the photograph that prints.
  *
- * This is a safe default, not a correct answer. Where an application carries
- * several photographs, only a human can say which is the holder — 15 of 27
- * enrolled trainees were in that state as of 2026-10-16. Staff need a way to
- * choose explicitly; until then, what was reviewed is what prints.
+ * The cost is that a stray upload wins. On SBM-2026-00004 the later of two
+ * files, a day apart, is a photograph of a different person, and this rule
+ * prints it. Removing or superseding that document is the fix; there is no
+ * rule that distinguishes a correcting re-upload from a mistaken one.
+ *
+ * Note this is not `Application.profilePhotoDocumentId`, which happens to track
+ * the same file but is written automatically on upload — it records the most
+ * recent file, never a decision, so it cannot later be repurposed to hold a
+ * staff member's explicit choice.
  */
 export function pickApplicationPhotoKey(
   app:
@@ -163,7 +165,9 @@ export function pickApplicationPhotoKey(
     | null
     | undefined,
 ): string | null {
-  return app?.documents[0]?.storageKey ?? null;
+  const docs = app?.documents;
+  if (!docs?.length) return null;
+  return docs[docs.length - 1].storageKey;
 }
 
 /**

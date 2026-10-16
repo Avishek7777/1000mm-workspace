@@ -222,9 +222,10 @@ console.log(
 );
 if (multiPhoto.length) {
   console.log(
-    "    The card now prints the FIRST (what the reviewer saw). Open each one and\n" +
-      "    confirm it is the holder — on at least one application a later upload is a\n" +
-      "    photograph of a different person. View at:\n" +
+    "    The card prints the LAST upload — each retry supersedes the one before.\n" +
+      "    Open it and confirm it is the holder: a stray upload wins under this rule,\n" +
+      "    and on at least one application the final file is a different person. The\n" +
+      "    remedy is to upload the correct photograph, which then becomes the last.\n" +
       "      <portal>/api/uploads/<path>   (needs a logged-in session)\n",
   );
 }
@@ -235,8 +236,9 @@ multiPhoto.forEach((e) => {
   // Full timestamps, not just dates: most of these are same-session retries,
   // and the minutes between them are what tells a re-upload apart from a
   // genuinely different photograph added later.
+  const lastIdx = e.application.documents.length - 1;
   e.application.documents.forEach((d, i) => {
-    const mark = i === 0 ? "  <- WILL BE PRINTED" : "";
+    const mark = i === lastIdx ? "  <- WILL BE PRINTED" : "";
     const when = d.createdAt.toISOString().slice(0, 16).replace("T", " ");
     console.log(`        ${when}  ${d.storageKey}${mark}`);
   });
