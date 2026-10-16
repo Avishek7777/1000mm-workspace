@@ -232,9 +232,13 @@ multiPhoto.forEach((e) => {
   console.log(
     `    ${(e.application?.referenceNumber ?? "—").padEnd(22)} ${e.application?.applicantFullName ?? e.trainee.fullName}  (${e.application.documents.length} photos)`,
   );
+  // Full timestamps, not just dates: most of these are same-session retries,
+  // and the minutes between them are what tells a re-upload apart from a
+  // genuinely different photograph added later.
   e.application.documents.forEach((d, i) => {
     const mark = i === 0 ? "  <- WILL BE PRINTED" : "";
-    console.log(`        ${d.createdAt.toISOString().slice(0, 10)}  ${d.storageKey}${mark}`);
+    const when = d.createdAt.toISOString().slice(0, 16).replace("T", " ");
+    console.log(`        ${when}  ${d.storageKey}${mark}`);
   });
 });
 
