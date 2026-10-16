@@ -139,29 +139,31 @@ export async function loadPhotoDataUrl(
 
 
 /**
- * The photograph for an application.
+ * The photograph for an application: the FIRST PROFILE_PHOTO uploaded.
  *
- * `Application.profilePhotoDocumentId` is written on every photo upload, so it
- * points at the one the applicant most recently chose. That is the
- * authoritative pointer and every surface should agree on it — a card that
- * disagrees with the page the reviewer approved is how the wrong face gets
- * printed. Falls back to the oldest PROFILE_PHOTO for rows predating the
- * pointer.
+ * Callers must pass `documents` ordered by `createdAt` ascending.
+ *
+ * Deliberately not `Application.profilePhotoDocumentId`. That field is
+ * rewritten on every upload, so it tracks the most recent file rather than an
+ * approved choice — and the most recent file is not trustworthy. On
+ * SBM-2026-00004 the newest of two uploads is a photograph of a different
+ * person entirely, which is exactly how a stranger's face reached a printed
+ * card. The oldest is what the review page shows (it fetches `createdAt: asc`
+ * and takes the first), so it is the image a reviewer actually looked at when
+ * they accepted the application.
+ *
+ * This is a safe default, not a correct answer. Where an application carries
+ * several photographs, only a human can say which is the holder — 15 of 27
+ * enrolled trainees were in that state as of 2026-10-16. Staff need a way to
+ * choose explicitly; until then, what was reviewed is what prints.
  */
 export function pickApplicationPhotoKey(
   app:
-    | {
-        profilePhotoDocumentId: string | null;
-        documents: { id: string; storageKey: string }[];
-      }
+    | { documents: { id: string; storageKey: string }[] }
     | null
     | undefined,
 ): string | null {
-  if (!app) return null;
-  const chosen = app.profilePhotoDocumentId
-    ? app.documents.find((d) => d.id === app.profilePhotoDocumentId)
-    : undefined;
-  return (chosen ?? app.documents[0])?.storageKey ?? null;
+  return app?.documents[0]?.storageKey ?? null;
 }
 
 /**

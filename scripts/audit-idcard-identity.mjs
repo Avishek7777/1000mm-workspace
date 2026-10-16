@@ -217,13 +217,26 @@ photoFallback.forEach((e) =>
   ),
 );
 
-console.log(`\nAMBIGUOUS PHOTO — more than one PROFILE_PHOTO on the application: ${multiPhoto.length}`);
-multiPhoto.forEach((e) =>
-  console.log(
-    `    ${(e.application?.referenceNumber ?? "—").padEnd(22)} ${e.trainee.fullName}  (${e.application.documents.length} photos; ` +
-      `review page shows the oldest, card showed the newest)`,
-  ),
+console.log(
+  `\nAMBIGUOUS PHOTO — more than one PROFILE_PHOTO on the application: ${multiPhoto.length}`,
 );
+if (multiPhoto.length) {
+  console.log(
+    "    The card now prints the FIRST (what the reviewer saw). Open each one and\n" +
+      "    confirm it is the holder — on at least one application a later upload is a\n" +
+      "    photograph of a different person. View at:\n" +
+      "      <portal>/api/uploads/<path>   (needs a logged-in session)\n",
+  );
+}
+multiPhoto.forEach((e) => {
+  console.log(
+    `    ${(e.application?.referenceNumber ?? "—").padEnd(22)} ${e.application?.applicantFullName ?? e.trainee.fullName}  (${e.application.documents.length} photos)`,
+  );
+  e.application.documents.forEach((d, i) => {
+    const mark = i === 0 ? "  <- WILL BE PRINTED" : "";
+    console.log(`        ${d.createdAt.toISOString().slice(0, 10)}  ${d.storageKey}${mark}`);
+  });
+});
 
 console.log(`\nCROSSED LINK — enrollment.traineeId != application.applicantId: ${crossedLink.length}`);
 crossedLink.forEach((e) =>

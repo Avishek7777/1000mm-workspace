@@ -93,7 +93,8 @@ export async function GET(req: NextRequest) {
           // The name that was reviewed and accepted. The User account's
           // fullName is NOT interchangeable with it — see below.
           applicantFullName: true,
-          profilePhotoDocumentId: true,
+          // Ascending: pickApplicationPhotoKey takes the first, i.e. the image
+          // the reviewer saw. See lib/verification.ts.
           documents: {
             where: { kind: "PROFILE_PHOTO", deletedAt: null },
             orderBy: { createdAt: "asc" },

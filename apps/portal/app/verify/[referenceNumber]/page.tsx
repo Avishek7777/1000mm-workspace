@@ -41,7 +41,6 @@ export default async function VerifyPage({
       select: {
         referenceNumber: true,
         applicantFullName: true,
-        profilePhotoDocumentId: true,
         documents: {
           where: { kind: "PROFILE_PHOTO" as const, deletedAt: null },
           orderBy: { createdAt: "asc" as const },
