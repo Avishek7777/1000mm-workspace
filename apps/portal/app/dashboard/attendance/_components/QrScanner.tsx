@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 type ScanResult = {
   refNumber: string;
@@ -14,7 +15,18 @@ type ScanResult = {
 
 type ScanMethod = "detecting" | "native" | "jsqr" | "unavailable";
 
-export function QrScanner() {
+export function QrScanner({
+  programId,
+  programCode,
+  scannedToday,
+}: {
+  /** Attendance is always taken for one programme — the page picks it. */
+  programId: string;
+  programCode: string;
+  scannedToday: number;
+}) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -46,25 +58,32 @@ export function QrScanner() {
     detect();
   }, []);
 
-  const lookupRef = useCallback(async (refNumber: string) => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/attendance/lookup?ref=${encodeURIComponent(refNumber)}`,
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        setResult({ refNumber, error: data.error ?? "Not found" });
-      } else {
-        setResult({ refNumber, ...data });
+  const lookupRef = useCallback(
+    async (refNumber: string) => {
+      if (loading) return;
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/attendance/lookup?ref=${encodeURIComponent(refNumber)}` +
+            `&programId=${encodeURIComponent(programId)}`,
+        );
+        const data = await res.json();
+        if (!res.ok) {
+          setResult({ refNumber, error: data.error ?? "Not found" });
+        } else {
+          setResult({ refNumber, ...data });
+          // Pull today's register back from the server so the list and the
+          // tally reflect the scan that just happened.
+          if (!data.alreadyScanned) startTransition(() => router.refresh());
+        }
+      } catch {
+        setResult({ refNumber, error: "Network error" });
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setResult({ refNumber, error: "Network error" });
-    } finally {
-      setLoading(false);
-    }
-  }, [loading]);
+    },
+    [loading, programId, router],
+  );
 
   const onDetected = useCallback(
     (value: string) => {
@@ -174,7 +193,14 @@ export function QrScanner() {
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-5 py-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900">Camera Scanner</h2>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Camera Scanner</h2>
+              <p className="mt-0.5 text-xs text-gray-500">
+                Taking attendance for{" "}
+                <span className="font-medium text-gray-700">{programCode}</span>
+                {scannedToday > 0 ? ` · ${scannedToday} scanned today` : ""}
+              </p>
+            </div>
             {/* Engine badge */}
             {scanMethod === "native" && (
               <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-semibold text-teal-700">
@@ -321,7 +347,7 @@ export function QrScanner() {
               </span>
               <span className="text-sm font-semibold text-gray-900">
                 {result.error
-                  ? "Not Found"
+                  ? "Not Accepted"
                   : result.alreadyScanned
                     ? "Already Scanned Today"
                     : "Attendance Recorded"}
