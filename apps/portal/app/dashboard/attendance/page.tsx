@@ -150,6 +150,7 @@ export default async function AttendancePage({
             <input
               type="date"
               name="date"
+              aria-label="Date — a week sheet runs for seven days from here"
               defaultValue={dateSlug}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
             />
@@ -184,19 +185,27 @@ export default async function AttendancePage({
                 </p>
               </div>
               <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-                {/* Blank roster with tick boxes, for taking attendance on paper */}
+                {/* A week of tick boxes, from the chosen date — a register is
+                    kept by the week, not reprinted every morning. */}
                 <a
-                  href={`/api/export/attendance/sheet?program=${selected.id}&date=${dateSlug}&mode=blank`}
+                  href={`/api/export/attendance/sheet?program=${selected.id}&date=${dateSlug}&range=week&mode=blank`}
                   className="rounded-lg border border-teal-300 bg-white px-3 py-1.5 text-xs font-medium text-teal-800 hover:bg-teal-50 transition-colors"
                 >
-                  Blank sheet
+                  Blank week
                 </a>
-                {/* The same roster marked Present/Absent from the day's scans */}
+                {/* The same grid marked from the scans already recorded */}
                 <a
-                  href={`/api/export/attendance/sheet?program=${selected.id}&date=${dateSlug}&mode=filled`}
+                  href={`/api/export/attendance/sheet?program=${selected.id}&date=${dateSlug}&range=week&mode=filled`}
                   className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 transition-colors"
                 >
-                  Register PDF
+                  Week register
+                </a>
+                {/* One date, with the time each person was scanned */}
+                <a
+                  href={`/api/export/attendance/sheet?program=${selected.id}&date=${dateSlug}&range=day&mode=filled`}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  This day
                 </a>
                 <Link
                   href={`/dashboard/system-admin/attendance?program=${selected.id}`}
