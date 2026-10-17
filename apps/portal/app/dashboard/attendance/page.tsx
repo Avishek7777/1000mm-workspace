@@ -9,7 +9,7 @@ import { QrScanner } from "./_components/QrScanner";
 export default async function AttendancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ program?: string }>;
+  searchParams: Promise<{ program?: string; date?: string }>;
 }) {
   const session = await auth();
   await requireRole([
@@ -26,7 +26,7 @@ export default async function AttendancePage({
     if (!enabled) redirect("/dashboard");
   }
 
-  const { program: selectedId } = await searchParams;
+  const { program: selectedId, date: dateParam } = await searchParams;
 
   // Only programmes that actually have someone to scan.
   const programs = await prisma.trainingProgram.findMany({
@@ -49,8 +49,11 @@ export default async function AttendancePage({
 
   const selected = programs.find((p) => p.id === selectedId) ?? null;
 
-  // Attendance is taken for one day at a time; everything below is today's.
-  const now = new Date();
+  // Attendance is taken for one day at a time. Defaults to today; an earlier
+  // day can be opened to review or reprint its register.
+  const parsed = dateParam ? new Date(`${dateParam}T00:00:00`) : null;
+  const now = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date();
+  const isToday = now.toDateString() === new Date().toDateString();
   const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 
@@ -96,6 +99,7 @@ export default async function AttendancePage({
     month: "long",
     year: "numeric",
   });
+  const dateSlug = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -103,7 +107,14 @@ export default async function AttendancePage({
         <h1 className="text-lg font-semibold text-gray-900">
           Attendance Scanner
         </h1>
-        <p className="mt-0.5 text-sm text-gray-500">{today}</p>
+        <p className="mt-0.5 text-sm text-gray-500">
+          {today}
+          {!isToday && (
+            <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              Past date — scanning records against today
+            </span>
+          )}
+        </p>
       </div>
 
       {/* Programme picker — attendance is always for one programme */}
@@ -136,6 +147,12 @@ export default async function AttendancePage({
                 </option>
               ))}
             </select>
+            <input
+              type="date"
+              name="date"
+              defaultValue={dateSlug}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+            />
             <button
               type="submit"
               className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
@@ -163,15 +180,31 @@ export default async function AttendancePage({
                 </p>
                 <p className="text-xs text-teal-700">
                   {todayScans.length} of {selected._count.enrollments} scanned
-                  today
+                  {isToday ? " today" : " on this date"}
                 </p>
               </div>
-              <Link
-                href={`/dashboard/system-admin/attendance?program=${selected.id}`}
-                className="rounded-lg border border-teal-300 bg-white px-3 py-1.5 text-xs font-medium text-teal-800 hover:bg-teal-50 transition-colors"
-              >
-                Full register →
-              </Link>
+              <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+                {/* Blank roster with tick boxes, for taking attendance on paper */}
+                <a
+                  href={`/api/export/attendance/sheet?program=${selected.id}&date=${dateSlug}&mode=blank`}
+                  className="rounded-lg border border-teal-300 bg-white px-3 py-1.5 text-xs font-medium text-teal-800 hover:bg-teal-50 transition-colors"
+                >
+                  Blank sheet
+                </a>
+                {/* The same roster marked Present/Absent from the day's scans */}
+                <a
+                  href={`/api/export/attendance/sheet?program=${selected.id}&date=${dateSlug}&mode=filled`}
+                  className="rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 transition-colors"
+                >
+                  Register PDF
+                </a>
+                <Link
+                  href={`/dashboard/system-admin/attendance?program=${selected.id}`}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  All records →
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -185,7 +218,7 @@ export default async function AttendancePage({
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
               <h2 className="text-sm font-semibold text-gray-900">
-                Scanned Today
+                {isToday ? "Scanned Today" : "Scanned On This Date"}
               </h2>
               <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
                 {todayScans.length}
@@ -193,7 +226,9 @@ export default async function AttendancePage({
             </div>
             {todayScans.length === 0 ? (
               <p className="px-5 py-8 text-center text-sm text-gray-400">
-                Nobody scanned yet today.
+                {isToday
+                  ? "Nobody scanned yet today."
+                  : "Nobody was scanned on this date."}
               </p>
             ) : (
               <ul className="max-h-80 divide-y divide-gray-50 overflow-y-auto">
